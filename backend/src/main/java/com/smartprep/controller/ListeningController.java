@@ -89,4 +89,35 @@ public class ListeningController {
             @PathVariable Long partId) {
         return ResponseEntity.ok(ApiResponse.ok(listeningService.extractVocabulary(partId)));
     }
+
+    /**
+     * Serve listening audio files. Falls back to a 1-second silent MP3 if physical file does not exist.
+     * GET /api/v1/listening/audio/{fileName}
+     */
+    @GetMapping(value = "/audio/{fileName}", produces = "audio/mpeg")
+    public ResponseEntity<byte[]> getAudioFile(@PathVariable String fileName) {
+        try {
+            org.springframework.core.io.ClassPathResource resource = 
+                new org.springframework.core.io.ClassPathResource("static/api/v1/listening/audio/" + fileName);
+            if (resource.exists()) {
+                try (java.io.InputStream is = resource.getInputStream()) {
+                    byte[] fileBytes = is.readAllBytes();
+                    return ResponseEntity.ok()
+                            .header("Content-Type", "audio/mpeg")
+                            .header("Accept-Ranges", "bytes")
+                            .body(fileBytes);
+                }
+            }
+        } catch (Exception e) {
+            // Fall through to silence fallback
+        }
+
+        // Fallback to 1-second silent MP3
+        String base64Mp3 = "SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAAwAAAbAAqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV////////////////////////////////////////////AAAAAExhdmM1OC4xMwAAAAAAAAAAAAAAACQDkAAAAAAAAAGw9wrNaQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/+MYxAAAAANIAAAAAExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV/+MYxDsAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV/+MYxHYAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
+        byte[] audioBytes = java.util.Base64.getDecoder().decode(base64Mp3);
+        return ResponseEntity.ok()
+                .header("Content-Type", "audio/mpeg")
+                .header("Accept-Ranges", "bytes")
+                .body(audioBytes);
+    }
 }
