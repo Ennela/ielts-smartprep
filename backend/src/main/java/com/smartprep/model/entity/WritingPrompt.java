@@ -17,8 +17,11 @@ public class WritingPrompt {
     private String promptText;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 50)
     private EssayType essayType;
+
+    @Column(name = "image_url", length = 512)
+    private String imageUrl;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

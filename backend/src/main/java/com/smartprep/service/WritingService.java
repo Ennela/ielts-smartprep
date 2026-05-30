@@ -44,7 +44,8 @@ public class WritingService {
     private final GeminiClient geminiClient;
     private final ObjectMapper objectMapper;
 
-    private static final int MIN_WORD_COUNT = 250;
+    private static final int MIN_WORD_COUNT_TASK1 = 150;
+    private static final int MIN_WORD_COUNT_TASK2 = 250;
 
     // ========== Prompt Listing ==========
 
@@ -63,6 +64,7 @@ public class WritingService {
                         .promptId(p.getPromptId())
                         .promptText(p.getPromptText())
                         .essayType(p.getEssayType().name())
+                        .imageUrl(p.getImageUrl())
                         .build())
                 .collect(Collectors.toList());
     }
@@ -75,6 +77,7 @@ public class WritingService {
                 .promptId(prompt.getPromptId())
                 .promptText(prompt.getPromptText())
                 .essayType(prompt.getEssayType().name())
+                .imageUrl(prompt.getImageUrl())
                 .build();
     }
 
@@ -88,17 +91,20 @@ public class WritingService {
         WritingPrompt prompt = promptRepository.findById(request.getPromptId())
                 .orElseThrow(() -> new ResourceNotFoundException("Writing prompt not found"));
 
-        // Validate word count
+        // Validate word count (Task 1: 150 words, Task 2: 250 words)
+        boolean isTask1 = prompt.getEssayType().isTask1();
+        int minWordCount = isTask1 ? MIN_WORD_COUNT_TASK1 : MIN_WORD_COUNT_TASK2;
         int wordCount = countWords(request.getEssayText());
-        if (wordCount < MIN_WORD_COUNT) {
+        if (wordCount < minWordCount) {
             throw new WordCountTooLowException(
-                    "Essay must be at least " + MIN_WORD_COUNT + " words. Current: " + wordCount);
+                    "Essay must be at least " + minWordCount + " words. Current: " + wordCount);
         }
 
-        // Step 1: Call AI for grading
+        // Step 1: Call AI for grading (select task-specific system prompt)
+        String systemPrompt = isTask1 ? TASK1_GRADING_SYSTEM_PROMPT : GRADING_SYSTEM_PROMPT;
         String gradingResponse = geminiClient.generate(
-                GRADING_SYSTEM_PROMPT,
-                buildGradingUserPrompt(prompt.getPromptText(), request.getEssayText())
+                systemPrompt,
+                buildGradingUserPrompt(prompt.getPromptText(), request.getEssayText(), isTask1)
         );
         JsonNode gradingJson = parseJson(gradingResponse);
 
@@ -114,9 +120,10 @@ public class WritingService {
         String generalFeedback = gradingJson.path("generalFeedback").asText("");
 
         // Step 2: Call AI for rewritten essay
+        String rewriteSystemPrompt = isTask1 ? TASK1_REWRITE_SYSTEM_PROMPT : REWRITE_SYSTEM_PROMPT;
         String rewriteResponse = geminiClient.generate(
-                REWRITE_SYSTEM_PROMPT,
-                buildRewriteUserPrompt(prompt.getPromptText(), request.getEssayText(), gradingResponse)
+                rewriteSystemPrompt,
+                buildRewriteUserPrompt(prompt.getPromptText(), request.getEssayText(), gradingResponse, isTask1)
         );
         JsonNode rewriteJson = parseJson(rewriteResponse);
 
@@ -311,18 +318,20 @@ public class WritingService {
                 .build();
     }
 
-    private String buildGradingUserPrompt(String promptText, String essayText) {
+    private String buildGradingUserPrompt(String promptText, String essayText, boolean isTask1) {
+        String taskLabel = isTask1 ? "Task 1" : "Task 2";
         return String.format(
-                "IELTS Writing Task 2 Prompt:\n\"%s\"\n\nStudent Essay:\n%s",
-                promptText, essayText);
+                "IELTS Writing %s Prompt:\n\"%s\"\n\nStudent Essay:\n%s",
+                taskLabel, promptText, essayText);
     }
 
-    private String buildRewriteUserPrompt(String promptText, String essayText, String errorAnalysis) {
+    private String buildRewriteUserPrompt(String promptText, String essayText, String errorAnalysis, boolean isTask1) {
+        String taskLabel = isTask1 ? "Task 1" : "Task 2";
         return String.format(
-                "Original IELTS Writing Task 2 Prompt:\n\"%s\"\n\n"
+                "Original IELTS Writing %s Prompt:\n\"%s\"\n\n"
                 + "Original Student Essay:\n%s\n\n"
                 + "Error Analysis and Scores:\n%s",
-                promptText, essayText, errorAnalysis);
+                taskLabel, promptText, essayText, errorAnalysis);
     }
 
     // ========== AI Prompt Templates ==========
@@ -387,6 +396,85 @@ public class WritingService {
               "rewrittenEssay": "<full rewritten essay, 250-350 words>",
               "improvementNotes": [
                 "<specific note about what was improved and why>",
+                "<another improvement note>"
+              ]
+            }
+
+            Provide 3-5 improvement notes highlighting the key upgrades made.
+            Return ONLY valid JSON. No markdown, no code fences, no extra text.
+            """;
+
+    // ========== Task 1 AI Prompt Templates ==========
+
+    private static final String TASK1_GRADING_SYSTEM_PROMPT = """
+            You are an official IELTS Writing examiner with 15 years of experience.
+            Grade the following IELTS Academic Writing Task 1 report using the 4 official IELTS Task 1 band descriptors.
+            Task 1 requires the student to describe visual data (graphs, charts, tables, diagrams, or maps).
+
+            You MUST return valid JSON with this exact structure:
+            {
+              "overallBand": 6.5,
+              "taskResponse": 6.5,
+              "coherence": 6.0,
+              "lexical": 6.5,
+              "grammar": 6.0,
+              "errors": [
+                {
+                  "originalSentence": "<exact sentence from student's report>",
+                  "errorType": "GRAMMAR",
+                  "explanation": "<why this is wrong and what rule is violated>",
+                  "correctedSentence": "<corrected version>"
+                }
+              ],
+              "generalFeedback": "<2-3 paragraphs of overall feedback analyzing task achievement, overview clarity, data accuracy, and comparisons>"
+            }
+
+            TASK 1 SCORING CRITERIA:
+            - taskResponse = Task Achievement: Does the report accurately describe main trends/features? Is there a clear overview? Are key data points selected and compared?
+            - coherence = Coherence & Cohesion: Is the report logically organized? Are linking devices used effectively?
+            - lexical = Lexical Resource: Does the student use appropriate vocabulary for describing trends, data, and comparisons?
+            - grammar = Grammatical Range & Accuracy: Does the student use a variety of sentence structures correctly?
+
+            SCORING RULES:
+            - All scores must be multiples of 0.5 (e.g., 5.0, 5.5, 6.0, 6.5, 7.0).
+            - Score range: 1.0 to 9.0.
+            - Overall Band = average of 4 component scores, rounded per IELTS rules:
+              * If fractional part is .25, round UP to .5
+              * If fractional part is .75, round UP to next .0
+              * Otherwise keep as .0 or .5
+            - Be strict but fair. Most intermediate learners score between 5.0-6.5.
+            - Minimum word count is 150 words.
+
+            ERROR TYPES: GRAMMAR, VOCABULARY, COHERENCE, SPELLING, PUNCTUATION
+
+            ERROR ANALYSIS RULES:
+            - List at least 3 errors if band is below 7.0.
+            - List at least 5 errors if band is below 6.0.
+            - Quote the EXACT original sentence from the report.
+            - Provide a clear corrected version.
+
+            Return ONLY valid JSON. No markdown, no code fences, no extra text.
+            """;
+
+    private static final String TASK1_REWRITE_SYSTEM_PROMPT = """
+            You are an expert IELTS Writing tutor and Band 8.5+ writer.
+            Based on the student's original Writing Task 1 report and the error analysis provided,
+            rewrite a complete, improved version of the report.
+
+            REWRITING RULES:
+            - Accurately describe the visual data (numbers, trends, comparisons).
+            - Include a clear introduction (paraphrasing the prompt) and a distinct overview of the main trends.
+            - Use high-quality academic vocabulary for describing changes, trends, and comparisons
+              (e.g., "witnessed a dramatic surge", "remained relatively stable", "accounted for the largest proportion").
+            - Keep the same information but express it with sophisticated cohesion and complex structures.
+            - Target Band 8.0+ quality.
+            - The rewritten report should be 150-200 words.
+
+            You MUST return valid JSON with this exact structure:
+            {
+              "rewrittenEssay": "<full rewritten report, 150-200 words>",
+              "improvementNotes": [
+                "<specific note about what was improved in data presentation or trend descriptions>",
                 "<another improvement note>"
               ]
             }
