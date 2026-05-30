@@ -2,6 +2,7 @@ package com.smartprep.model.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import com.smartprep.model.enums.Role;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -37,6 +38,11 @@ public class User {
 
     @Column(precision = 2, scale = 1)
     private BigDecimal targetListeningScore;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private Role role = Role.STUDENT;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

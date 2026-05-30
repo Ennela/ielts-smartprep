@@ -40,7 +40,7 @@ public class UserService {
                 .build();
 
         user = userRepository.save(user);
-        String token = jwtTokenProvider.generateToken(user.getUserId(), user.getUsername());
+        String token = jwtTokenProvider.generateToken(user.getUserId(), user.getUsername(), user.getRole().name());
 
         return buildAuthResponse(user, token);
     }
@@ -53,7 +53,7 @@ public class UserService {
             throw new IllegalArgumentException("Invalid username or password");
         }
 
-        String token = jwtTokenProvider.generateToken(user.getUserId(), user.getUsername());
+        String token = jwtTokenProvider.generateToken(user.getUserId(), user.getUsername(), user.getRole().name());
         return buildAuthResponse(user, token);
     }
 
@@ -71,6 +71,7 @@ public class UserService {
                 .email(user.getEmail())
                 .token(token)
                 .expiresIn(token != null ? 86400000L : null)
+                .role(user.getRole() != null ? user.getRole().name() : "STUDENT")
                 .targetReadingScore(user.getTargetReadingScore())
                 .targetWritingScore(user.getTargetWritingScore())
                 .targetListeningScore(user.getTargetListeningScore())
