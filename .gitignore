@@ -28,3 +28,6 @@ hs_err_pid*
 # OS
 .DS_Store
 Thumbs.db
+
+# Agent folders
+.agents/
