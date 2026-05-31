@@ -14,6 +14,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import com.smartprep.dto.request.AdminReadingQuizRequest;
+import com.smartprep.dto.response.AdminReadingQuizResponse;
+
 @RestController
 @RequestMapping("/api/v1/admin")
 @RequiredArgsConstructor
@@ -75,5 +78,38 @@ public class AdminController {
     public ResponseEntity<ApiResponse<Void>> deleteWritingPrompt(@PathVariable Long promptId) {
         adminService.deleteWritingPrompt(promptId);
         return ResponseEntity.ok(ApiResponse.ok(null, "Prompt deleted"));
+    }
+
+    // ===== Reading Quizzes =====
+
+    @GetMapping("/reading-quizzes")
+    public ResponseEntity<ApiResponse<Page<AdminReadingQuizResponse>>> listReadingQuizzes(
+            @RequestParam(required = false) String topic,
+            @RequestParam(required = false) String difficulty,
+            @RequestParam(required = false) String source,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.listReadingQuizzes(topic, difficulty, source, page, size)));
+    }
+
+    @PostMapping("/reading-quizzes")
+    public ResponseEntity<ApiResponse<AdminReadingQuizResponse>> createReadingQuiz(
+            @Valid @RequestBody AdminReadingQuizRequest request) {
+        AdminReadingQuizResponse created = adminService.createReadingQuiz(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(created, "Reading quiz template created"));
+    }
+
+    @PutMapping("/reading-quizzes/{quizId}")
+    public ResponseEntity<ApiResponse<AdminReadingQuizResponse>> updateReadingQuiz(
+            @PathVariable Long quizId,
+            @Valid @RequestBody AdminReadingQuizRequest request) {
+        AdminReadingQuizResponse updated = adminService.updateReadingQuiz(quizId, request);
+        return ResponseEntity.ok(ApiResponse.ok(updated, "Reading quiz template updated"));
+    }
+
+    @DeleteMapping("/reading-quizzes/{quizId}")
+    public ResponseEntity<ApiResponse<Void>> deleteReadingQuiz(@PathVariable Long quizId) {
+        adminService.deleteReadingQuiz(quizId);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Reading quiz template deleted"));
     }
 }

@@ -1,14 +1,22 @@
 package com.smartprep.service;
 
+import com.smartprep.dto.request.AdminReadingQuizRequest;
 import com.smartprep.dto.request.AdminWritingPromptRequest;
 import com.smartprep.dto.response.AdminDashboardResponse;
 import com.smartprep.dto.response.AdminUserDetailResponse;
 import com.smartprep.dto.response.AdminUserResponse;
+import com.smartprep.dto.response.AdminReadingQuizResponse;
 import com.smartprep.exception.ResourceNotFoundException;
+import com.smartprep.model.entity.ReadingQuestion;
+import com.smartprep.model.entity.ReadingQuiz;
 import com.smartprep.model.entity.ScoreHistory;
 import com.smartprep.model.entity.User;
 import com.smartprep.model.entity.WritingPrompt;
+import com.smartprep.model.enums.Difficulty;
+import com.smartprep.model.enums.QuestionType;
+import com.smartprep.model.enums.Topic;
 import com.smartprep.model.enums.EssayType;
+import com.smartprep.repository.ReadingQuizRepository;
 import com.smartprep.repository.ScoreHistoryRepository;
 import com.smartprep.repository.UserRepository;
 import com.smartprep.repository.WritingPromptRepository;
@@ -17,6 +25,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -32,6 +41,7 @@ public class AdminService {
     private final UserRepository userRepository;
     private final ScoreHistoryRepository scoreHistoryRepository;
     private final WritingPromptRepository writingPromptRepository;
+    private final ReadingQuizRepository readingQuizRepository;
 
     /**
      * List users with pagination and optional search.
@@ -172,6 +182,139 @@ public class AdminService {
                 .totalTests(totalTests)
                 .avgScore(avgScore)
                 .createdAt(user.getCreatedAt())
+                .build();
+    }
+
+    // ===== Reading Quizzes CRUD =====
+
+    public Page<AdminReadingQuizResponse> listReadingQuizzes(String topicStr, String difficultyStr, String source, int page, int size) {
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Topic topic = (topicStr != null && !topicStr.isBlank()) ? Topic.valueOf(topicStr.toUpperCase()) : null;
+        Difficulty difficulty = (difficultyStr != null && !difficultyStr.isBlank()) ? Difficulty.valueOf(difficultyStr.toUpperCase()) : null;
+        String cleanSource = (source != null && !source.isBlank()) ? source.toUpperCase() : null;
+        return readingQuizRepository.findQuizzesForAdmin(topic, difficulty, cleanSource, pageRequest)
+                .map(this::toAdminReadingQuizResponse);
+    }
+
+    @Transactional
+    public AdminReadingQuizResponse createReadingQuiz(AdminReadingQuizRequest request) {
+        Topic topic = Topic.valueOf(request.getTopic().toUpperCase());
+        Difficulty difficulty = Difficulty.valueOf(request.getDifficulty().toUpperCase());
+
+        ReadingQuiz quiz = ReadingQuiz.builder()
+                .topic(topic)
+                .difficulty(difficulty)
+                .passageText(request.getPassageText())
+                .timeLimitSeconds(request.getTimeLimitSeconds())
+                .totalQuestions(request.getQuestions().size())
+                .isTemplate(true)
+                .build();
+
+        List<ReadingQuestion> questions = request.getQuestions().stream()
+                .map(q -> ReadingQuestion.builder()
+                        .quiz(quiz)
+                        .questionType(QuestionType.valueOf(q.getQuestionType().toUpperCase()))
+                        .questionText(q.getQuestionText())
+                        .optionA(q.getOptionA())
+                        .optionB(q.getOptionB())
+                        .optionC(q.getOptionC())
+                        .optionD(q.getOptionD())
+                        .correctAnswer(q.getCorrectAnswer().trim())
+                        .explanation(q.getExplanation())
+                        .orderIndex(q.getOrderIndex())
+                        .optionsJson(q.getOptionsJson())
+                        .wordLimit(q.getWordLimit())
+                        .groupLabel(q.getGroupLabel())
+                        .groupId(q.getGroupId())
+                        .groupContext(q.getGroupContext())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
+
+        quiz.setQuestions(questions);
+        ReadingQuiz saved = readingQuizRepository.save(quiz);
+        return toAdminReadingQuizResponse(saved);
+    }
+
+    @Transactional
+    public AdminReadingQuizResponse updateReadingQuiz(Long quizId, AdminReadingQuizRequest request) {
+        ReadingQuiz quiz = readingQuizRepository.findById(quizId)
+                .orElseThrow(() -> new ResourceNotFoundException("Reading quiz not found: " + quizId));
+
+        quiz.setTopic(Topic.valueOf(request.getTopic().toUpperCase()));
+        quiz.setDifficulty(Difficulty.valueOf(request.getDifficulty().toUpperCase()));
+        quiz.setPassageText(request.getPassageText());
+        quiz.setTimeLimitSeconds(request.getTimeLimitSeconds());
+        quiz.setTotalQuestions(request.getQuestions().size());
+
+        // Clear and reload questions (supported by orphanRemoval=true)
+        quiz.getQuestions().clear();
+
+        List<ReadingQuestion> questions = request.getQuestions().stream()
+                .map(q -> ReadingQuestion.builder()
+                        .quiz(quiz)
+                        .questionType(QuestionType.valueOf(q.getQuestionType().toUpperCase()))
+                        .questionText(q.getQuestionText())
+                        .optionA(q.getOptionA())
+                        .optionB(q.getOptionB())
+                        .optionC(q.getOptionC())
+                        .optionD(q.getOptionD())
+                        .correctAnswer(q.getCorrectAnswer().trim())
+                        .explanation(q.getExplanation())
+                        .orderIndex(q.getOrderIndex())
+                        .optionsJson(q.getOptionsJson())
+                        .wordLimit(q.getWordLimit())
+                        .groupLabel(q.getGroupLabel())
+                        .groupId(q.getGroupId())
+                        .groupContext(q.getGroupContext())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
+
+        quiz.getQuestions().addAll(questions);
+
+        ReadingQuiz saved = readingQuizRepository.save(quiz);
+        return toAdminReadingQuizResponse(saved);
+    }
+
+    @Transactional
+    public void deleteReadingQuiz(Long quizId) {
+        if (!readingQuizRepository.existsById(quizId)) {
+            throw new ResourceNotFoundException("Reading quiz not found: " + quizId);
+        }
+        readingQuizRepository.deleteById(quizId);
+    }
+
+    public AdminReadingQuizResponse toAdminReadingQuizResponse(ReadingQuiz quiz) {
+        List<AdminReadingQuizResponse.QuestionDto> questionDtos = quiz.getQuestions().stream()
+                .map(q -> AdminReadingQuizResponse.QuestionDto.builder()
+                        .questionId(q.getQuestionId())
+                        .questionType(q.getQuestionType().name())
+                        .questionText(q.getQuestionText())
+                        .optionA(q.getOptionA())
+                        .optionB(q.getOptionB())
+                        .optionC(q.getOptionC())
+                        .optionD(q.getOptionD())
+                        .correctAnswer(q.getCorrectAnswer())
+                        .explanation(q.getExplanation())
+                        .orderIndex(q.getOrderIndex())
+                        .optionsJson(q.getOptionsJson())
+                        .wordLimit(q.getWordLimit())
+                        .groupLabel(q.getGroupLabel())
+                        .groupId(q.getGroupId())
+                        .groupContext(q.getGroupContext())
+                        .build())
+                .collect(java.util.stream.Collectors.toList());
+
+        return AdminReadingQuizResponse.builder()
+                .quizId(quiz.getQuizId())
+                .topic(quiz.getTopic().name())
+                .difficulty(quiz.getDifficulty().name())
+                .passageText(quiz.getPassageText())
+                .timeLimitSeconds(quiz.getTimeLimitSeconds())
+                .totalQuestions(quiz.getTotalQuestions())
+                .createdAt(quiz.getCreatedAt())
+                .questions(questionDtos)
+                .isTemplate(quiz.getIsTemplate())
+                .createdBy(Boolean.TRUE.equals(quiz.getIsTemplate()) ? "Admin" : (quiz.getUser() != null ? quiz.getUser().getUsername() : "AI"))
                 .build();
     }
 }
