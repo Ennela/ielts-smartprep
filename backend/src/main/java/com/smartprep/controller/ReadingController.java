@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.data.domain.Page;
 import java.util.List;
 
 @RestController
@@ -32,6 +33,33 @@ public class ReadingController {
         ReadingQuizResponse quiz = readingService.generateQuiz(user.getUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok(quiz, "Reading quiz generated successfully"));
+    }
+
+    /**
+     * Get available admin-provided reading quiz templates.
+     * GET /api/v1/reading/templates
+     */
+    @GetMapping("/templates")
+    public ResponseEntity<ApiResponse<Page<ReadingQuizResponse>>> getTemplates(
+            @RequestParam(required = false) String topic,
+            @RequestParam(required = false) String difficulty,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Page<ReadingQuizResponse> templates = readingService.getTemplateList(topic, difficulty, page, size);
+        return ResponseEntity.ok(ApiResponse.ok(templates));
+    }
+
+    /**
+     * Start a quiz attempt from an admin template.
+     * POST /api/v1/reading/templates/{templateId}/start
+     */
+    @PostMapping("/templates/{templateId}/start")
+    public ResponseEntity<ApiResponse<ReadingQuizResponse>> startTemplate(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long templateId) {
+        ReadingQuizResponse quiz = readingService.startTemplateQuiz(user.getUserId(), templateId);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.ok(quiz, "Reading quiz template started successfully"));
     }
 
     /**
@@ -57,6 +85,18 @@ public class ReadingController {
             @Valid @RequestBody ReadingSubmitRequest request) {
         ReadingResultResponse result = readingService.submitQuiz(quizId, user.getUserId(), request);
         return ResponseEntity.ok(ApiResponse.ok(result, "Quiz submitted successfully"));
+    }
+
+    /**
+     * Get quiz result (for submitted quizzes only).
+     * GET /api/v1/reading/{quizId}/result
+     */
+    @GetMapping("/{quizId}/result")
+    public ResponseEntity<ApiResponse<ReadingResultResponse>> getResult(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long quizId) {
+        ReadingResultResponse result = readingService.getResult(quizId, user.getUserId());
+        return ResponseEntity.ok(ApiResponse.ok(result));
     }
 
     /**
