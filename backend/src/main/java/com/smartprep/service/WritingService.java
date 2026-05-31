@@ -251,6 +251,8 @@ public class WritingService {
 
     private JsonNode parseJson(String response) {
         try {
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, true);
+            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_BACKSLASH_ESCAPING_ANY_CHARACTER, true);
             return objectMapper.readTree(response);
         } catch (Exception e) {
             log.error("Failed to parse AI JSON response: {}", response);
@@ -340,13 +342,24 @@ public class WritingService {
             You are an official IELTS Writing examiner with 15 years of experience.
             Grade the following IELTS Writing Task 2 essay using the 4 official IELTS band descriptors.
 
-            You MUST return valid JSON with this exact structure:
+            === GRADING PROCESS (follow in this order) ===
+            STEP 1: Read the essay carefully and thoroughly.
+            STEP 2: For each of the 4 criteria below, determine which band (4, 5, 6, 7, 8, or 9) best matches the essay, based ONLY on the rubric descriptions. Do NOT guess or default to any specific number.
+            STEP 3: Convert your band determination to a numeric score (must be a multiple of 0.5, range 1.0–9.0).
+            STEP 4: Calculate Overall Band = average of 4 component scores, using IELTS rounding:
+              * fractional part < 0.25 → round down to .0
+              * fractional part 0.25–0.74 → round to .5
+              * fractional part >= 0.75 → round up to next .0
+            STEP 5: Output the final JSON below.
+
+            === OUTPUT FORMAT ===
+            You MUST return valid JSON with this exact structure (replace YOUR_SCORE with actual numeric values you determined in STEP 3):
             {
-              "overallBand": 6.5,
-              "taskResponse": 6.5,
-              "coherence": 6.0,
-              "lexical": 6.5,
-              "grammar": 6.0,
+              "overallBand": YOUR_SCORE,
+              "taskResponse": YOUR_SCORE,
+              "coherence": YOUR_SCORE,
+              "lexical": YOUR_SCORE,
+              "grammar": YOUR_SCORE,
               "errors": [
                 {
                   "originalSentence": "<exact sentence from student's essay>",
@@ -355,25 +368,49 @@ public class WritingService {
                   "correctedSentence": "<corrected version>"
                 }
               ],
-              "generalFeedback": "<2-3 paragraphs of overall feedback with specific improvement suggestions>"
+              "generalFeedback": "<2-3 paragraphs of overall feedback with specific improvement suggestions referencing the rubric>"
             }
 
-            SCORING RULES:
-            - All scores must be multiples of 0.5 (e.g., 5.0, 5.5, 6.0, 6.5, 7.0).
-            - Score range: 1.0 to 9.0.
-            - Overall Band = average of 4 component scores, rounded per IELTS rules:
-              * If fractional part is .25, round UP to .5
-              * If fractional part is .75, round UP to next .0
-              * Otherwise keep as .0 or .5
-            - Be strict but fair. Most intermediate learners score between 5.0-6.5.
+            === IELTS WRITING TASK 2 BAND DESCRIPTORS RUBRIC ===
 
+            ### Task Response (TR) — assess this criterion independently:
+            - Band 9: Fully addresses ALL parts of the task. Presents a fully developed position with relevant, fully extended and well supported ideas.
+            - Band 8: Sufficiently addresses all parts. Presents a well-developed response with relevant, extended and supported ideas.
+            - Band 7: Addresses all parts. Clear position throughout. Main ideas are presented, extended and supported, but may over-generalise or lack focus.
+            - Band 6: Addresses all parts, though some may be more fully covered. Position is relevant but conclusions may become unclear/repetitive. Some main ideas inadequately developed.
+            - Band 5: Addresses the task only PARTIALLY. Position expressed but development unclear, may have no conclusion. Main ideas limited and insufficiently developed; irrelevant detail possible.
+            - Band 4 or below: Responds minimally or tangentially. Position unclear. Ideas difficult to identify, repetitive or not supported.
+
+            ### Coherence and Cohesion (CC) — assess this criterion independently:
+            - Band 9: Cohesion attracts no attention. Paragraphing skilfully managed.
+            - Band 8: Information sequenced logically. All cohesion aspects managed well. Paragraphing sufficient and appropriate.
+            - Band 7: Information logically organised with clear progression. Cohesive devices used appropriately (minor under-/over-use possible). Clear central topic per paragraph.
+            - Band 6: Coherent overall progression. Cohesive devices effective but cohesion within/between sentences may be faulty or mechanical. Referencing not always clear. Paragraphing not always logical.
+            - Band 5: Some organisation but lacks overall progression. Cohesive devices inadequate, inaccurate or overused. May be repetitive due to lack of referencing. Paragraphing inadequate or absent.
+            - Band 4 or below: Not arranged coherently, no clear progression, confusing or no paragraphing.
+
+            ### Lexical Resource (LR) — assess this criterion independently:
+            - Band 9: Wide range of vocabulary with very natural, sophisticated control. Rare minor errors as 'slips' only.
+            - Band 8: Wide range used fluently and flexibly for precise meanings. Uncommon items used skilfully (occasional inaccuracies in collocation). Rare spelling/word-formation errors.
+            - Band 7: Sufficient range for some flexibility and precision. Less common items used with some style/collocation awareness. Occasional errors in word choice, spelling or word formation.
+            - Band 6: Adequate range for the task. Attempts less common vocabulary with some inaccuracy. Some spelling/word-formation errors that do NOT impede communication.
+            - Band 5: Limited range, minimally adequate. Noticeable spelling/word-formation errors that may cause difficulty.
+            - Band 4 or below: Only basic vocabulary, used repetitively or inappropriately. Limited control of word formation/spelling; errors cause strain or distort meaning.
+
+            ### Grammatical Range and Accuracy (GRA) — assess this criterion independently:
+            - Band 9: Wide range of structures with full flexibility and accuracy. Rare minor errors as 'slips' only.
+            - Band 8: Wide range of structures. Majority of sentences error-free. Very occasional errors/inappropriacies.
+            - Band 7: Variety of complex structures. Frequent error-free sentences. Good grammar/punctuation control with a few errors.
+            - Band 6: Mix of simple and complex forms. Some grammar/punctuation errors that RARELY reduce communication.
+            - Band 5: Limited range. Complex sentences tend to be less accurate than simple ones. Frequent grammatical errors; punctuation may be faulty.
+            - Band 4 or below: Very limited range with rare subordinate clauses. Errors predominate; punctuation often faulty.
+
+            === ERROR ANALYSIS ===
             ERROR TYPES: GRAMMAR, VOCABULARY, COHERENCE, SPELLING, PUNCTUATION
-
-            ERROR ANALYSIS RULES:
-            - List at least 3 errors if band is below 7.0.
-            - List at least 5 errors if band is below 6.0.
+            - List at least 3 specific errors if overall band is below 7.0.
+            - List at least 5 specific errors if overall band is below 6.0.
             - Quote the EXACT original sentence from the essay.
-            - Provide a clear corrected version.
+            - Provide a clear corrected version with explanation.
 
             Return ONLY valid JSON. No markdown, no code fences, no extra text.
             """;
@@ -411,13 +448,24 @@ public class WritingService {
             Grade the following IELTS Academic Writing Task 1 report using the 4 official IELTS Task 1 band descriptors.
             Task 1 requires the student to describe visual data (graphs, charts, tables, diagrams, or maps).
 
-            You MUST return valid JSON with this exact structure:
+            === GRADING PROCESS (follow in this order) ===
+            STEP 1: Read the report carefully and thoroughly.
+            STEP 2: For each of the 4 criteria below, determine which band (4, 5, 6, 7, 8, or 9) best matches the report, based ONLY on the rubric descriptions. Do NOT guess or default to any specific number.
+            STEP 3: Convert your band determination to a numeric score (must be a multiple of 0.5, range 1.0–9.0).
+            STEP 4: Calculate Overall Band = average of 4 component scores, using IELTS rounding:
+              * fractional part < 0.25 → round down to .0
+              * fractional part 0.25–0.74 → round to .5
+              * fractional part >= 0.75 → round up to next .0
+            STEP 5: Output the final JSON below.
+
+            === OUTPUT FORMAT ===
+            You MUST return valid JSON with this exact structure (replace YOUR_SCORE with actual numeric values you determined in STEP 3):
             {
-              "overallBand": 6.5,
-              "taskResponse": 6.5,
-              "coherence": 6.0,
-              "lexical": 6.5,
-              "grammar": 6.0,
+              "overallBand": YOUR_SCORE,
+              "taskResponse": YOUR_SCORE,
+              "coherence": YOUR_SCORE,
+              "lexical": YOUR_SCORE,
+              "grammar": YOUR_SCORE,
               "errors": [
                 {
                   "originalSentence": "<exact sentence from student's report>",
@@ -426,32 +474,49 @@ public class WritingService {
                   "correctedSentence": "<corrected version>"
                 }
               ],
-              "generalFeedback": "<2-3 paragraphs of overall feedback analyzing task achievement, overview clarity, data accuracy, and comparisons>"
+              "generalFeedback": "<2-3 paragraphs of overall feedback analyzing task achievement, overview clarity, data accuracy, and comparisons, referencing the rubric>"
             }
 
-            TASK 1 SCORING CRITERIA:
-            - taskResponse = Task Achievement: Does the report accurately describe main trends/features? Is there a clear overview? Are key data points selected and compared?
-            - coherence = Coherence & Cohesion: Is the report logically organized? Are linking devices used effectively?
-            - lexical = Lexical Resource: Does the student use appropriate vocabulary for describing trends, data, and comparisons?
-            - grammar = Grammatical Range & Accuracy: Does the student use a variety of sentence structures correctly?
+            === IELTS ACADEMIC WRITING TASK 1 BAND DESCRIPTORS RUBRIC ===
 
-            SCORING RULES:
-            - All scores must be multiples of 0.5 (e.g., 5.0, 5.5, 6.0, 6.5, 7.0).
-            - Score range: 1.0 to 9.0.
-            - Overall Band = average of 4 component scores, rounded per IELTS rules:
-              * If fractional part is .25, round UP to .5
-              * If fractional part is .75, round UP to next .0
-              * Otherwise keep as .0 or .5
-            - Be strict but fair. Most intermediate learners score between 5.0-6.5.
-            - Minimum word count is 150 words.
+            ### Task Achievement (TA) — assess this criterion independently:
+            - Band 9: Fully satisfies ALL requirements of the task. Clearly presents a fully developed response.
+            - Band 8: Covers all requirements sufficiently. Presents, highlights and illustrates key features clearly and appropriately.
+            - Band 7: Covers the requirements. Presents a CLEAR OVERVIEW of main trends, differences or stages. Highlights key features but could be more fully extended.
+            - Band 6: Addresses the requirements. Overview present with appropriate selection. Adequately highlights key features but some details may be irrelevant, inappropriate or inaccurate.
+            - Band 5: Generally addresses the task. Recounts detail MECHANICALLY with NO CLEAR OVERVIEW; may lack data support. Inadequately covers key features; tends to focus on details rather than trends.
+            - Band 4 or below: Attempts the task but fails to cover all key features; confuses features with details; parts unclear, irrelevant, repetitive or inaccurate.
 
+            ### Coherence and Cohesion (CC) — assess this criterion independently:
+            - Band 9: Cohesion attracts no attention. Paragraphing skilfully managed.
+            - Band 8: Information sequenced logically. All cohesion aspects managed well. Paragraphing sufficient and appropriate.
+            - Band 7: Information logically organised with clear progression. Cohesive devices used appropriately (minor under-/over-use possible).
+            - Band 6: Coherent overall progression. Cohesive devices effective but cohesion within/between sentences may be faulty or mechanical. Referencing not always clear.
+            - Band 5: Some organisation but lacks overall progression. Cohesive devices inadequate, inaccurate or overused. May be repetitive due to lack of referencing.
+            - Band 4 or below: Not arranged coherently, no clear progression, basic cohesive devices inaccurate or repetitive.
+
+            ### Lexical Resource (LR) — assess this criterion independently:
+            - Band 9: Wide range of vocabulary with very natural, sophisticated control. Rare minor errors as 'slips' only.
+            - Band 8: Wide range used fluently and flexibly for precise meanings. Uncommon items used skilfully (occasional inaccuracies in collocation). Rare spelling/word-formation errors.
+            - Band 7: Sufficient range for flexibility and precision. Less common items used with some style/collocation awareness. Occasional errors in word choice, spelling or word formation.
+            - Band 6: Adequate range. Attempts less common vocabulary with some inaccuracy. Some spelling/word-formation errors that do NOT impede communication.
+            - Band 5: Limited range, minimally adequate. Noticeable spelling/word-formation errors that may cause difficulty.
+            - Band 4 or below: Only basic vocabulary, used repetitively or inappropriately. Limited control of word formation/spelling.
+
+            ### Grammatical Range and Accuracy (GRA) — assess this criterion independently:
+            - Band 9: Wide range of structures with full flexibility and accuracy. Rare minor errors as 'slips' only.
+            - Band 8: Wide range of structures. Majority of sentences error-free. Very occasional errors/inappropriacies.
+            - Band 7: Variety of complex structures. Frequent error-free sentences. Good grammar/punctuation control with a few errors.
+            - Band 6: Mix of simple and complex forms. Some grammar/punctuation errors that RARELY reduce communication.
+            - Band 5: Limited range. Complex sentences tend to be less accurate than simple ones. Frequent grammatical errors; punctuation may be faulty.
+            - Band 4 or below: Very limited range with rare subordinate clauses. Errors predominate; punctuation often faulty.
+
+            === ERROR ANALYSIS ===
             ERROR TYPES: GRAMMAR, VOCABULARY, COHERENCE, SPELLING, PUNCTUATION
-
-            ERROR ANALYSIS RULES:
-            - List at least 3 errors if band is below 7.0.
-            - List at least 5 errors if band is below 6.0.
+            - List at least 3 specific errors if overall band is below 7.0.
+            - List at least 5 specific errors if overall band is below 6.0.
             - Quote the EXACT original sentence from the report.
-            - Provide a clear corrected version.
+            - Provide a clear corrected version with explanation.
 
             Return ONLY valid JSON. No markdown, no code fences, no extra text.
             """;
