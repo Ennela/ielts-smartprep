@@ -27,6 +27,23 @@ const adminApi = {
 
     deleteWritingPrompt: (promptId) =>
         axiosClient.delete(`/admin/writing-prompts/${promptId}`),
+
+    listReadingQuizzes: (topic, difficulty, source, page = 0, size = 10) => {
+        const params = { page, size };
+        if (topic) params.topic = topic;
+        if (difficulty) params.difficulty = difficulty;
+        if (source) params.source = source;
+        return axiosClient.get('/admin/reading-quizzes', { params });
+    },
+
+    createReadingQuiz: (data) =>
+        axiosClient.post('/admin/reading-quizzes', data),
+
+    updateReadingQuiz: (quizId, data) =>
+        axiosClient.put(`/admin/reading-quizzes/${quizId}`, data),
+
+    deleteReadingQuiz: (quizId) =>
+        axiosClient.delete(`/admin/reading-quizzes/${quizId}`),
 };
 
 export default adminApi;

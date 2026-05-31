@@ -23,6 +23,7 @@ import ListeningHistoryPage from './pages/ListeningHistoryPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import AdminWritingPromptsPage from './pages/AdminWritingPromptsPage';
+import AdminReadingQuizzesPage from './pages/AdminReadingQuizzesPage';
 
 import './index.css';
 
@@ -62,6 +63,7 @@ export default function App() {
             <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
             <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
             <Route path="/admin/writing-prompts" element={<AdminRoute><AdminWritingPromptsPage /></AdminRoute>} />
+            <Route path="/admin/reading-quizzes" element={<AdminRoute><AdminReadingQuizzesPage /></AdminRoute>} />
 
 
           </Route>
