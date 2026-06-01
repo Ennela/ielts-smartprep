@@ -4,16 +4,18 @@ import { useAuth } from '../../context/AuthContext';
 
 const MENU_ITEMS = [
   { path: '/dashboard', label: 'Dashboard',  icon: 'dashboard',  end: true },
+  { path: '/mock-tests', label: 'Mock Test',  icon: 'quiz',       end: false },
   { path: '/reading',   label: 'Reading',    icon: 'menu_book',  end: false },
   { path: '/writing',   label: 'Writing',    icon: 'edit_note',  end: false },
   { path: '/listening', label: 'Listening',  icon: 'headphones', end: false },
 ];
 
 const ADMIN_MENU_ITEMS = [
-  { path: '/admin',                  label: 'Tổng quan', icon: 'bar_chart',    end: true },
-  { path: '/admin/users',            label: 'Học viên',  icon: 'group',        end: false },
-  { path: '/admin/writing-prompts',  label: 'Đề viết',   icon: 'description',  end: false },
-  { path: '/admin/reading-quizzes',  label: 'Đề đọc',   icon: 'menu_book',    end: false },
+  { path: '/admin',                  label: 'Overview', icon: 'bar_chart',    end: true },
+  { path: '/admin/users',            label: 'Students',  icon: 'group',        end: false },
+  { path: '/admin/mock-tests',       label: 'Mock Tests', icon: 'quiz',         end: false },
+  { path: '/admin/writing-prompts',  label: 'Writing Prompts',   icon: 'description',  end: false },
+  { path: '/admin/reading-quizzes',  label: 'Reading Quizzes',   icon: 'menu_book',    end: false },
 ];
 
 export default function MainLayout() {
@@ -53,7 +55,7 @@ export default function MainLayout() {
           <div className="sidebar-user-info">
             <span className="sidebar-user-name">{displayName}</span>
             <span className="sidebar-user-role">
-              {isAdmin ? 'Quản trị viên' : `Band Target: ${(() => {
+              {isAdmin ? 'Admin' : `Band Target: ${(() => {
                 if (!user) return '6.5';
                 const r = parseFloat(user.targetReadingScore) || 6.5;
                 const w = parseFloat(user.targetWritingScore) || 6.5;
@@ -78,7 +80,7 @@ export default function MainLayout() {
               end={item.end}
               className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
               onClick={() => setSidebarOpen(false)}
-              id={`nav-${item.label.toLowerCase()}`}
+              id={`nav-${item.label.toLowerCase().replace(/\s/g, '-')}`}
             >
               <span className="sidebar-icon">
                 <span className="material-symbols-outlined">{item.icon}</span>
@@ -90,7 +92,7 @@ export default function MainLayout() {
           {isAdmin && (
             <>
               <div className="sidebar-divider" />
-              <span className="sidebar-section-label">Quản trị</span>
+              <span className="sidebar-section-label">Administration</span>
               {ADMIN_MENU_ITEMS.map((item) => (
                 <NavLink
                   key={item.path}
@@ -112,7 +114,7 @@ export default function MainLayout() {
 
         {/* Footer: CTA + links */}
         <div className="sidebar-footer">
-          <button className="sidebar-cta" onClick={() => navigate('/reading')}>
+          <button className="sidebar-cta" onClick={() => navigate('/mock-tests')}>
             Start Mock Test
           </button>
           <div className="sidebar-footer-links">
@@ -122,7 +124,7 @@ export default function MainLayout() {
             </button>
             <button className="sidebar-footer-link sidebar-logout" onClick={handleLogout} id="sidebar-logout-btn">
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>logout</span>
-              <span>Đăng xuất</span>
+              <span>Logout</span>
             </button>
           </div>
         </div>

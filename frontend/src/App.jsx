@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ReadingProvider } from './context/ReadingContext';
+import { MockTestProvider } from './context/MockTestContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import AdminRoute from './components/common/AdminRoute';
 import MainLayout from './components/common/MainLayout';
@@ -20,8 +21,12 @@ import ListeningPracticePage from './pages/ListeningPracticePage';
 import ListeningExamPage from './pages/ListeningExamPage';
 import ListeningResultPage from './pages/ListeningResultPage';
 import ListeningHistoryPage from './pages/ListeningHistoryPage';
+import MockTestLobbyPage from './pages/MockTestLobbyPage';
+import MockTestSessionPage from './pages/MockTestSessionPage';
+import MockTestResultPage from './pages/MockTestResultPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import AdminUsersPage from './pages/AdminUsersPage';
+import AdminMockTestsPage from './pages/AdminMockTestsPage';
 import AdminWritingPromptsPage from './pages/AdminWritingPromptsPage';
 import AdminReadingQuizzesPage from './pages/AdminReadingQuizzesPage';
 
@@ -40,6 +45,14 @@ export default function App() {
           <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/profile" element={<ProfilePage />} />
+
+            {/* Mock Tests */}
+            <Route path="/mock-tests" element={
+              <MockTestProvider><MockTestLobbyPage /></MockTestProvider>
+            } />
+            <Route path="/mock-tests/result/:submissionId" element={
+              <MockTestProvider><MockTestResultPage /></MockTestProvider>
+            } />
 
             {/* Reading (config, result, history use MainLayout) */}
             <Route path="/reading" element={<ReadingConfigPage />} />
@@ -62,6 +75,7 @@ export default function App() {
             {/* Admin (guard: ADMIN role only) */}
             <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
             <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
+            <Route path="/admin/mock-tests" element={<AdminRoute><AdminMockTestsPage /></AdminRoute>} />
             <Route path="/admin/writing-prompts" element={<AdminRoute><AdminWritingPromptsPage /></AdminRoute>} />
             <Route path="/admin/reading-quizzes" element={<AdminRoute><AdminReadingQuizzesPage /></AdminRoute>} />
 
@@ -76,6 +90,11 @@ export default function App() {
           } />
           <Route path="/listening/exam" element={
             <ProtectedRoute><ListeningExamPage /></ProtectedRoute>
+          } />
+          <Route path="/mock-tests/take/:sessionId" element={
+            <ProtectedRoute>
+              <MockTestProvider><MockTestSessionPage /></MockTestProvider>
+            </ProtectedRoute>
           } />
 
           {/* Default redirect */}
