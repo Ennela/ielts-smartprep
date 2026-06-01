@@ -1,10 +1,9 @@
 package com.smartprep.controller;
 
 import com.smartprep.dto.request.AdminWritingPromptRequest;
-import com.smartprep.dto.response.AdminDashboardResponse;
-import com.smartprep.dto.response.AdminUserDetailResponse;
-import com.smartprep.dto.response.AdminUserResponse;
-import com.smartprep.dto.response.ApiResponse;
+import com.smartprep.dto.request.AdminReadingQuizRequest;
+import com.smartprep.dto.request.AdminMockTestRequest;
+import com.smartprep.dto.response.*;
 import com.smartprep.model.entity.WritingPrompt;
 import com.smartprep.service.AdminService;
 import jakarta.validation.Valid;
@@ -13,9 +12,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import com.smartprep.dto.request.AdminReadingQuizRequest;
-import com.smartprep.dto.response.AdminReadingQuizResponse;
 
 @RestController
 @RequestMapping("/api/v1/admin")
@@ -111,5 +107,35 @@ public class AdminController {
     public ResponseEntity<ApiResponse<Void>> deleteReadingQuiz(@PathVariable Long quizId) {
         adminService.deleteReadingQuiz(quizId);
         return ResponseEntity.ok(ApiResponse.ok(null, "Reading quiz template deleted"));
+    }
+
+    // ===== Mock Tests =====
+
+    @GetMapping("/mock-tests")
+    public ResponseEntity<ApiResponse<Page<MockTestResponse>>> listMockTests(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.listMockTests(page, size)));
+    }
+
+    @PostMapping("/mock-tests")
+    public ResponseEntity<ApiResponse<MockTestResponse>> createMockTest(
+            @Valid @RequestBody AdminMockTestRequest request) {
+        MockTestResponse created = adminService.createMockTest(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(created, "Mock test created successfully"));
+    }
+
+    @PutMapping("/mock-tests/{mockTestId}")
+    public ResponseEntity<ApiResponse<MockTestResponse>> updateMockTest(
+            @PathVariable Long mockTestId,
+            @Valid @RequestBody AdminMockTestRequest request) {
+        MockTestResponse updated = adminService.updateMockTest(mockTestId, request);
+        return ResponseEntity.ok(ApiResponse.ok(updated, "Mock test updated successfully"));
+    }
+
+    @DeleteMapping("/mock-tests/{mockTestId}")
+    public ResponseEntity<ApiResponse<Void>> deleteMockTest(@PathVariable Long mockTestId) {
+        adminService.deleteMockTest(mockTestId);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Mock test deleted successfully"));
     }
 }

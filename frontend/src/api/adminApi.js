@@ -44,6 +44,18 @@ const adminApi = {
 
     deleteReadingQuiz: (quizId) =>
         axiosClient.delete(`/admin/reading-quizzes/${quizId}`),
+
+    listMockTests: (page = 0, size = 10) =>
+        axiosClient.get('/admin/mock-tests', { params: { page, size } }),
+
+    createMockTest: (data) =>
+        axiosClient.post('/admin/mock-tests', data),
+
+    updateMockTest: (id, data) =>
+        axiosClient.put(`/admin/mock-tests/${id}`, data),
+
+    deleteMockTest: (id) =>
+        axiosClient.delete(`/admin/mock-tests/${id}`),
 };
 
 export default adminApi;

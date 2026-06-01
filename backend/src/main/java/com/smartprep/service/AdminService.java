@@ -1,25 +1,16 @@
 package com.smartprep.service;
 
+import com.smartprep.dto.request.AdminMockTestRequest;
 import com.smartprep.dto.request.AdminReadingQuizRequest;
 import com.smartprep.dto.request.AdminWritingPromptRequest;
-import com.smartprep.dto.response.AdminDashboardResponse;
-import com.smartprep.dto.response.AdminUserDetailResponse;
-import com.smartprep.dto.response.AdminUserResponse;
-import com.smartprep.dto.response.AdminReadingQuizResponse;
+import com.smartprep.dto.response.*;
 import com.smartprep.exception.ResourceNotFoundException;
-import com.smartprep.model.entity.ReadingQuestion;
-import com.smartprep.model.entity.ReadingQuiz;
-import com.smartprep.model.entity.ScoreHistory;
-import com.smartprep.model.entity.User;
-import com.smartprep.model.entity.WritingPrompt;
+import com.smartprep.model.entity.*;
 import com.smartprep.model.enums.Difficulty;
 import com.smartprep.model.enums.QuestionType;
 import com.smartprep.model.enums.Topic;
 import com.smartprep.model.enums.EssayType;
-import com.smartprep.repository.ReadingQuizRepository;
-import com.smartprep.repository.ScoreHistoryRepository;
-import com.smartprep.repository.UserRepository;
-import com.smartprep.repository.WritingPromptRepository;
+import com.smartprep.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -33,6 +24,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -42,6 +34,8 @@ public class AdminService {
     private final ScoreHistoryRepository scoreHistoryRepository;
     private final WritingPromptRepository writingPromptRepository;
     private final ReadingQuizRepository readingQuizRepository;
+    private final MockTestRepository mockTestRepository;
+    private final ListeningPartRepository listeningPartRepository;
 
     /**
      * List users with pagination and optional search.
@@ -315,6 +309,97 @@ public class AdminService {
                 .questions(questionDtos)
                 .isTemplate(quiz.getIsTemplate())
                 .createdBy(Boolean.TRUE.equals(quiz.getIsTemplate()) ? "Admin" : (quiz.getUser() != null ? quiz.getUser().getUsername() : "AI"))
+                .build();
+    }
+
+    // ===== Mock Tests CRUD =====
+
+    public Page<MockTestResponse> listMockTests(int page, int size) {
+        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return mockTestRepository.findAll(pageRequest).map(this::mapToMockTestResponse);
+    }
+
+    @Transactional
+    public MockTestResponse createMockTest(AdminMockTestRequest request) {
+        List<ListeningPart> listeningParts = new ArrayList<>();
+        for (Long id : request.getListeningPartIds()) {
+            listeningPartRepository.findById(id).ifPresent(listeningParts::add);
+        }
+
+        List<ReadingQuiz> readingQuizzes = new ArrayList<>();
+        for (Long id : request.getReadingQuizIds()) {
+            readingQuizRepository.findById(id).ifPresent(readingQuizzes::add);
+        }
+
+        List<WritingPrompt> writingPrompts = new ArrayList<>();
+        for (Long id : request.getWritingPromptIds()) {
+            writingPromptRepository.findById(id).ifPresent(writingPrompts::add);
+        }
+
+        MockTest mockTest = MockTest.builder()
+                .title(request.getTitle())
+                .description(request.getDescription())
+                .difficulty(Difficulty.valueOf(request.getDifficulty().toUpperCase()))
+                .listeningParts(listeningParts)
+                .readingQuizzes(readingQuizzes)
+                .writingPrompts(writingPrompts)
+                .build();
+
+        MockTest saved = mockTestRepository.save(mockTest);
+        return mapToMockTestResponse(saved);
+    }
+
+    @Transactional
+    public MockTestResponse updateMockTest(Long mockTestId, AdminMockTestRequest request) {
+        MockTest mockTest = mockTestRepository.findById(mockTestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Mock test not found: " + mockTestId));
+
+        List<ListeningPart> listeningParts = new ArrayList<>();
+        for (Long id : request.getListeningPartIds()) {
+            listeningPartRepository.findById(id).ifPresent(listeningParts::add);
+        }
+
+        List<ReadingQuiz> readingQuizzes = new ArrayList<>();
+        for (Long id : request.getReadingQuizIds()) {
+            readingQuizRepository.findById(id).ifPresent(readingQuizzes::add);
+        }
+
+        List<WritingPrompt> writingPrompts = new ArrayList<>();
+        for (Long id : request.getWritingPromptIds()) {
+            writingPromptRepository.findById(id).ifPresent(writingPrompts::add);
+        }
+
+        mockTest.setTitle(request.getTitle());
+        mockTest.setDescription(request.getDescription());
+        mockTest.setDifficulty(Difficulty.valueOf(request.getDifficulty().toUpperCase()));
+        mockTest.setListeningParts(listeningParts);
+        mockTest.setReadingQuizzes(readingQuizzes);
+        mockTest.setWritingPrompts(writingPrompts);
+
+        MockTest saved = mockTestRepository.save(mockTest);
+        return mapToMockTestResponse(saved);
+    }
+
+    @Transactional
+    public void deleteMockTest(Long mockTestId) {
+        if (!mockTestRepository.existsById(mockTestId)) {
+            throw new ResourceNotFoundException("Mock test not found: " + mockTestId);
+        }
+        mockTestRepository.deleteById(mockTestId);
+    }
+
+    private MockTestResponse mapToMockTestResponse(MockTest test) {
+        return MockTestResponse.builder()
+                .mockTestId(test.getMockTestId())
+                .title(test.getTitle())
+                .description(test.getDescription())
+                .difficulty(test.getDifficulty())
+                .listeningPartsCount(test.getListeningParts().size())
+                .readingQuizzesCount(test.getReadingQuizzes().size())
+                .writingPromptsCount(test.getWritingPrompts().size())
+                .listeningPartIds(test.getListeningParts().stream().map(ListeningPart::getPartId).collect(Collectors.toList()))
+                .readingQuizIds(test.getReadingQuizzes().stream().map(ReadingQuiz::getQuizId).collect(Collectors.toList()))
+                .writingPromptIds(test.getWritingPrompts().stream().map(WritingPrompt::getPromptId).collect(Collectors.toList()))
                 .build();
     }
 }
