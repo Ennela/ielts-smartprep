@@ -3,31 +3,31 @@ import { useNavigate } from 'react-router-dom';
 import readingApi from '../api/readingApi';
 
 const TOPICS = [
-  { value: 'ENVIRONMENT', label: 'Môi trường' },
-  { value: 'TECHNOLOGY', label: 'Công nghệ' },
-  { value: 'HISTORY', label: 'Lịch sử' },
-  { value: 'HEALTH', label: 'Sức khỏe' },
-  { value: 'EDUCATION', label: 'Giáo dục' },
+  { value: 'ENVIRONMENT', label: 'Environment' },
+  { value: 'TECHNOLOGY', label: 'Technology' },
+  { value: 'HISTORY', label: 'History' },
+  { value: 'HEALTH', label: 'Health' },
+  { value: 'EDUCATION', label: 'Education' },
 ];
 
 const DIFFICULTIES = [
-  { value: 'PASSAGE_1', label: 'Passage 1 (Dễ)', time: '10 phút', desc: 'Từ vựng đơn giản, đọc hiểu cơ bản' },
-  { value: 'PASSAGE_2', label: 'Passage 2 (Vừa)', time: '15 phút', desc: 'Từ vựng học thuật, kỹ năng suy luận' },
-  { value: 'PASSAGE_3', label: 'Passage 3 (Khó)', time: '20 phút', desc: 'Từ vựng nâng cao, phân tích phản biện' },
+  { value: 'PASSAGE_1', label: 'Passage 1 (Easy)', time: '10 mins', desc: 'Simple vocabulary, basic reading comprehension' },
+  { value: 'PASSAGE_2', label: 'Passage 2 (Medium)', time: '15 mins', desc: 'Academic vocabulary, inference skills' },
+  { value: 'PASSAGE_3', label: 'Passage 3 (Hard)', time: '20 mins', desc: 'Advanced vocabulary, critical analysis' },
 ];
 
 const topicLabels = {
-  ENVIRONMENT: 'Môi trường',
-  TECHNOLOGY: 'Công nghệ',
-  HISTORY: 'Lịch sử',
-  HEALTH: 'Sức khỏe',
-  EDUCATION: 'Giáo dục'
+  ENVIRONMENT: 'Environment',
+  TECHNOLOGY: 'Technology',
+  HISTORY: 'History',
+  HEALTH: 'Health',
+  EDUCATION: 'Education'
 };
 
 const difficultyLabels = {
-  PASSAGE_1: 'Passage 1 (Dễ)',
-  PASSAGE_2: 'Passage 2 (Vừa)',
-  PASSAGE_3: 'Passage 3 (Khó)'
+  PASSAGE_1: 'Passage 1 (Easy)',
+  PASSAGE_2: 'Passage 2 (Medium)',
+  PASSAGE_3: 'Passage 3 (Hard)'
 };
 
 export default function ReadingConfigPage() {
@@ -62,7 +62,7 @@ export default function ReadingConfigPage() {
       setAdminQuizzes(res.data.data.content || []);
       setTotalPages(res.data.data.totalPages || 0);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Không thể tải danh sách đề thi từ hệ thống.');
+      setError(err.response?.data?.message || err.message || 'Unable to load test templates from system.');
     } finally {
       setAdminLoading(false);
     }
@@ -76,7 +76,7 @@ export default function ReadingConfigPage() {
       const quizId = res.data.data.quizId;
       navigate(`/reading/exam/${quizId}`);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Tạo bài thi thất bại. Vui lòng thử lại.');
+      setError(err.response?.data?.message || err.message || 'Failed to generate quiz. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -90,7 +90,7 @@ export default function ReadingConfigPage() {
       const quizId = res.data.data.quizId;
       navigate(`/reading/exam/${quizId}`);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Bắt đầu làm đề thi thất bại. Vui lòng thử lại.');
+      setError(err.response?.data?.message || err.message || 'Failed to start the quiz. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -102,10 +102,10 @@ export default function ReadingConfigPage() {
         <div className="reading-config-header">
           <button className="btn-back" onClick={() => navigate('/dashboard')} id="back-to-dashboard">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            Trang chủ
+            Home
           </button>
-          <h1>Luyện Reading</h1>
-          <p className="subtitle">Luyện tập kỹ năng Reading với AI hoặc đề thi mẫu</p>
+          <h1>Reading Practice</h1>
+          <p className="subtitle">Practice your reading skills with AI or template tests</p>
         </div>
 
         {/* Tab Container */}
@@ -132,7 +132,7 @@ export default function ReadingConfigPage() {
               fontSize: '1rem'
             }}
           >
-            Đề AI generate
+            AI-Generated Tests
           </button>
           <button
             type="button"
@@ -150,7 +150,7 @@ export default function ReadingConfigPage() {
               fontSize: '1rem'
             }}
           >
-            Đề do phía admin cung cấp
+            Curated Tests
           </button>
         </div>
 
@@ -160,7 +160,7 @@ export default function ReadingConfigPage() {
           <div className="config-form">
             {/* Topic Selection */}
             <div className="config-section">
-              <h2>Chọn chủ đề</h2>
+              <h2>Select Topic</h2>
               <div className="topic-grid">
                 {TOPICS.map((t) => (
                   <button
@@ -178,7 +178,7 @@ export default function ReadingConfigPage() {
 
             {/* Difficulty Selection */}
             <div className="config-section">
-              <h2>Chọn độ khó</h2>
+              <h2>Select Difficulty</h2>
               <div className="difficulty-grid">
                 {DIFFICULTIES.map((d) => (
                   <button
@@ -208,10 +208,10 @@ export default function ReadingConfigPage() {
               {loading ? (
                 <>
                   <span className="spinner"></span>
-                  Đang tạo bằng AI...
+                  Generating with AI...
                 </>
               ) : (
-                'Tạo bài thi Reading'
+                'Generate Reading Test'
               )}
             </button>
           </div>
@@ -225,14 +225,14 @@ export default function ReadingConfigPage() {
               flexWrap: 'wrap'
             }}>
               <div className="filter-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: '200px' }}>
-                <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Chủ đề</label>
+                <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Topic</label>
                 <select
                   value={filterTopic}
                   onChange={(e) => { setFilterTopic(e.target.value); setPage(0); }}
                   className="form-input"
                   style={{ width: '100%' }}
                 >
-                  <option value="">Tất cả chủ đề</option>
+                  <option value="">All Topics</option>
                   {TOPICS.map(t => (
                     <option key={t.value} value={t.value}>{t.label}</option>
                   ))}
@@ -240,14 +240,14 @@ export default function ReadingConfigPage() {
               </div>
 
               <div className="filter-group" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: '200px' }}>
-                <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Độ khó</label>
+                <label style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)' }}>Difficulty</label>
                 <select
                   value={filterDifficulty}
                   onChange={(e) => { setFilterDifficulty(e.target.value); setPage(0); }}
                   className="form-input"
                   style={{ width: '100%' }}
                 >
-                  <option value="">Tất cả độ khó</option>
+                  <option value="">All Difficulties</option>
                   {DIFFICULTIES.map(d => (
                     <option key={d.value} value={d.value}>{d.label}</option>
                   ))}
@@ -258,7 +258,7 @@ export default function ReadingConfigPage() {
             {/* Templates Grid */}
             {adminLoading ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
-                <span className="spinner"></span> &nbsp; Đang tải đề thi...
+                <span className="spinner"></span> &nbsp; Loading tests...
               </div>
             ) : adminQuizzes.length === 0 ? (
               <div style={{
@@ -268,8 +268,8 @@ export default function ReadingConfigPage() {
                 borderRadius: '8px',
                 color: 'var(--text-secondary)'
               }}>
-                <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Chưa có đề thi nào trong danh mục này</p>
-                <p style={{ fontSize: '0.875rem' }}>Giáo viên hoặc Admin sẽ cập nhật thêm đề thi trong thời gian tới.</p>
+                <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>No tests available in this category</p>
+                <p style={{ fontSize: '0.875rem' }}>Teachers or Admins will update more tests in the future.</p>
               </div>
             ) : (
               <div>
@@ -327,7 +327,7 @@ export default function ReadingConfigPage() {
                           color: 'var(--text-primary)',
                           lineHeight: '1.4'
                         }}>
-                          Bài đọc: {quiz.topic}
+                          Passage: {topicLabels[quiz.topic] || quiz.topic}
                         </h3>
                         <p style={{
                           fontSize: '0.875rem',
@@ -352,11 +352,11 @@ export default function ReadingConfigPage() {
                         }}>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-                            {Math.round(quiz.timeLimitSeconds / 60)} phút
+                            {Math.round(quiz.timeLimitSeconds / 60)} mins
                           </span>
                           <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                            {quiz.totalQuestions} câu hỏi
+                            {quiz.totalQuestions} questions
                           </span>
                         </div>
                       </div>
@@ -366,7 +366,7 @@ export default function ReadingConfigPage() {
                         disabled={loading}
                         style={{ width: '100%', marginTop: 'auto' }}
                       >
-                        Bắt đầu làm bài
+                        Start Test
                       </button>
                     </div>
                   ))}
@@ -380,17 +380,17 @@ export default function ReadingConfigPage() {
                       disabled={page === 0}
                       onClick={() => setPage(p => p - 1)}
                     >
-                      Trang trước
+                      Previous
                     </button>
                     <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                      Trang {page + 1} / {totalPages}
+                      Page {page + 1} / {totalPages}
                     </span>
                     <button
                       className="btn btn-outline"
                       disabled={page >= totalPages - 1}
                       onClick={() => setPage(p => p + 1)}
                     >
-                      Trang sau
+                      Next
                     </button>
                   </div>
                 )}
@@ -402,7 +402,7 @@ export default function ReadingConfigPage() {
         {/* History Link */}
         <div className="config-footer">
           <button className="btn btn-outline" onClick={() => navigate('/reading/history')} id="view-history-btn">
-            Xem lịch sử
+            View History
           </button>
         </div>
       </div>

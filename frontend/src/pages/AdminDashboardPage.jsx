@@ -5,7 +5,7 @@ import adminApi from '../api/adminApi';
 const STAT_CARDS = [
   {
     key: 'totalUsers',
-    label: 'Tổng học viên',
+    label: 'Total Students',
     icon: (
       <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
@@ -17,7 +17,7 @@ const STAT_CARDS = [
   },
   {
     key: 'testsToday',
-    label: 'Lượt làm bài hôm nay',
+    label: 'Tests Completed Today',
     icon: (
       <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 20V10" /><path d="M18 20V4" /><path d="M6 20v-4" />
@@ -29,7 +29,7 @@ const STAT_CARDS = [
   },
   {
     key: 'pendingWritings',
-    label: 'Bài viết chờ chấm',
+    label: 'Pending Writing Submissions',
     icon: (
       <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" />
@@ -41,7 +41,7 @@ const STAT_CARDS = [
   },
   {
     key: 'apiHealthy',
-    label: 'Sức khỏe API',
+    label: 'API Status',
     icon: (
       <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
@@ -49,7 +49,7 @@ const STAT_CARDS = [
     ),
     color: 'var(--color-success)',
     bg: 'rgba(16,185,129,0.08)',
-    format: (v) => v ? 'Hoạt động tốt' : 'Có sự cố',
+    format: (v) => v ? 'Healthy' : 'Unhealthy',
     statusClass: (v) => v ? 'admin-health-ok' : 'admin-health-err',
   },
 ];
@@ -67,7 +67,7 @@ export default function AdminDashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const today = new Date().toLocaleDateString('vi-VN', {
+  const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
   });
 
@@ -86,8 +86,8 @@ export default function AdminDashboardPage() {
       {/* Header */}
       <div className="admin-dash-header reveal">
         <div>
-          <h1>Bảng điều khiển quản trị</h1>
-          <p className="subtitle">Tổng quan hoạt động hệ thống IELTS SmartPrep</p>
+          <h1>Admin Dashboard</h1>
+          <p className="subtitle">Overview of IELTS SmartPrep system activity</p>
         </div>
         <div className="dash-date-badge">
           <span>{today}</span>
@@ -121,7 +121,7 @@ export default function AdminDashboardPage() {
 
       {/* Quick Nav Cards */}
       <div className="admin-quick-nav reveal reveal-delay-2">
-        <h2>Quản lý nhanh</h2>
+        <h2>Quick Management</h2>
         <div className="admin-quick-grid">
           <div className="card card-clickable" onClick={() => navigate('/admin/users')} id="admin-nav-users">
             <div className="admin-quick-icon" style={{ background: 'rgba(15,118,110,0.08)', color: 'var(--color-primary)' }}>
@@ -129,9 +129,9 @@ export default function AdminDashboardPage() {
                 <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
             </div>
-            <h3>Quản lý học viên</h3>
-            <p>Xem danh sách, tìm kiếm và xem chi tiết tiến trình từng học viên</p>
-            <span className="card-action">Xem danh sách →</span>
+            <h3>Student Management</h3>
+            <p>View list, search, and check details of each student's progress</p>
+            <span className="card-action">View list →</span>
           </div>
 
           <div className="card card-clickable" onClick={() => navigate('/admin/writing-prompts')} id="admin-nav-prompts">
@@ -140,9 +140,9 @@ export default function AdminDashboardPage() {
                 <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
               </svg>
             </div>
-            <h3>Quản lý đề viết</h3>
-            <p>Thêm, sửa, xóa đề viết Task 1 và Task 2 cho học viên luyện tập</p>
-            <span className="card-action">Quản lý đề →</span>
+            <h3>Writing Prompts Management</h3>
+            <p>Create, edit, and delete Task 1 and Task 2 writing prompts</p>
+            <span className="card-action">Manage prompts →</span>
           </div>
         </div>
       </div>

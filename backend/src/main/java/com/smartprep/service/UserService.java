@@ -2,6 +2,8 @@ package com.smartprep.service;
 
 import com.smartprep.dto.request.LoginRequest;
 import com.smartprep.dto.request.RegisterRequest;
+import com.smartprep.dto.request.UpdateProfileRequest;
+import com.smartprep.dto.request.ChangePasswordRequest;
 import com.smartprep.dto.response.AuthResponse;
 import com.smartprep.exception.ResourceNotFoundException;
 import com.smartprep.model.entity.User;
@@ -20,6 +22,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final StatsService statsService;
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
@@ -61,6 +64,32 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         return buildAuthResponse(user, null);
+    }
+
+    public AuthResponse updateProfile(Long userId, UpdateProfileRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        
+        user.setDisplayName(request.getDisplayName());
+        user.setTargetReadingScore(request.getTargetReadingScore());
+        user.setTargetWritingScore(request.getTargetWritingScore());
+        user.setTargetListeningScore(request.getTargetListeningScore());
+        
+        user = userRepository.save(user);
+        statsService.evictOverviewCache(userId);
+        return buildAuthResponse(user, null);
+    }
+
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new IllegalArgumentException("Incorrect current password");
+        }
+        
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 
     private AuthResponse buildAuthResponse(User user, String token) {

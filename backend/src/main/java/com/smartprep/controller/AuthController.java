@@ -2,6 +2,8 @@ package com.smartprep.controller;
 
 import com.smartprep.dto.request.LoginRequest;
 import com.smartprep.dto.request.RegisterRequest;
+import com.smartprep.dto.request.UpdateProfileRequest;
+import com.smartprep.dto.request.ChangePasswordRequest;
 import com.smartprep.dto.response.ApiResponse;
 import com.smartprep.dto.response.AuthResponse;
 import com.smartprep.model.entity.User;
@@ -37,5 +39,21 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResponse>> getProfile(@AuthenticationPrincipal User user) {
         AuthResponse response = userService.getProfile(user.getUserId());
         return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<ApiResponse<AuthResponse>> updateProfile(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody UpdateProfileRequest request) {
+        AuthResponse response = userService.updateProfile(user.getUserId(), request);
+        return ResponseEntity.ok(ApiResponse.ok(response, "Profile updated successfully"));
+    }
+
+    @PutMapping("/password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        userService.changePassword(user.getUserId(), request);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Password changed successfully"));
     }
 }

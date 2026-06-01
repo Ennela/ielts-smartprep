@@ -11,7 +11,6 @@ export default function ReadingExamPage() {
   const navigate = useNavigate();
   const { quiz, answers, loading, error, isSubmitted, setQuiz, setLoading, setError, submitStart, setResult } = useReading();
 
-  // Fetch quiz on mount
   useEffect(() => {
     const fetchQuiz = async () => {
       setLoading(true);
@@ -24,7 +23,7 @@ export default function ReadingExamPage() {
         }
         setQuiz(quizData);
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load quiz');
+        setError(err.response?.data?.message || 'Unable to load test');
       }
     };
     fetchQuiz();
@@ -38,19 +37,17 @@ export default function ReadingExamPage() {
       setResult(res.data.data);
       navigate(`/reading/result/${quizId}`, { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to submit quiz');
+      setError(err.response?.data?.message || 'Submission failed');
     }
   }, [quizId, answers, isSubmitted, submitStart, setResult, setError, navigate]);
 
-  if (loading && !quiz) {
-    return <div className="loading-screen">Loading quiz...</div>;
-  }
+  if (loading && !quiz) return <div className="loading-screen">Loading test...</div>;
 
   if (error) {
     return (
       <div className="loading-screen">
         <div>
-          <p style={{ color: 'var(--color-error)' }}>{error}</p>
+          <p style={{ color: 'var(--error)' }}>{error}</p>
           <button className="btn btn-primary" onClick={() => navigate('/reading')} style={{ marginTop: 16 }}>
             Go Back
           </button>
@@ -66,15 +63,30 @@ export default function ReadingExamPage() {
 
   return (
     <div className="reading-exam-page" id="reading-exam-page">
-      {/* Top Bar */}
-      <div className="exam-topbar">
+
+      {/* ── Exam Header ── */}
+      <header className="exam-topbar">
+        {/* Left: Logo + divider + badges */}
         <div className="exam-topbar-left">
+          <span className="exam-logo">SmartPrep</span>
+          <div className="exam-divider-v" />
           <span className="exam-topic-badge">{quiz.topic}</span>
-          <span className="exam-diff-badge">{quiz.difficulty.replace('_', ' ')}</span>
+          <span className="exam-diff-badge">{quiz.difficulty?.replace('_', ' ')}</span>
         </div>
-        <CountdownTimer onTimeUp={handleSubmit} />
+
+        {/* Center: Exam title */}
+        <div className="exam-topbar-center">
+          <h1>Academic Reading</h1>
+          <p>Passage 1 of 1</p>
+        </div>
+
+        {/* Right: Timer + help + submit */}
         <div className="exam-topbar-right">
-          <span className="exam-progress">{answeredCount}/{totalQuestions} answered</span>
+          <CountdownTimer onTimeUp={handleSubmit} />
+          <button className="btn-exam-help">
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>help_outline</span>
+            Help
+          </button>
           <button
             className="btn btn-primary btn-submit-exam"
             onClick={handleSubmit}
@@ -84,16 +96,35 @@ export default function ReadingExamPage() {
             {loading ? 'Submitting...' : 'Submit'}
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* Split Screen */}
+      {/* ── Split Screen ── */}
       <div className="exam-split">
         <div className="exam-left">
           <PassageViewer passage={quiz.passageText} />
         </div>
-        <div className="exam-divider" />
         <div className="exam-right">
           <QuestionPanel questions={quiz.questions} />
+        </div>
+      </div>
+
+      {/* ── Bottom Action Bar ── */}
+      <div className="exam-action-bar">
+        <div className="exam-action-bar-left">
+          <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--secondary)' }}>check_circle</span>
+          <span>Answered <strong>{answeredCount}</strong> / {totalQuestions} questions</span>
+        </div>
+        <div className="exam-action-bar-right">
+          <button className="btn btn-outline" onClick={() => navigate('/reading')}>
+            Exit
+          </button>
+          <button
+            className="btn btn-primary btn-submit-exam"
+            onClick={handleSubmit}
+            disabled={isSubmitted || loading}
+          >
+            {loading ? 'Submitting...' : 'Complete & Submit'}
+          </button>
         </div>
       </div>
     </div>

@@ -67,7 +67,7 @@ export default function AdminWritingPromptsPage() {
   };
 
   const handleSave = async () => {
-    if (!form.promptText.trim()) { setError('Nội dung đề không được để trống'); return; }
+    if (!form.promptText.trim()) { setError('Prompt content cannot be empty'); return; }
     setSaving(true);
     setError(null);
     try {
@@ -78,10 +78,10 @@ export default function AdminWritingPromptsPage() {
       };
       if (editing) {
         await adminApi.updateWritingPrompt(editing.promptId, payload);
-        setSuccessMsg('Cập nhật đề thành công!');
+        setSuccessMsg('Prompt updated successfully!');
       } else {
         await adminApi.createWritingPrompt(payload);
-        setSuccessMsg('Tạo đề mới thành công!');
+        setSuccessMsg('Prompt created successfully!');
       }
       closeModal();
       fetchPrompts(filter, page);
@@ -99,7 +99,7 @@ export default function AdminWritingPromptsPage() {
     try {
       await adminApi.deleteWritingPrompt(deleteId);
       setDeleteId(null);
-      setSuccessMsg('Đã xóa đề thành công!');
+      setSuccessMsg('Prompt deleted successfully!');
       fetchPrompts(filter, page);
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
@@ -122,14 +122,14 @@ export default function AdminWritingPromptsPage() {
         <div>
           <button className="btn-back" onClick={() => navigate('/admin')} id="back-to-admin">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            Tổng quan
+            Overview
           </button>
-          <h1>Quản lý đề viết</h1>
-          <p className="subtitle">{totalElements} đề viết trong hệ thống</p>
+          <h1>Writing Prompts Management</h1>
+          <p className="subtitle">{totalElements} writing prompts in system</p>
         </div>
         <button className="btn btn-primary" onClick={openCreate} id="create-prompt-btn">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Thêm đề mới
+          Add New Prompt
         </button>
       </div>
 
@@ -138,7 +138,7 @@ export default function AdminWritingPromptsPage() {
 
       {/* Filter */}
       <div className="writing-filter reveal reveal-delay-1">
-        <button className={`filter-btn ${filter === '' ? 'active' : ''}`} onClick={() => { setFilter(''); setPage(0); }}>Tất cả</button>
+        <button className={`filter-btn ${filter === '' ? 'active' : ''}`} onClick={() => { setFilter(''); setPage(0); }}>All</button>
         {ALL_TYPES.map(t => (
           <button key={t} className={`filter-btn ${filter === t ? 'active' : ''}`} onClick={() => { setFilter(t); setPage(0); }}>
             {TYPE_LABELS[t]}
@@ -152,7 +152,7 @@ export default function AdminWritingPromptsPage() {
           <div className="loading-spinner"><div className="spinner" /></div>
         ) : content.length === 0 ? (
           <div className="empty-state">
-            <p>Không tìm thấy đề viết nào{filter ? ` loại "${TYPE_LABELS[filter]}"` : ''}.</p>
+            <p>No writing prompts found{filter ? ` of type "${TYPE_LABELS[filter]}"` : ''}.</p>
           </div>
         ) : (
           <>
@@ -162,10 +162,10 @@ export default function AdminWritingPromptsPage() {
                   <tr>
                     <th>#</th>
                     <th>Task</th>
-                    <th>Loại đề</th>
-                    <th>Nội dung</th>
-                    <th>Ngày tạo</th>
-                    <th>Hành động</th>
+                    <th>Prompt Type</th>
+                    <th>Content</th>
+                    <th>Created Date</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -194,12 +194,12 @@ export default function AdminWritingPromptsPage() {
                             className="btn btn-sm btn-outline"
                             onClick={() => openEdit(p)}
                             id={`edit-prompt-${p.promptId}`}
-                          >Sửa</button>
+                          >Edit</button>
                           <button
                             className="btn btn-sm admin-btn-danger"
                             onClick={() => setDeleteId(p.promptId)}
                             id={`delete-prompt-${p.promptId}`}
-                          >Xóa</button>
+                          >Delete</button>
                         </div>
                       </td>
                     </tr>
@@ -210,9 +210,9 @@ export default function AdminWritingPromptsPage() {
 
             {totalPages > 1 && (
               <div className="ht-pagination">
-                <button className="btn btn-sm btn-outline" disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))}>Trước</button>
-                <span className="ht-page-info">Trang {page + 1} / {totalPages}</span>
-                <button className="btn btn-sm btn-outline" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Sau</button>
+                <button className="btn btn-sm btn-outline" disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))}>Prev</button>
+                <span className="ht-page-info">Page {page + 1} / {totalPages}</span>
+                <button className="btn btn-sm btn-outline" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Next</button>
               </div>
             )}
           </>
@@ -228,13 +228,13 @@ export default function AdminWritingPromptsPage() {
             </button>
 
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.2rem', fontWeight: 700, marginBottom: 24 }}>
-              {editing ? 'Chỉnh sửa đề viết' : 'Tạo đề viết mới'}
+              {editing ? 'Edit Writing Prompt' : 'Create New Writing Prompt'}
             </h2>
 
             {error && <div className="error-msg">{error}</div>}
 
             <div className="admin-form-group">
-              <label className="admin-form-label">Loại đề</label>
+              <label className="admin-form-label">Prompt Type</label>
               <select
                 className="matching-select"
                 value={form.essayType}
@@ -251,19 +251,19 @@ export default function AdminWritingPromptsPage() {
             </div>
 
             <div className="admin-form-group">
-              <label className="admin-form-label">Nội dung đề</label>
+              <label className="admin-form-label">Prompt Content</label>
               <textarea
                 className="editor-textarea"
                 value={form.promptText}
                 onChange={e => setForm(f => ({ ...f, promptText: e.target.value }))}
-                placeholder="Nhập nội dung đề viết..."
+                placeholder="Enter prompt content..."
                 style={{ minHeight: 160 }}
               />
             </div>
 
             {isTask1(form.essayType) && (
               <div className="admin-form-group">
-                <label className="admin-form-label">URL hình ảnh (Task 1)</label>
+                <label className="admin-form-label">Image URL (Task 1)</label>
                 <input
                   type="text"
                   className="completion-input"
@@ -281,10 +281,10 @@ export default function AdminWritingPromptsPage() {
             )}
 
             <div className="admin-form-actions">
-              <button className="btn btn-outline" onClick={closeModal}>Hủy</button>
+              <button className="btn btn-outline" onClick={closeModal}>Cancel</button>
               <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
                 {saving && <span className="spinner" />}
-                {editing ? 'Cập nhật' : 'Tạo đề'}
+                {editing ? 'Update' : 'Create Prompt'}
               </button>
             </div>
           </div>
@@ -296,16 +296,16 @@ export default function AdminWritingPromptsPage() {
         <div className="admin-modal-overlay" onClick={() => setDeleteId(null)}>
           <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 700, marginBottom: 12 }}>
-              Xác nhận xóa
+              Confirm Delete
             </h2>
             <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', marginBottom: 24, lineHeight: 1.6 }}>
-              Bạn có chắc chắn muốn xóa đề viết này? Hành động này không thể hoàn tác.
+              Are you sure you want to delete this writing prompt? This action cannot be undone.
             </p>
             <div className="admin-form-actions">
-              <button className="btn btn-outline" onClick={() => setDeleteId(null)}>Hủy</button>
+              <button className="btn btn-outline" onClick={() => setDeleteId(null)}>Cancel</button>
               <button className="btn admin-btn-danger-fill" onClick={handleDelete} disabled={deleting}>
                 {deleting && <span className="spinner" />}
-                Xóa đề
+                Delete Prompt
               </button>
             </div>
           </div>
@@ -318,5 +318,5 @@ export default function AdminWritingPromptsPage() {
 function formatDate(dateStr) {
   if (!dateStr) return '—';
   const d = new Date(dateStr);
-  return d.toLocaleDateString('vi-VN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 }

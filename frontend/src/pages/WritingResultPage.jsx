@@ -2,6 +2,25 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import writingApi from '../api/writingApi';
 
+const CRITERIA_EXPLANATIONS = [
+  {
+    label: 'Task Achievement / Response (TA)',
+    desc: 'This criterion is based on your ability to complete all requirements of the task correctly and fully. If all parts of the question are addressed through logical arguments and accurate data, you will easily achieve a high score.',
+  },
+  {
+    label: 'Coherence & Cohesion (CC)',
+    desc: 'This criterion evaluates the clarity and logical flow of the essay. A cohesive essay is easy to read, consistent, and objectively clarifies both main and supporting points.',
+  },
+  {
+    label: 'Lexical Resource (LR)',
+    desc: 'This criterion tests the candidate\'s vocabulary range and precision. The more varied and natural the lexical choices, the higher the score. Proper spelling and collocation are also evaluated here.',
+  },
+  {
+    label: 'Grammatical Range & Accuracy (GRA)',
+    desc: 'This criterion assesses grammatical diversity and precision. Candidates should use a mix of simple and complex sentence structures correctly. Proper punctuation is also essential.',
+  }
+];
+
 export default function WritingResultPage() {
     const { submissionId } = useParams();
     const navigate = useNavigate();
@@ -42,7 +61,7 @@ export default function WritingResultPage() {
         return (
             <div className="loading-screen">
                 <span className="spinner" style={{ width: 24, height: 24 }}></span>
-                Loading results...
+                Loading result...
             </div>
         );
     }
@@ -50,8 +69,8 @@ export default function WritingResultPage() {
     if (error || !result) {
         return (
             <div className="result-content">
-                <div className="error-msg">{error || 'No result found.'}</div>
-                <button className="btn btn-outline" onClick={() => navigate('/writing')}>Back to Writing</button>
+                <div className="error-msg">{error || 'Result not found.'}</div>
+                <button className="btn btn-outline" onClick={() => navigate('/writing')}>Go Back to Writing</button>
             </div>
         );
     }
@@ -60,7 +79,7 @@ export default function WritingResultPage() {
         { label: 'Task Response', score: result.taskResponse },
         { label: 'Coherence & Cohesion', score: result.coherence },
         { label: 'Lexical Resource', score: result.lexical },
-        { label: 'Grammatical Range', score: result.grammar },
+        { label: 'Grammatical Range & Accuracy', score: result.grammar },
     ];
 
     return (
@@ -68,7 +87,7 @@ export default function WritingResultPage() {
             <div className="writing-result-content">
                 <button className="btn-back" onClick={() => navigate('/writing')} id="back-to-writing">
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                    Back to Writing
+                    Go Back to Writing
                 </button>
 
                 <h1>Writing Assessment Report</h1>
@@ -152,7 +171,7 @@ export default function WritingResultPage() {
                     {activeTab === 'errors' && (
                         <div className="errors-panel">
                             {(!result.errors || result.errors.length === 0) ? (
-                                <p className="empty-msg">No errors found. Great writing!</p>
+                                <p className="empty-msg">No errors found. Excellent writing!</p>
                             ) : (
                                 <div className="error-table">
                                     <div className="error-table-header">
@@ -202,6 +221,25 @@ export default function WritingResultPage() {
                             )}
                         </div>
                     )}
+                </div>
+
+                {/* Grading Criteria Explanations Reference */}
+                <div className="card criteria-explanations-card" style={{ marginTop: 24, padding: 24 }}>
+                    <h3 style={{ marginBottom: 16 }}>Grading Criteria Explanations</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+                        {CRITERIA_EXPLANATIONS.map((c, i) => (
+                            <div key={i} style={{
+                                padding: 16, borderRadius: 'var(--radius-lg)',
+                                background: 'var(--surface-container-low)',
+                                border: '1px solid var(--outline-variant)'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                    <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--primary)' }}>{c.label}</span>
+                                </div>
+                                <p style={{ fontSize: '0.78rem', color: 'var(--on-surface-variant)', lineHeight: 1.5, margin: 0 }}>{c.desc}</p>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>

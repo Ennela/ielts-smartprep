@@ -108,9 +108,9 @@ export default function ListeningResultPage() {
         {/* Tabs */}
         <div className="result-tabs">
           <button className={`tab-btn ${activeTab === 'answers' ? 'active' : ''}`}
-            onClick={() => setActiveTab('answers')}>Answer Review</button>
+            onClick={() => setActiveTab('answers')}>Review Answers</button>
           <button className={`tab-btn ${activeTab === 'transcript' ? 'active' : ''}`}
-            onClick={() => setActiveTab('transcript')}>Transcripts</button>
+            onClick={() => setActiveTab('transcript')}>Transcript</button>
           <button className={`tab-btn ${activeTab === 'vocabulary' ? 'active' : ''}`}
             onClick={() => {
               setActiveTab('vocabulary');
@@ -140,12 +140,12 @@ export default function ListeningResultPage() {
                         <div className="answer-row">
                           <span className="answer-label">Your answer:</span>
                           <span className={`answer-value ${q.isCorrect ? '' : 'answer-wrong'}`}>
-                            {q.userAnswer || '(no answer)'}
+                            {q.userAnswer || '(not answered)'}
                           </span>
                         </div>
                         {!q.isCorrect && (
                           <div className="answer-row">
-                            <span className="answer-label">Correct:</span>
+                            <span className="answer-label">Correct answer:</span>
                             <span className="answer-value answer-correct">{q.correctAnswer}</span>
                           </div>
                         )}
@@ -220,7 +220,7 @@ export default function ListeningResultPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-muted">Click a part above to extract vocabulary.</p>
+              <p className="text-muted">No vocabulary found. Please try again.</p>
             )}
           </div>
         )}

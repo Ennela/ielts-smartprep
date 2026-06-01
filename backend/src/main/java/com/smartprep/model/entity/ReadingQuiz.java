@@ -18,7 +18,7 @@ public class ReadingQuiz {
     private Long quizId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = true)
     private User user;
 
     @Enumerated(EnumType.STRING)
@@ -43,6 +43,12 @@ public class ReadingQuiz {
     private Integer correctAnswers;
 
     private LocalDateTime submittedAt;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isTemplate = false;
+
+    private Long parentTemplateId;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

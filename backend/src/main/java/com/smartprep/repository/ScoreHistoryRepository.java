@@ -46,4 +46,7 @@ public interface ScoreHistoryRepository extends JpaRepository<ScoreHistory, Long
     // Paginated history filtered by skill
     Page<ScoreHistory> findByUserUserIdAndSkillTypeOrderByRecordedAtDesc(
             Long userId, SkillType skillType, Pageable pageable);
+
+    // Admin: count tests today
+    long countByRecordedAtAfter(LocalDateTime since);
 }

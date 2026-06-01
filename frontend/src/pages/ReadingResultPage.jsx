@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useReading } from '../context/ReadingContext';
 import readingApi from '../api/readingApi';
@@ -11,23 +11,18 @@ export default function ReadingResultPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    // If result is not in context (e.g. page refresh), fetch from quiz endpoint
     if (!result || String(result.quizId) !== String(quizId)) {
       const fetchResult = async () => {
         setLoading(true);
         try {
-          // Re-fetch quiz, if submitted it returns full result
-          const res = await readingApi.getQuiz(quizId);
-          const quizData = res.data.data;
-          if (!quizData.submitted) {
+          const res = await readingApi.getResult(quizId);
+          setResult(res.data.data);
+        } catch (err) {
+          if (err.status === 400) {
             navigate(`/reading/exam/${quizId}`, { replace: true });
             return;
           }
-          // Need to re-submit to get results (or we load from existing result)
-          // For now, we use the context result or show a simplified view
-          setResult(quizData);
-        } catch (err) {
-          setError(err.response?.data?.message || 'Failed to load results');
+          setError(err.response?.data?.message || err.message || 'Unable to load result');
         } finally {
           setLoading(false);
         }
@@ -37,7 +32,7 @@ export default function ReadingResultPage() {
   }, [quizId]);
 
   if (loading) {
-    return <div className="loading-screen">Loading results...</div>;
+    return <div className="loading-screen">Loading result...</div>;
   }
 
   if (error) {
@@ -79,7 +74,7 @@ export default function ReadingResultPage() {
             </div>
           </div>
           <div className="score-details">
-            <h1>Test Complete!</h1>
+            <h1>Quiz Completed!</h1>
             <div className="score-stats">
               <div className="score-stat">
                 <span className="stat-value">{result.correctAnswers}</span>
@@ -106,69 +101,24 @@ export default function ReadingResultPage() {
           <details className="result-passage-toggle">
             <summary>View Passage</summary>
             <div className="result-passage">
-              {result.passageText.split('\n').filter(p => p.trim()).map((para, idx) => (
-                <p key={idx}>{para}</p>
-              ))}
+              {result.passageText.split('\n').filter(p => p.trim()).map((para, idx) => {
+                const labelMatch = para.match(/^([A-Z])\.\s+(.*)/s);
+                if (labelMatch) {
+                  return (
+                    <div key={idx} className="passage-paragraph labeled-paragraph">
+                      <span className="paragraph-label">{labelMatch[1]}</span>
+                      <p>{labelMatch[2]}</p>
+                    </div>
+                  );
+                }
+                return <p key={idx}>{para}</p>;
+              })}
             </div>
           </details>
         )}
 
-        {/* Question Results */}
-        <div className="result-questions">
-          <h2>Answer Review</h2>
-          {result.questions?.map((q, idx) => (
-            <div
-              key={q.questionId || idx}
-              className={`result-question-item ${q.correct ? 'correct' : 'incorrect'}`}
-              id={`result-q-${idx + 1}`}
-            >
-              <div className="rq-header">
-                <span className="rq-number">Q{q.orderIndex || idx + 1}</span>
-                <span className={`rq-status ${q.correct ? 'correct' : 'incorrect'}`}>
-                  {q.correct ? 'Correct' : 'Incorrect'}
-                </span>
-                <span className="rq-type-badge">{q.questionType}</span>
-              </div>
-              <p className="rq-text">{q.questionText}</p>
-
-              {/* Show options for MCQ */}
-              {q.questionType === 'MCQ' && (
-                <div className="rq-options">
-                  {[
-                    { key: 'A', text: q.optionA },
-                    { key: 'B', text: q.optionB },
-                    { key: 'C', text: q.optionC },
-                    { key: 'D', text: q.optionD },
-                  ].filter(o => o.text).map(opt => (
-                    <div
-                      key={opt.key}
-                      className={`rq-option
-                        ${opt.key === q.correctAnswer ? 'correct-answer' : ''}
-                        ${opt.key === q.userAnswer && !q.correct ? 'wrong-answer' : ''}
-                      `}
-                    >
-                      <span className="rq-option-key">{opt.key}</span>
-                      <span>{opt.text}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Show answers for TFNG */}
-              {q.questionType === 'TFNG' && (
-                <div className="rq-tfng-answer">
-                  <span>Your answer: <strong className={q.correct ? 'text-success' : 'text-error'}>{q.userAnswer || '(no answer)'}</strong></span>
-                  {!q.correct && <span>Correct answer: <strong className="text-success">{q.correctAnswer}</strong></span>}
-                </div>
-              )}
-
-              {/* Explanation */}
-              <div className="rq-explanation">
-                <strong>Explanation:</strong> {q.explanation}
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* Question Results — grouped */}
+        <ResultQuestions questions={result.questions} />
 
         {/* Action Buttons */}
         <div className="result-actions">
@@ -176,10 +126,201 @@ export default function ReadingResultPage() {
             Take Another Test
           </button>
           <button className="btn btn-outline" onClick={() => navigate('/reading/history')} id="view-all-history-btn">
-            View All History
+            View Complete History
           </button>
         </div>
       </div>
     </div>
   );
+}
+
+// ============================================================
+// ResultQuestions — groups and renders question results
+// ============================================================
+function ResultQuestions({ questions }) {
+  const groups = useMemo(() => {
+    if (!questions) return [];
+    const groupMap = new Map();
+    questions.forEach((q) => {
+      const gid = q.groupId || 0;
+      if (!groupMap.has(gid)) {
+        groupMap.set(gid, {
+          groupId: gid,
+          groupLabel: q.groupLabel || '',
+          groupType: q.questionType,
+          groupContext: q.groupContext || null,
+          questions: [],
+        });
+      }
+      groupMap.get(gid).questions.push(q);
+    });
+    return Array.from(groupMap.values());
+  }, [questions]);
+
+  return (
+    <div className="result-questions">
+      <h2>Review Answers</h2>
+      {groups.map((group) => (
+        <div key={group.groupId} className="result-question-group">
+          {group.groupLabel && (
+            <div className="group-label result-group-label">{group.groupLabel}</div>
+          )}
+
+          {/* Summary context with filled answers */}
+          {group.groupContext && group.groupType === 'SUMMARY_COMPLETION' && (
+            <ResultSummaryBlock context={group.groupContext} questions={group.questions} />
+          )}
+
+          {group.questions.map((q, idx) => (
+            <ResultQuestionItem key={q.questionId || idx} q={q} idx={idx} />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ============================================================
+// ResultQuestionItem — single question result
+// ============================================================
+function ResultQuestionItem({ q, idx }) {
+  const typeLabel = formatQuestionType(q.questionType);
+
+  return (
+    <div
+      className={`result-question-item ${q.correct ? 'correct' : 'incorrect'}`}
+      id={`result-q-${q.orderIndex || idx + 1}`}
+    >
+      <div className="rq-header">
+        <span className="rq-number">Q{q.orderIndex || idx + 1}</span>
+        <span className={`rq-status ${q.correct ? 'correct' : 'incorrect'}`}>
+          {q.correct ? 'Correct' : 'Incorrect'}
+        </span>
+        <span className="rq-type-badge">{typeLabel}</span>
+      </div>
+      <p className="rq-text">{q.questionText}</p>
+
+      {/* MCQ: Show options with highlights */}
+      {q.questionType === 'MCQ' && (
+        <div className="rq-options">
+          {[
+            { key: 'A', text: q.optionA },
+            { key: 'B', text: q.optionB },
+            { key: 'C', text: q.optionC },
+            { key: 'D', text: q.optionD },
+          ].filter(o => o.text).map(opt => {
+            const isCorrectAnswer = opt.key === q.correctAnswer;
+            const isUserAnswer = opt.key === q.userAnswer;
+            const isWrongSelection = isUserAnswer && !q.correct;
+            return (
+              <div
+                key={opt.key}
+                className={`rq-option
+                  ${isCorrectAnswer ? 'correct-answer' : ''}
+                  ${isWrongSelection ? 'wrong-answer' : ''}
+                  ${isUserAnswer && q.correct ? 'correct-answer user-selected' : ''}
+                `}
+              >
+                <span className="rq-option-key">{opt.key}</span>
+                <span>{opt.text}</span>
+              </div>
+            );
+          })}
+          {!q.userAnswer && (
+            <div className="rq-no-answer">
+              <em>(Not answered)</em>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TFNG / YNNG */}
+      {(q.questionType === 'TFNG' || q.questionType === 'YNNG') && (
+        <div className="rq-tfng-answer">
+          <span>Your answer: <strong className={q.correct ? 'text-success' : 'text-error'}>{q.userAnswer || '(not answered)'}</strong></span>
+          {!q.correct && <span>Correct answer: <strong className="text-success">{q.correctAnswer}</strong></span>}
+        </div>
+      )}
+
+      {/* Completion types */}
+      {(q.questionType === 'SENTENCE_COMPLETION' || q.questionType === 'SUMMARY_COMPLETION') && (
+        <div className="rq-completion-answer">
+          <span>Answer: <strong className={q.correct ? 'text-success' : 'text-error'}>{q.userAnswer || '(not answered)'}</strong></span>
+          {!q.correct && <span>Correct answer: <strong className="text-success">{q.correctAnswer}</strong></span>}
+        </div>
+      )}
+
+      {/* Matching types */}
+      {(q.questionType === 'MATCHING_HEADINGS' || q.questionType === 'MATCHING_INFORMATION' ||
+        q.questionType === 'MATCHING_FEATURES' || q.questionType === 'MATCHING_SENTENCE_ENDINGS') && (
+        <div className="rq-matching-answer">
+          <span>You chose: <strong className={q.correct ? 'text-success' : 'text-error'}>{q.userAnswer || '(not answered)'}</strong></span>
+          {!q.correct && <span>Correct answer: <strong className="text-success">{q.correctAnswer}</strong></span>}
+        </div>
+      )}
+
+      {/* Explanation */}
+      {q.explanation && (
+        <div className="rq-explanation">
+          <strong>Explanation:</strong> {q.explanation}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+// ResultSummaryBlock — shows filled summary with color-coded answers
+// ============================================================
+function ResultSummaryBlock({ context, questions }) {
+  if (!context) return null;
+
+  const blankMap = {};
+  questions.forEach((q) => {
+    const match = q.questionText.match(/(\d+)/);
+    if (match) blankMap[match[1]] = q;
+  });
+
+  const parts = context.split(/(___\d+___)/g);
+
+  return (
+    <div className="summary-block result-summary-block">
+      <div className="summary-text">
+        {parts.map((part, idx) => {
+          const blankMatch = part.match(/___(\d+)___/);
+          if (blankMatch) {
+            const q = blankMap[blankMatch[1]];
+            if (!q) return <span key={idx}>{part}</span>;
+            return (
+              <span key={idx} className={`summary-filled ${q.correct ? 'correct' : 'incorrect'}`}>
+                {q.userAnswer || '___'}
+                {!q.correct && (
+                  <span className="summary-correct-hint"> [{q.correctAnswer}]</span>
+                )}
+              </span>
+            );
+          }
+          return <span key={idx}>{part}</span>;
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// Helper
+// ============================================================
+function formatQuestionType(type) {
+  const labels = {
+    MCQ: 'MCQ',
+    TFNG: 'T/F/NG',
+    YNNG: 'Y/N/NG',
+    SENTENCE_COMPLETION: 'Sentence Completion',
+    SUMMARY_COMPLETION: 'Summary Completion',
+    MATCHING_HEADINGS: 'Matching Headings',
+    MATCHING_INFORMATION: 'Matching Information',
+    MATCHING_FEATURES: 'Matching Features',
+    MATCHING_SENTENCE_ENDINGS: 'Matching Endings',
+  };
+  return labels[type] || type;
 }

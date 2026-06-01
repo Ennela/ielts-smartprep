@@ -3,17 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import adminApi from '../api/adminApi';
 
 const TOPICS = [
-  { value: 'ENVIRONMENT', label: 'Môi trường' },
-  { value: 'TECHNOLOGY', label: 'Công nghệ' },
-  { value: 'HISTORY', label: 'Lịch sử' },
-  { value: 'HEALTH', label: 'Sức khỏe' },
-  { value: 'EDUCATION', label: 'Giáo dục' },
+  { value: 'ENVIRONMENT', label: 'Environment' },
+  { value: 'TECHNOLOGY', label: 'Technology' },
+  { value: 'HISTORY', label: 'History' },
+  { value: 'HEALTH', label: 'Health' },
+  { value: 'EDUCATION', label: 'Education' },
 ];
 
 const DIFFICULTIES = [
-  { value: 'PASSAGE_1', label: 'Passage 1 (Dễ)', defaultTime: 600 },
-  { value: 'PASSAGE_2', label: 'Passage 2 (Vừa)', defaultTime: 900 },
-  { value: 'PASSAGE_3', label: 'Passage 3 (Khó)', defaultTime: 1200 },
+  { value: 'PASSAGE_1', label: 'Passage 1 (Easy)', defaultTime: 600 },
+  { value: 'PASSAGE_2', label: 'Passage 2 (Medium)', defaultTime: 900 },
+  { value: 'PASSAGE_3', label: 'Passage 3 (Hard)', defaultTime: 1200 },
 ];
 
 const QUESTION_TYPES = [
@@ -29,17 +29,17 @@ const QUESTION_TYPES = [
 ];
 
 const TOPIC_LABELS = {
-  ENVIRONMENT: 'Môi trường',
-  TECHNOLOGY: 'Công nghệ',
-  HISTORY: 'Lịch sử',
-  HEALTH: 'Sức khỏe',
-  EDUCATION: 'Giáo dục'
+  ENVIRONMENT: 'Environment',
+  TECHNOLOGY: 'Technology',
+  HISTORY: 'History',
+  HEALTH: 'Health',
+  EDUCATION: 'Education'
 };
 
 const DIFFICULTY_LABELS = {
-  PASSAGE_1: 'Passage 1 (Dễ)',
-  PASSAGE_2: 'Passage 2 (Vừa)',
-  PASSAGE_3: 'Passage 3 (Khó)'
+  PASSAGE_1: 'Passage 1 (Easy)',
+  PASSAGE_2: 'Passage 2 (Medium)',
+  PASSAGE_3: 'Passage 3 (Hard)'
 };
 
 export default function AdminReadingQuizzesPage() {
@@ -173,15 +173,15 @@ export default function AdminReadingQuizzesPage() {
 
   const handleSave = async () => {
     // Validate
-    if (!form.passageText.trim()) { setError('Nội dung bài đọc không được để trống'); return; }
-    if (form.questions.length === 0) { setError('Bài đọc phải có ít nhất 1 câu hỏi'); return; }
+    if (!form.passageText.trim()) { setError('Passage text cannot be empty'); return; }
+    if (form.questions.length === 0) { setError('The passage must contain at least 1 question'); return; }
     for (let i = 0; i < form.questions.length; i++) {
       const q = form.questions[i];
-      if (!q.questionText.trim()) { setError(`Câu hỏi #${i + 1}: Nội dung câu hỏi không được để trống`); return; }
-      if (!q.correctAnswer.trim()) { setError(`Câu hỏi #${i + 1}: Đáp án chính xác không được để trống`); return; }
+      if (!q.questionText.trim()) { setError(`Question #${i + 1}: Question text cannot be empty`); return; }
+      if (!q.correctAnswer.trim()) { setError(`Question #${i + 1}: Correct answer cannot be empty`); return; }
       if (q.questionType === 'MCQ') {
         if (!q.optionA.trim() || !q.optionB.trim()) {
-          setError(`Câu hỏi #${i + 1} (Multiple Choice): Phải có ít nhất Option A và Option B`);
+          setError(`Question #${i + 1} (Multiple Choice): Must have at least Option A and Option B`);
           return;
         }
       }
@@ -192,16 +192,16 @@ export default function AdminReadingQuizzesPage() {
     try {
       if (editing) {
         await adminApi.updateReadingQuiz(editing.quizId, form);
-        setSuccessMsg('Cập nhật đề đọc thành công!');
+        setSuccessMsg('Reading passage updated successfully!');
       } else {
         await adminApi.createReadingQuiz(form);
-        setSuccessMsg('Tạo đề đọc mới thành công!');
+        setSuccessMsg('Reading passage created successfully!');
       }
       closeModal();
       fetchQuizzes(filterTopic, filterDifficulty, page);
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Lưu đề thi thất bại');
+      setError(err.response?.data?.message || err.message || 'Failed to save quiz');
     } finally {
       setSaving(false);
     }
@@ -213,11 +213,11 @@ export default function AdminReadingQuizzesPage() {
     try {
       await adminApi.deleteReadingQuiz(deleteId);
       setDeleteId(null);
-      setSuccessMsg('Đã xóa đề đọc thành công!');
+      setSuccessMsg('Reading passage deleted successfully!');
       fetchQuizzes(filterTopic, filterDifficulty, page);
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Xóa đề thi thất bại');
+      setError(err.response?.data?.message || err.message || 'Failed to delete quiz');
     } finally {
       setDeleting(false);
     }
@@ -234,14 +234,14 @@ export default function AdminReadingQuizzesPage() {
         <div>
           <button className="btn-back" onClick={() => navigate('/admin')} id="back-to-admin">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            Tổng quan
+            Overview
           </button>
-          <h1>Quản lý đề đọc (Reading)</h1>
-          <p className="subtitle">{totalElements} đề đọc mẫu trong hệ thống</p>
+          <h1>Reading Quizzes Management</h1>
+          <p className="subtitle">{totalElements} sample passages in the system</p>
         </div>
         <button className="btn btn-primary" onClick={openCreate} id="create-quiz-btn">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Thêm đề đọc mới
+          Add New Passage
         </button>
       </div>
 
@@ -256,7 +256,7 @@ export default function AdminReadingQuizzesPage() {
           className="form-input"
           style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', minWidth: '180px' }}
         >
-          <option value="">Tất cả chủ đề</option>
+          <option value="">All Topics</option>
           {TOPICS.map(t => (
             <option key={t.value} value={t.value}>{t.label}</option>
           ))}
@@ -268,7 +268,7 @@ export default function AdminReadingQuizzesPage() {
           className="form-input"
           style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', minWidth: '180px' }}
         >
-          <option value="">Tất cả độ khó</option>
+          <option value="">All Difficulties</option>
           {DIFFICULTIES.map(d => (
             <option key={d.value} value={d.value}>{d.value.replace('_', ' ')}</option>
           ))}
@@ -280,9 +280,9 @@ export default function AdminReadingQuizzesPage() {
           className="form-input"
           style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', minWidth: '180px' }}
         >
-          <option value="">Tất cả nguồn</option>
-          <option value="ADMIN">Admin soạn</option>
-          <option value="AI">AI generate</option>
+          <option value="">All Sources</option>
+          <option value="ADMIN">Admin Created</option>
+          <option value="AI">AI Generated</option>
         </select>
       </div>
 
@@ -292,7 +292,7 @@ export default function AdminReadingQuizzesPage() {
           <div className="loading-spinner"><div className="spinner" /></div>
         ) : content.length === 0 ? (
           <div className="empty-state">
-            <p>Không tìm thấy đề đọc nào phù hợp.</p>
+            <p>No reading passages found.</p>
           </div>
         ) : (
           <>
@@ -301,13 +301,13 @@ export default function AdminReadingQuizzesPage() {
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>Chủ đề</th>
-                    <th>Độ khó</th>
-                    <th>Nguồn</th>
-                    <th>Thời gian</th>
-                    <th>Số câu hỏi</th>
-                    <th>Nội dung bài đọc</th>
-                    <th>Hành động</th>
+                    <th>Topic</th>
+                    <th>Difficulty</th>
+                    <th>Source</th>
+                    <th>Time Limit</th>
+                    <th>Questions Count</th>
+                    <th>Passage Text</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -331,7 +331,7 @@ export default function AdminReadingQuizzesPage() {
                           <span className="essay-type-badge" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }} title={`Tạo bởi user: ${quiz.createdBy || 'AI'}`}>AI Generate</span>
                         )}
                       </td>
-                      <td>{Math.round(quiz.timeLimitSeconds / 60)} phút</td>
+                      <td>{Math.round(quiz.timeLimitSeconds / 60)} mins</td>
                       <td>{quiz.totalQuestions}</td>
                       <td style={{ maxWidth: '300px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {quiz.passageText}
@@ -342,12 +342,12 @@ export default function AdminReadingQuizzesPage() {
                             className="btn btn-sm btn-outline"
                             onClick={() => openEdit(quiz)}
                             id={`edit-quiz-${quiz.quizId}`}
-                          >Sửa</button>
+                          >Edit</button>
                           <button
                             className="btn btn-sm admin-btn-danger"
                             onClick={() => setDeleteId(quiz.quizId)}
                             id={`delete-quiz-${quiz.quizId}`}
-                          >Xóa</button>
+                          >Delete</button>
                         </div>
                       </td>
                     </tr>
@@ -358,9 +358,9 @@ export default function AdminReadingQuizzesPage() {
 
             {totalPages > 1 && (
               <div className="ht-pagination">
-                <button className="btn btn-sm btn-outline" disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))}>Trước</button>
-                <span className="ht-page-info">Trang {page + 1} / {totalPages}</span>
-                <button className="btn btn-sm btn-outline" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Sau</button>
+                <button className="btn btn-sm btn-outline" disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))}>Prev</button>
+                <span className="ht-page-info">Page {page + 1} / {totalPages}</span>
+                <button className="btn btn-sm btn-outline" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Next</button>
               </div>
             )}
           </>
@@ -376,14 +376,14 @@ export default function AdminReadingQuizzesPage() {
             </button>
 
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.25rem', fontWeight: 700, marginBottom: 24 }}>
-              {editing ? 'Chỉnh sửa đề đọc' : 'Tạo đề đọc mẫu mới'}
+              {editing ? 'Edit Reading Passage' : 'Create New Sample Reading Passage'}
             </h2>
 
             {error && <div className="error-msg" style={{ marginBottom: '1rem' }}>{error}</div>}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
               <div className="admin-form-group">
-                <label className="admin-form-label">Chủ đề</label>
+                <label className="admin-form-label">Topic</label>
                 <select
                   className="matching-select"
                   value={form.topic}
@@ -395,7 +395,7 @@ export default function AdminReadingQuizzesPage() {
               </div>
 
               <div className="admin-form-group">
-                <label className="admin-form-label">Độ khó (Passage)</label>
+                <label className="admin-form-label">Difficulty (Passage)</label>
                 <select
                   className="matching-select"
                   value={form.difficulty}
@@ -408,7 +408,7 @@ export default function AdminReadingQuizzesPage() {
             </div>
 
             <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
-              <label className="admin-form-label">Thời gian làm bài (giây)</label>
+              <label className="admin-form-label">Time Limit (seconds)</label>
               <input
                 type="number"
                 className="completion-input"
@@ -419,12 +419,12 @@ export default function AdminReadingQuizzesPage() {
             </div>
 
             <div className="admin-form-group" style={{ marginBottom: '1.5rem' }}>
-              <label className="admin-form-label">Nội dung bài đọc (Passage Text)</label>
+              <label className="admin-form-label">Passage Text</label>
               <textarea
                 className="editor-textarea"
                 value={form.passageText}
                 onChange={e => setForm(f => ({ ...f, passageText: e.target.value }))}
-                placeholder="Nhập nội dung văn bản bài đọc..."
+                placeholder="Enter passage text..."
                 style={{ minHeight: 200, width: '100%', fontFamily: 'inherit' }}
               />
             </div>
@@ -432,15 +432,15 @@ export default function AdminReadingQuizzesPage() {
             {/* Questions Section */}
             <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem', marginBottom: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: '600' }}>Danh sách câu hỏi ({form.questions.length})</h3>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '600' }}>Question List ({form.questions.length})</h3>
                 <button type="button" className="btn btn-outline" onClick={addQuestion}>
-                  + Thêm câu hỏi
+                  + Add Question
                 </button>
               </div>
 
               {form.questions.length === 0 ? (
                 <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
-                  Chưa có câu hỏi nào. Nhấn "+ Thêm câu hỏi" để bắt đầu.
+                  No questions added yet. Click "+ Add Question" to start.
                 </p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -469,16 +469,16 @@ export default function AdminReadingQuizzesPage() {
                           fontWeight: '600'
                         }}
                       >
-                        Xóa câu hỏi
+                        Delete Question
                       </button>
 
                       <h4 style={{ fontWeight: '600', marginBottom: '1rem', color: 'var(--primary-color)' }}>
-                        Câu hỏi #{idx + 1}
+                        Question #{idx + 1}
                       </h4>
 
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                         <div>
-                          <label className="admin-form-label" style={{ fontSize: '0.85rem' }}>Loại câu hỏi</label>
+                          <label className="admin-form-label" style={{ fontSize: '0.85rem' }}>Question Type</label>
                           <select
                             className="matching-select"
                             value={q.questionType}
@@ -490,7 +490,7 @@ export default function AdminReadingQuizzesPage() {
                         </div>
 
                         <div>
-                          <label className="admin-form-label" style={{ fontSize: '0.85rem' }}>Đáp án chính xác</label>
+                          <label className="admin-form-label" style={{ fontSize: '0.85rem' }}>Correct Answer</label>
                           {q.questionType === 'MCQ' ? (
                             <select
                               className="matching-select"
@@ -531,7 +531,7 @@ export default function AdminReadingQuizzesPage() {
                               className="completion-input"
                               value={q.correctAnswer}
                               onChange={e => updateQuestionField(idx, 'correctAnswer', e.target.value)}
-                              placeholder="Nhập từ/cụm từ đáp án chính xác..."
+                              placeholder="Enter the correct answer word or phrase..."
                               style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
                             />
                           )}
@@ -539,13 +539,13 @@ export default function AdminReadingQuizzesPage() {
                       </div>
 
                       <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
-                        <label className="admin-form-label" style={{ fontSize: '0.85rem' }}>Nội dung câu hỏi</label>
+                        <label className="admin-form-label" style={{ fontSize: '0.85rem' }}>Question Text</label>
                         <input
                           type="text"
                           className="completion-input"
                           value={q.questionText}
                           onChange={e => updateQuestionField(idx, 'questionText', e.target.value)}
-                          placeholder="Ví dụ: According to paragraph 1, what is the primary benefit..."
+                          placeholder="e.g. According to paragraph 1, what is the primary benefit..."
                           style={{ width: '100%', maxWidth: '100%', padding: '0.5rem 0.8rem' }}
                         />
                       </div>
@@ -637,19 +637,19 @@ export default function AdminReadingQuizzesPage() {
                             className="editor-textarea"
                             value={q.groupContext || ''}
                             onChange={e => updateQuestionField(idx, 'groupContext', e.target.value)}
-                            placeholder="Nhập ngữ cảnh/tóm tắt chung cho nhóm câu hỏi..."
+                            placeholder="Enter shared context or summary with blanks for the question group..."
                             style={{ minHeight: 60, width: '100%', fontSize: '0.875rem' }}
                           />
                         </div>
                       )}
 
                       <div className="admin-form-group" style={{ marginBottom: 0 }}>
-                        <label className="admin-form-label" style={{ fontSize: '0.85rem' }}>Giải thích chi tiết (Explanation)</label>
+                        <label className="admin-form-label" style={{ fontSize: '0.85rem' }}>Detailed Explanation</label>
                         <textarea
                           className="editor-textarea"
                           value={q.explanation || ''}
                           onChange={e => updateQuestionField(idx, 'explanation', e.target.value)}
-                          placeholder="Nhập lý do tại sao đáp án này đúng và trích dẫn trong văn bản..."
+                          placeholder="Enter explanation of why this answer is correct and cite the passage text..."
                           style={{ minHeight: 60, width: '100%' }}
                         />
                       </div>
@@ -660,10 +660,10 @@ export default function AdminReadingQuizzesPage() {
             </div>
 
             <div className="admin-form-actions" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
-              <button className="btn btn-outline" onClick={closeModal} type="button">Hủy</button>
+              <button className="btn btn-outline" onClick={closeModal} type="button">Cancel</button>
               <button className="btn btn-primary" onClick={handleSave} disabled={saving} type="button">
                 {saving && <span className="spinner" />}
-                {editing ? 'Cập nhật đề' : 'Tạo đề mới'}
+                {editing ? 'Update Passage' : 'Create New Passage'}
               </button>
             </div>
           </div>
@@ -675,16 +675,16 @@ export default function AdminReadingQuizzesPage() {
         <div className="admin-modal-overlay" onClick={() => setDeleteId(null)}>
           <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 700, marginBottom: 12 }}>
-              Xác nhận xóa
+              Confirm Delete
             </h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 24, lineHeight: 1.6 }}>
-              Bạn có chắc chắn muốn xóa đề đọc này? Hành động này không thể hoàn tác.
+              Are you sure you want to delete this reading passage? This action cannot be undone.
             </p>
             <div className="admin-form-actions">
-              <button className="btn btn-outline" onClick={() => setDeleteId(null)}>Hủy</button>
+              <button className="btn btn-outline" onClick={() => setDeleteId(null)}>Cancel</button>
               <button className="btn admin-btn-danger-fill" onClick={handleDelete} disabled={deleting}>
                 {deleting && <span className="spinner" />}
-                Xóa đề
+                Delete Passage
               </button>
             </div>
           </div>

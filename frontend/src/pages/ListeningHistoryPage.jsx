@@ -24,13 +24,13 @@ export default function ListeningHistoryPage() {
     <div className="listening-page">
       <div className="listening-content">
         <h1>Listening History</h1>
-        <p className="subtitle">Your past listening test attempts</p>
+        <p className="subtitle">Your previous Listening tests and practice sessions</p>
 
         {history.length === 0 ? (
           <div className="empty-state">
-            <p>No listening tests completed yet.</p>
+            <p>No Listening tests taken yet.</p>
             <button className="btn btn-primary" onClick={() => navigate('/listening')}>
-              Start Practicing
+              Start Practice
             </button>
           </div>
         ) : (
@@ -49,7 +49,7 @@ export default function ListeningHistoryPage() {
                         {item.testMode === 'MOCK_TEST' ? 'Mock Test' : 'Practice'}
                       </span>
                       <span className="history-date">
-                        {item.submittedAt ? new Date(item.submittedAt).toLocaleDateString('en-GB', {
+                        {item.submittedAt ? new Date(item.submittedAt).toLocaleDateString('en-US', {
                           day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
                         }) : ''}
                       </span>

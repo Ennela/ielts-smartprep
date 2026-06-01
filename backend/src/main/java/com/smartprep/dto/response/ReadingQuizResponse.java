@@ -36,6 +36,13 @@ public class ReadingQuizResponse {
         private String optionC;
         private String optionD;
         private Integer orderIndex;
+
+        // New fields for advanced question types
+        private String optionsJson;   // JSON array for matching dropdowns
+        private Integer wordLimit;    // word limit for completion types
+        private String groupLabel;    // group header text
+        private Integer groupId;      // group identifier
+        private String groupContext;  // shared context (summary text with blanks)
         // correctAnswer and explanation are NOT included here (hidden before submit)
     }
 }

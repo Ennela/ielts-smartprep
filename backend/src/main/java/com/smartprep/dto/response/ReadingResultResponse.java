@@ -40,5 +40,12 @@ public class ReadingResultResponse {
         private String userAnswer;
         private boolean correct;
         private String explanation;
+
+        // New fields for advanced question types
+        private String optionsJson;
+        private Integer wordLimit;
+        private String groupLabel;
+        private Integer groupId;
+        private String groupContext;
     }
 }

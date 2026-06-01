@@ -7,7 +7,9 @@ export default function ListeningExamPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const mode = searchParams.get('mode') || 'practice';
-  const partIds = useMemo(() => (searchParams.get('parts') || '').split(',').map(Number).filter(Boolean), [searchParams]);
+  const partIds = useMemo(() =>
+    (searchParams.get('parts') || '').split(',').map(Number).filter(Boolean),
+  [searchParams]);
 
   const [parts, setParts] = useState([]);
   const [answers, setAnswers] = useState({});
@@ -33,9 +35,8 @@ export default function ListeningExamPage() {
     if (partIds.length) loadParts();
   }, [partIds]);
 
-  const handleAnswer = (questionId, value) => {
+  const handleAnswer = (questionId, value) =>
     setAnswers(prev => ({ ...prev, [questionId]: value }));
-  };
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -43,21 +44,21 @@ export default function ListeningExamPage() {
       const res = await listeningApi.submitTest(
         mode === 'mock-test' ? 'MOCK_TEST' : 'PRACTICE',
         partIds,
-        answers
+        answers,
       );
-      const testId = res.data?.data?.testId;
-      navigate(`/listening/result/${testId}`, { state: res.data?.data });
+      navigate(`/listening/result/${res.data?.data?.testId}`, { state: res.data?.data });
     } catch (err) {
       console.error(err);
-      alert('Failed to submit test');
+      alert('Submission failed');
     } finally {
       setSubmitting(false);
     }
   };
 
   const currentPart = parts[currentPartIndex];
-  const totalQuestions = parts.reduce((sum, p) => sum + (p.questions?.length || 0), 0);
+  const totalQuestions = parts.reduce((s, p) => s + (p.questions?.length || 0), 0);
   const answeredCount = Object.keys(answers).filter(k => answers[k]?.trim()).length;
+  const audioBaseUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:8080';
 
   if (loading) return (
     <div className="listening-page">
@@ -65,42 +66,81 @@ export default function ListeningExamPage() {
     </div>
   );
 
-  const audioBaseUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:8080';
-
   return (
-    <div className="listening-page">
-      <nav className="navbar">
-        <div className="navbar-brand" style={{cursor:'pointer'}} onClick={() => navigate('/listening')}>SmartPrep</div>
-        <div className="navbar-user">
-          <span className={`badge ${mode === 'mock-test' ? 'badge-mock' : 'badge-practice'}`}>
-            {mode === 'mock-test' ? 'MOCK TEST' : 'PRACTICE'}
-          </span>
-          <span className="answer-progress">{answeredCount}/{totalQuestions} answered</span>
-        </div>
-      </nav>
+    <div className="listening-page" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
 
-      <main className="listening-exam-layout">
-        {/* Part tabs */}
-        {parts.length > 1 && (
-          <div className="listening-part-tabs">
-            {parts.map((part, idx) => (
-              <button
-                key={part.partId}
-                className={`part-tab ${idx === currentPartIndex ? 'active' : ''}`}
-                onClick={() => setCurrentPartIndex(idx)}
-              >
-                Part {part.partNumber}: {part.title}
-              </button>
-            ))}
+      {/* ── Header ── */}
+      <header style={{
+        padding: '16px 32px', borderBottom: '1px solid var(--outline-variant)',
+        background: 'var(--surface-container-lowest)', flexShrink: 0,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
+              onClick={() => navigate('/listening')}>
+              <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--primary)' }}>
+                SmartPrep
+              </span>
+              <span style={{
+                padding: '2px 10px', borderRadius: 'var(--radius-full)', fontSize: '0.72rem', fontWeight: 700,
+                background: mode === 'mock-test' ? 'rgba(186,26,26,0.08)' : 'rgba(0,108,74,0.08)',
+                color: mode === 'mock-test' ? 'var(--error)' : 'var(--secondary)',
+              }}>
+                {mode === 'mock-test' ? 'MOCK TEST' : 'PRACTICE'}
+              </span>
+            </div>
+            {currentPart && (
+              <p style={{ fontSize: '0.875rem', color: 'var(--on-surface-variant)', marginTop: 4 }}>
+                <strong style={{ color: 'var(--on-surface)' }}>
+                  Part {currentPart.partNumber}: {currentPart.title}
+                </strong>
+                {currentPart.topic && ` · ${currentPart.topic}`}
+              </p>
+            )}
           </div>
-        )}
+          <div style={{ textAlign: 'right' }}>
+            <p style={{ fontSize: '0.875rem', color: 'var(--on-surface-variant)' }}>
+              Answered <strong style={{ color: 'var(--on-surface)' }}>{answeredCount}</strong> / {totalQuestions}
+            </p>
+          </div>
+        </div>
+      </header>
 
+      {/* ── Part Tabs ── */}
+      {parts.length > 1 && (
+        <div className="listening-part-tabs" style={{ padding: '12px 32px', background: 'var(--surface-container-low)', borderBottom: '1px solid var(--outline-variant)' }}>
+          {parts.map((part, idx) => (
+            <button
+              key={part.partId}
+              className={`part-tab ${idx === currentPartIndex ? 'active' : ''}`}
+              onClick={() => setCurrentPartIndex(idx)}
+            >
+              Part {part.partNumber}: {part.title}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── Main Content ── */}
+      <main style={{ flex: 1, maxWidth: 820, margin: '0 auto', width: '100%', padding: '32px 24px' }}>
         {currentPart && (
-          <div className="listening-exam-content">
-            {/* Audio player */}
-            <div className="listening-audio-section">
-              <h2>Part {currentPart.partNumber}: {currentPart.title}</h2>
-              <p className="listening-topic-label">{currentPart.topic}</p>
+          <>
+            {/* Audio Player Card */}
+            <div style={{
+              background: 'var(--surface-container-lowest)', border: '1px solid var(--outline-variant)',
+              borderRadius: 'var(--radius-xl)', padding: 24, marginBottom: 32,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                <span className="material-symbols-outlined" style={{ color: 'var(--primary)', fontSize: 24 }}>headphones</span>
+                <div>
+                  <p style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.95rem' }}>
+                    Part {currentPart.partNumber}: {currentPart.title}
+                  </p>
+                  {currentPart.topic && (
+                    <p style={{ fontSize: '0.8', color: 'var(--on-surface-variant)' }}>{currentPart.topic}</p>
+                  )}
+                </div>
+              </div>
               <AudioPlayer
                 src={`${audioBaseUrl}${currentPart.audioUrl}`}
                 mode={mode}
@@ -112,57 +152,77 @@ export default function ListeningExamPage() {
               {(currentPart.questions || [])
                 .sort((a, b) => a.orderIndex - b.orderIndex)
                 .map((q, qIdx) => {
-                  // Calculate global question number
                   let globalNum = qIdx + 1;
-                  for (let i = 0; i < currentPartIndex; i++) {
-                    globalNum += (parts[i].questions?.length || 0);
-                  }
-
+                  for (let i = 0; i < currentPartIndex; i++) globalNum += (parts[i].questions?.length || 0);
                   return (
-                    <div key={q.questionId} className="question-card">
-                      <div className="question-number">Q{globalNum}</div>
+                    <div key={q.questionId} style={{
+                      background: 'var(--surface-container-lowest)',
+                      border: '1px solid var(--outline-variant)',
+                      borderRadius: 'var(--radius-xl)', padding: 20,
+                    }}>
+                      <div className="question-number" style={{ marginBottom: 8 }}>Q{globalNum}</div>
                       {q.questionType === 'MCQ' ? (
-                        <McqQuestion
-                          question={q}
-                          value={answers[q.questionId] || ''}
-                          onChange={(val) => handleAnswer(q.questionId, val)}
-                        />
+                        <McqQuestion question={q} value={answers[q.questionId] || ''} onChange={v => handleAnswer(q.questionId, v)} />
                       ) : (
-                        <FillBlankQuestion
-                          question={q}
-                          value={answers[q.questionId] || ''}
-                          onChange={(val) => handleAnswer(q.questionId, val)}
-                        />
+                        <FillBlankQuestion question={q} value={answers[q.questionId] || ''} onChange={v => handleAnswer(q.questionId, v)} />
                       )}
                     </div>
                   );
                 })}
             </div>
-          </div>
+          </>
         )}
-
-        <div className="listening-submit-bar">
-          <button
-            className="btn btn-primary btn-lg"
-            onClick={handleSubmit}
-            disabled={submitting || answeredCount === 0}
-            id="submit-listening-btn"
-          >
-            {submitting ? 'Grading...' : `Submit Test (${answeredCount}/${totalQuestions})`}
-          </button>
-        </div>
       </main>
+
+      {/* ── Submit Bar ── */}
+      <div style={{
+        position: 'sticky', bottom: 0, padding: '16px 32px',
+        background: 'var(--surface-container-lowest)', borderTop: '1px solid var(--outline-variant)',
+        display: 'flex', justifyContent: 'flex-end', gap: 12,
+      }}>
+        <button className="btn btn-outline" onClick={() => navigate('/listening')}>Exit</button>
+        <button
+          className="btn btn-primary btn-lg"
+          onClick={handleSubmit}
+          disabled={submitting || answeredCount === 0}
+          id="submit-listening-btn"
+        >
+          {submitting ? 'Grading...' : `Submit (${answeredCount}/${totalQuestions})`}
+        </button>
+      </div>
+
+      {/* ── FAB Buttons ── */}
+      <div style={{ position: 'fixed', bottom: 80, right: 24, display: 'flex', flexDirection: 'column', gap: 10, zIndex: 50 }}>
+        <button style={{
+          display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px',
+          background: 'var(--primary)', color: 'var(--on-primary)',
+          border: 'none', borderRadius: 'var(--radius-full)',
+          fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.875rem',
+          cursor: 'pointer', boxShadow: 'var(--shadow-lg)', transition: 'background var(--transition)',
+        }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>psychology</span>
+          AI Vocabulary
+        </button>
+        <button style={{
+          display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px',
+          background: 'var(--surface-container-lowest)', color: 'var(--primary)',
+          border: '1px solid var(--primary)', borderRadius: 'var(--radius-full)',
+          fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.875rem',
+          cursor: 'pointer', boxShadow: 'var(--shadow)', transition: 'background var(--transition)',
+        }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>analytics</span>
+          AI Analysis
+        </button>
+      </div>
     </div>
   );
 }
 
-// ===== MCQ Question Component =====
+/* ── MCQ Question ── */
 function McqQuestion({ question, value, onChange }) {
-  // Parse MCQ options from questionText
   const lines = question.questionText.split('\n');
   const stem = lines[0];
   const options = lines.slice(1).filter(l => l.trim());
-
   return (
     <div className="mcq-question">
       <p className="question-text">{stem}</p>
@@ -171,13 +231,8 @@ function McqQuestion({ question, value, onChange }) {
           const letter = opt.trim().charAt(0);
           return (
             <label key={i} className={`mcq-option ${value === letter ? 'selected' : ''}`}>
-              <input
-                type="radio"
-                name={`q-${question.questionId}`}
-                value={letter}
-                checked={value === letter}
-                onChange={() => onChange(letter)}
-              />
+              <input type="radio" name={`q-${question.questionId}`} value={letter}
+                checked={value === letter} onChange={() => onChange(letter)} />
               <span className="mcq-letter">{letter}</span>
               <span className="mcq-label">{opt.trim().substring(2).trim()}</span>
             </label>
@@ -188,10 +243,9 @@ function McqQuestion({ question, value, onChange }) {
   );
 }
 
-// ===== Fill-in-the-Blank Question Component =====
+/* ── Fill-in-the-Blank Question ── */
 function FillBlankQuestion({ question, value, onChange }) {
   const parts = question.questionText.split('___');
-
   return (
     <div className="fill-blank-question">
       <p className="question-text">
@@ -199,13 +253,8 @@ function FillBlankQuestion({ question, value, onChange }) {
           <span key={i}>
             {part}
             {i < parts.length - 1 && (
-              <input
-                type="text"
-                className="fill-blank-input"
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                placeholder="your answer"
-              />
+              <input type="text" className="fill-blank-input" value={value}
+                onChange={e => onChange(e.target.value)} placeholder="your answer" />
             )}
           </span>
         ))}

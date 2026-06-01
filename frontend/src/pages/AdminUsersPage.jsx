@@ -57,10 +57,10 @@ export default function AdminUsersPage() {
         <div>
           <button className="btn-back" onClick={() => navigate('/admin')} id="back-to-admin">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            Tổng quan
+            Overview
           </button>
-          <h1>Quản lý học viên</h1>
-          <p className="subtitle">Tổng cộng {totalElements} học viên đã đăng ký</p>
+          <h1>Student Management</h1>
+          <p className="subtitle">Total of {totalElements} registered students</p>
         </div>
       </div>
 
@@ -73,7 +73,7 @@ export default function AdminUsersPage() {
         </svg>
         <input
           type="text"
-          placeholder="Tìm kiếm theo tên hoặc email..."
+          placeholder="Search by name or email..."
           value={search}
           onChange={(e) => handleSearch(e.target.value)}
           id="admin-user-search"
@@ -86,7 +86,7 @@ export default function AdminUsersPage() {
           <div className="loading-spinner"><div className="spinner" /></div>
         ) : content.length === 0 ? (
           <div className="empty-state">
-            <p>Không tìm thấy học viên nào{search ? ` với từ khóa "${search}"` : ''}.</p>
+            <p>No students found{search ? ` with keyword "${search}"` : ''}.</p>
           </div>
         ) : (
           <>
@@ -95,12 +95,12 @@ export default function AdminUsersPage() {
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>Học viên</th>
+                    <th>Student</th>
                     <th>Email</th>
-                    <th>Số bài</th>
-                    <th>Điểm TB</th>
-                    <th>Ngày tham gia</th>
-                    <th>Hành động</th>
+                    <th>Tests Taken</th>
+                    <th>Avg Score</th>
+                    <th>Join Date</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -132,7 +132,7 @@ export default function AdminUsersPage() {
                           onClick={() => openDetail(u.userId)}
                           id={`view-user-${u.userId}`}
                         >
-                          Chi tiết
+                          Details
                         </button>
                       </td>
                     </tr>
@@ -147,13 +147,13 @@ export default function AdminUsersPage() {
                   className="btn btn-sm btn-outline"
                   disabled={page === 0}
                   onClick={() => setPage(p => Math.max(0, p - 1))}
-                >Trước</button>
-                <span className="ht-page-info">Trang {page + 1} / {totalPages}</span>
+                >Prev</button>
+                <span className="ht-page-info">Page {page + 1} / {totalPages}</span>
                 <button
                   className="btn btn-sm btn-outline"
                   disabled={page >= totalPages - 1}
                   onClick={() => setPage(p => p + 1)}
-                >Sau</button>
+                >Next</button>
               </div>
             )}
           </>
@@ -180,7 +180,7 @@ export default function AdminUsersPage() {
                     <h2>{detail.displayName || detail.username}</h2>
                     <p className="admin-detail-meta">@{detail.username} · {detail.email}</p>
                     <p className="admin-detail-meta">
-                      Tham gia: {formatDate(detail.createdAt)}
+                      Joined: {formatDate(detail.createdAt)}
                       {detail.role === 'ADMIN' && <span className="admin-role-badge">ADMIN</span>}
                     </p>
                   </div>
@@ -188,7 +188,7 @@ export default function AdminUsersPage() {
 
                 {/* Targets */}
                 <div className="admin-detail-targets">
-                  <h3>Mục tiêu điểm</h3>
+                  <h3>Target Band Scores</h3>
                   <div className="admin-target-row">
                     <span>Reading: <strong>{detail.targetReadingScore ?? '—'}</strong></span>
                     <span>Writing: <strong>{detail.targetWritingScore ?? '—'}</strong></span>
@@ -199,7 +199,7 @@ export default function AdminUsersPage() {
                 {/* Skill Stats */}
                 {detail.skillStats?.length > 0 && (
                   <div className="admin-detail-section">
-                    <h3>Thống kê theo kỹ năng</h3>
+                    <h3>Skill Statistics</h3>
                     <div className="admin-skill-stats">
                       {detail.skillStats.map(s => (
                         <div key={s.skill} className="admin-skill-stat-card">
@@ -207,11 +207,11 @@ export default function AdminUsersPage() {
                           <div className="admin-skill-stat-numbers">
                             <div>
                               <span className="stat-value">{s.totalTests}</span>
-                              <span className="stat-label">Bài thi</span>
+                              <span className="stat-label">Tests</span>
                             </div>
                             <div>
                               <span className="stat-value">{s.avgScore != null ? Number(s.avgScore).toFixed(1) : '—'}</span>
-                              <span className="stat-label">Điểm TB</span>
+                              <span className="stat-label">Avg Score</span>
                             </div>
                           </div>
                         </div>
@@ -223,7 +223,7 @@ export default function AdminUsersPage() {
                 {/* Recent Scores */}
                 {detail.recentScores?.length > 0 && (
                   <div className="admin-detail-section">
-                    <h3>Lịch sử gần đây</h3>
+                    <h3>Recent History</h3>
                     <div className="admin-recent-scores">
                       {detail.recentScores.map((s, i) => (
                         <div key={i} className="admin-recent-row">
@@ -257,5 +257,5 @@ function getBandClass(score) {
 function formatDate(dateStr) {
   if (!dateStr) return '—';
   const d = new Date(dateStr);
-  return d.toLocaleDateString('vi-VN', { day: '2-digit', month: 'short', year: 'numeric' });
+  return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 }

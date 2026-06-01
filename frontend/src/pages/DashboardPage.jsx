@@ -34,53 +34,98 @@ export default function DashboardPage() {
       .catch(() => {});
   }, [historySkill, historyPage]);
 
-  const today = new Date().toLocaleDateString('vi-VN', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-  });
+  const displayName = user?.displayName || user?.username || 'You';
+  const targetBand = overview?.targetBand || '8.0';
+  const currentBand = overview?.currentEstimate || '—';
 
   return (
     <div className="dashboard-content">
-      {/* Row 1: Greeting */}
-      <div className="dash-greeting reveal">
-        <div className="dash-greeting-left">
-          <h1>Xin chao, {user?.displayName || user?.username}</h1>
-          <p className="subtitle">Your IELTS practice dashboard</p>
-        </div>
-        <div className="dash-date-badge">
-          <span>{today}</span>
-        </div>
-      </div>
 
-      {/* Row 2: Skill Progress Cards */}
-      <div className="skill-progress-row reveal reveal-delay-1">
-        {overview?.skills ? (
-          overview.skills.map(skill => (
-            <SkillProgressCard
-              key={skill.skill}
-              skill={skill.skill}
-              currentAvg={skill.currentAvg}
-              targetScore={skill.targetScore}
-              progressPercent={skill.progressPercent}
-              totalTests={skill.totalTests}
-              gap={skill.gap}
-              status={skill.status}
-            />
-          ))
-        ) : (
-          ['READING', 'WRITING', 'LISTENING'].map(s => (
-            <div key={s} className="card card-clickable" onClick={() => navigate(`/${s.toLowerCase()}`)}>
-              <h3>{s}</h3>
-              <p>Start practicing to track your progress</p>
-              <span className="card-action">Start Practice</span>
-            </div>
-          ))
-        )}
-      </div>
+      {/* ── Row 1: Welcome Hero Bento ── */}
+      <section className="dash-hero reveal">
+        <div className="dash-welcome-card">
+          <div>
+            <h1>Welcome, {displayName}.</h1>
+            <p className="subtitle">
+              Keep practicing to achieve your target band score.
+            </p>
+          </div>
+          <div className="dash-welcome-actions">
+            <button
+              className="btn btn-primary"
+              onClick={() => navigate('/reading')}
+            >
+              Continue Practice
+            </button>
+            <button
+              className="btn btn-outline"
+              onClick={() => navigate('/reading/history')}
+            >
+              View Details
+            </button>
+          </div>
+        </div>
 
-      {/* Row 3: Score Trend Chart */}
+        {/* Target Band Card */}
+        <div className="dash-target-card">
+          <p className="dash-target-label">Overall Target Band</p>
+          <div className="dash-target-band">{targetBand}</div>
+          <div className="dash-target-chip">
+            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>trending_up</span>
+            Current Est. {currentBand}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Row 2: Skill Breakdown ── */}
+      <section className="reveal reveal-delay-1">
+        <div className="dash-section-header">
+          <h2>Skill Breakdown</h2>
+          <a href="#" onClick={e => { e.preventDefault(); navigate('/reading/history'); }}>
+            View History
+          </a>
+        </div>
+
+        <div className="skill-progress-row">
+          {overview?.skills ? (
+            overview.skills.map(skill => (
+              <SkillProgressCard
+                key={skill.skill}
+                skill={skill.skill}
+                currentAvg={skill.currentAvg}
+                targetScore={skill.targetScore}
+                progressPercent={skill.progressPercent}
+                totalTests={skill.totalTests}
+                gap={skill.gap}
+                status={skill.status}
+              />
+            ))
+          ) : (
+            ['READING', 'WRITING', 'LISTENING'].map(s => (
+              <div key={s} className="skill-progress-card" style={{ cursor: 'pointer' }} onClick={() => navigate(`/${s.toLowerCase()}`)}>
+                <div className="spc-header">
+                  <div className="spc-icon-wrap">
+                    <span className="material-symbols-outlined">
+                      {s === 'READING' ? 'menu_book' : s === 'WRITING' ? 'edit_note' : 'headphones'}
+                    </span>
+                  </div>
+                  <span className={`spc-band-score spc-band-${s.toLowerCase()}`}>—</span>
+                </div>
+                <p className="spc-skill-name">{s.charAt(0) + s.slice(1).toLowerCase()}</p>
+                <p className="spc-count">Start practicing to track your progress</p>
+                <div className="spc-progress-bar">
+                  <div className={`spc-progress-fill spc-fill-${s.toLowerCase()}`} style={{ width: '0%' }} />
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
+      {/* ── Row 3: Score Trend Chart ── */}
       <div className="trend-section reveal reveal-delay-2">
         <div className="trend-header">
-          <h2>Score Trend</h2>
+          <h2>Score Trends</h2>
           <div className="trend-controls">
             <div className="trend-tabs">
               {['READING', 'WRITING', 'LISTENING'].map(s => (
@@ -112,13 +157,13 @@ export default function DashboardPage() {
             />
           ) : (
             <div className="trend-empty">
-              <p>No data yet. Start practicing to see your progress!</p>
+              <p>No data available. Start practicing to see your progress!</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Row 4: History */}
+      {/* ── Row 4: Recent History ── */}
       <div className="history-section reveal reveal-delay-3">
         <div className="history-header">
           <h2>Recent Activity</h2>
@@ -151,7 +196,7 @@ export default function DashboardPage() {
                   </span>
                   <span className="ht-score">{item.score?.toFixed ? item.score.toFixed(1) : item.score}</span>
                   <span className="ht-date">
-                    {item.recordedAt ? new Date(item.recordedAt).toLocaleDateString('en-GB', {
+                    {item.recordedAt ? new Date(item.recordedAt).toLocaleDateString('en-US', {
                       day: 'numeric', month: 'short', year: 'numeric',
                     }) : ''}
                   </span>
@@ -160,24 +205,16 @@ export default function DashboardPage() {
             </div>
             {history.totalPages > 1 && (
               <div className="ht-pagination">
-                <button
-                  className="btn btn-sm btn-outline"
-                  disabled={historyPage === 0}
-                  onClick={() => setHistoryPage(p => Math.max(0, p - 1))}
-                >Previous</button>
+                <button className="btn btn-sm btn-outline" disabled={historyPage === 0}
+                  onClick={() => setHistoryPage(p => Math.max(0, p - 1))}>Previous</button>
                 <span className="ht-page-info">Page {historyPage + 1} / {history.totalPages}</span>
-                <button
-                  className="btn btn-sm btn-outline"
-                  disabled={historyPage >= history.totalPages - 1}
-                  onClick={() => setHistoryPage(p => p + 1)}
-                >Next</button>
+                <button className="btn btn-sm btn-outline" disabled={historyPage >= history.totalPages - 1}
+                  onClick={() => setHistoryPage(p => p + 1)}>Next</button>
               </div>
             )}
           </>
         ) : (
-          <div className="trend-empty">
-            <p>No history entries yet.</p>
-          </div>
+          <div className="trend-empty"><p>No history available.</p></div>
         )}
       </div>
     </div>

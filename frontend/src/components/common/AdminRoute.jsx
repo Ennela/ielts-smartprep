@@ -5,7 +5,7 @@ export default function AdminRoute({ children }) {
   const { isAuthenticated, isAdmin, loading } = useAuth();
 
   if (loading) {
-    return <div className="loading-screen">Đang tải...</div>;
+    return <div className="loading-screen">Loading...</div>;
   }
 
   if (!isAuthenticated) {

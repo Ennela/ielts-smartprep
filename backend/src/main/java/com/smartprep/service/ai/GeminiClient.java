@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartprep.exception.AiServiceException;
 import com.smartprep.exception.InvalidAiResponseException;
+import com.smartprep.exception.ServiceUnavailableException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,7 +42,9 @@ public class GeminiClient {
     /**
      * Send a prompt to Gemini API and return the text response.
      * Implements retry with exponential backoff.
+     * Protected by Resilience4j Circuit Breaker.
      */
+    @CircuitBreaker(name = "gemini", fallbackMethod = "fallbackGenerate")
     public String generate(String systemPrompt, String userPrompt) {
         String url = baseUrl + ":generateContent?key=" + apiKey;
 
@@ -77,6 +81,15 @@ public class GeminiClient {
         }
 
         throw new AiServiceException("Gemini API failed after all retries");
+    }
+
+    /**
+     * Fallback method invoked when circuit breaker is OPEN or call fails.
+     */
+    private String fallbackGenerate(String systemPrompt, String userPrompt, Throwable throwable) {
+        log.error("Circuit breaker fallback for Gemini API: {}", throwable.getMessage());
+        throw new ServiceUnavailableException(
+                "AI service is temporarily unavailable. Please try again in a few moments.");
     }
 
     private Map<String, Object> buildRequestBody(String systemPrompt, String userPrompt) {
@@ -128,3 +141,4 @@ public class GeminiClient {
         }
     }
 }
+

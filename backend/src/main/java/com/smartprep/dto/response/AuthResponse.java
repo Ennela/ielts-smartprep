@@ -12,6 +12,7 @@ public class AuthResponse {
     private String email;
     private String token;
     private Long expiresIn;
+    private String role;
     private BigDecimal targetReadingScore;
     private BigDecimal targetWritingScore;
     private BigDecimal targetListeningScore;

@@ -13,6 +13,8 @@ public class AnalyticsOverviewResponse {
     private List<SkillProgress> skills;
     private long totalTests;
     private long targetMetCount;
+    private BigDecimal targetBand;
+    private BigDecimal currentEstimate;
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class SkillProgress {

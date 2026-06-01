@@ -69,10 +69,33 @@ public class StatsService {
         long totalTestCount = totalTests.values().stream().mapToLong(Long::longValue).sum();
         long metTargetCount = skills.stream().filter(s -> s.getProgressPercent() >= 100).count();
 
+        // Calculate overall target band (average of reading, writing, listening targets)
+        BigDecimal targetReading = user.getTargetReadingScore() != null ? user.getTargetReadingScore() : new BigDecimal("6.5");
+        BigDecimal targetWriting = user.getTargetWritingScore() != null ? user.getTargetWritingScore() : new BigDecimal("6.5");
+        BigDecimal targetListening = user.getTargetListeningScore() != null ? user.getTargetListeningScore() : new BigDecimal("6.5");
+        BigDecimal targetSum = targetReading.add(targetWriting).add(targetListening);
+        BigDecimal targetBand = roundToIeltsBand(targetSum.divide(BigDecimal.valueOf(3), 4, RoundingMode.HALF_UP));
+
+        // Calculate overall current estimate band (average of active skill scores)
+        BigDecimal currentEstimate = null;
+        BigDecimal sumAvg = BigDecimal.ZERO;
+        long activeSkills = 0;
+        for (AnalyticsOverviewResponse.SkillProgress sp : skills) {
+            if (sp.getTotalTests() > 0) {
+                sumAvg = sumAvg.add(sp.getCurrentAvg());
+                activeSkills++;
+            }
+        }
+        if (activeSkills > 0) {
+            currentEstimate = roundToIeltsBand(sumAvg.divide(BigDecimal.valueOf(activeSkills), 4, RoundingMode.HALF_UP));
+        }
+
         AnalyticsOverviewResponse response = AnalyticsOverviewResponse.builder()
                 .skills(skills)
                 .totalTests(totalTestCount)
                 .targetMetCount(metTargetCount)
+                .targetBand(targetBand)
+                .currentEstimate(currentEstimate)
                 .build();
 
         // Update cache
@@ -190,6 +213,26 @@ public class StatsService {
             case "LISTENING" -> user.getTargetListeningScore() != null ? user.getTargetListeningScore() : new BigDecimal("6.5");
             default -> new BigDecimal("6.5");
         };
+    }
+
+    public void evictOverviewCache(Long userId) {
+        if (userId != null) {
+            overviewCache.remove(userId);
+        }
+    }
+
+    private BigDecimal roundToIeltsBand(BigDecimal score) {
+        if (score == null || score.compareTo(BigDecimal.ZERO) == 0) return BigDecimal.ZERO;
+        double val = score.doubleValue();
+        double base = Math.floor(val);
+        double fractional = val - base;
+        if (fractional < 0.25) {
+            return BigDecimal.valueOf(base).setScale(1, RoundingMode.HALF_UP);
+        } else if (fractional < 0.75) {
+            return BigDecimal.valueOf(base + 0.5).setScale(1, RoundingMode.HALF_UP);
+        } else {
+            return BigDecimal.valueOf(base + 1.0).setScale(1, RoundingMode.HALF_UP);
+        }
     }
 
     // Simple cache entry

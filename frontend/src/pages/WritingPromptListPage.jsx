@@ -2,42 +2,82 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import writingApi from '../api/writingApi';
 
-const ESSAY_TYPES = [
+const TASK1_TYPES = ['LINE_GRAPH', 'BAR_CHART', 'PIE_CHART', 'TABLE', 'MAP', 'DIAGRAM'];
+const TASK2_TYPES = ['OPINION', 'DISCUSSION', 'CAUSE_AND_EFFECT', 'PROBLEM_AND_SOLUTION', 'ADVANTAGES_DISADVANTAGES', 'TWO_PART_QUESTION'];
+
+const TASK2_FILTERS = [
     { value: '', label: 'All Types' },
     { value: 'OPINION', label: 'Opinion' },
     { value: 'DISCUSSION', label: 'Discussion' },
     { value: 'CAUSE_AND_EFFECT', label: 'Cause & Effect' },
+    { value: 'PROBLEM_AND_SOLUTION', label: 'Problem & Solution' },
+    { value: 'ADVANTAGES_DISADVANTAGES', label: 'Advantages & Disadvantages' },
+    { value: 'TWO_PART_QUESTION', label: 'Two-Part Question' },
+];
+
+const TASK1_FILTERS = [
+    { value: '', label: 'All Types' },
+    { value: 'LINE_GRAPH', label: 'Line Graph' },
+    { value: 'BAR_CHART', label: 'Bar Chart' },
+    { value: 'PIE_CHART', label: 'Pie Chart' },
+    { value: 'TABLE', label: 'Table' },
+    { value: 'MAP', label: 'Map' },
+    { value: 'DIAGRAM', label: 'Diagram' },
 ];
 
 export default function WritingPromptListPage() {
     const navigate = useNavigate();
     const [prompts, setPrompts] = useState([]);
+    const [activeTask, setActiveTask] = useState(1); // 1 or 2
     const [filter, setFilter] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
     useEffect(() => {
         loadPrompts();
-    }, [filter]);
+    }, []);
+
+    useEffect(() => {
+        setFilter(''); // Reset filter when switching tabs
+    }, [activeTask]);
 
     const loadPrompts = async () => {
         setLoading(true);
         setError('');
         try {
-            const res = await writingApi.getPrompts(filter || undefined);
+            const res = await writingApi.getPrompts();
             setPrompts(res.data.data || []);
         } catch (err) {
-            setError('Failed to load writing prompts.');
+            setError('Failed to load prompts.');
         } finally {
             setLoading(false);
         }
     };
+
+    // Filter prompts by active task and sub-filter
+    const taskTypes = activeTask === 1 ? TASK1_TYPES : TASK2_TYPES;
+    const filteredPrompts = prompts.filter(p => {
+        if (!taskTypes.includes(p.essayType)) return false;
+        if (filter && p.essayType !== filter) return false;
+        return true;
+    });
+
+    const filters = activeTask === 1 ? TASK1_FILTERS : TASK2_FILTERS;
 
     const getTypeBadgeClass = (type) => {
         switch (type) {
             case 'OPINION': return 'badge-opinion';
             case 'DISCUSSION': return 'badge-discussion';
             case 'CAUSE_AND_EFFECT': return 'badge-cause';
+            case 'PROBLEM_AND_SOLUTION': return 'badge-problem';
+            case 'ADVANTAGES_DISADVANTAGES': return 'badge-advantages';
+            case 'TWO_PART_QUESTION': return 'badge-twopart';
+            case 'LINE_GRAPH': return 'badge-line-graph';
+            case 'BAR_CHART': return 'badge-bar-chart';
+            case 'PIE_CHART': return 'badge-pie-chart';
+            case 'TABLE': return 'badge-table';
+            case 'MAP': return 'badge-map';
+            case 'DIAGRAM': return 'badge-diagram';
             default: return '';
         }
     };
@@ -45,7 +85,16 @@ export default function WritingPromptListPage() {
     const formatType = (type) => {
         switch (type) {
             case 'CAUSE_AND_EFFECT': return 'Cause & Effect';
-            default: return type.charAt(0) + type.slice(1).toLowerCase();
+            case 'PROBLEM_AND_SOLUTION': return 'Problem & Solution';
+            case 'ADVANTAGES_DISADVANTAGES': return 'Advantages & Disadvantages';
+            case 'TWO_PART_QUESTION': return 'Two-Part Question';
+            case 'LINE_GRAPH': return 'Line Graph';
+            case 'BAR_CHART': return 'Bar Chart';
+            case 'PIE_CHART': return 'Pie Chart';
+            case 'TABLE': return 'Table';
+            case 'MAP': return 'Map';
+            case 'DIAGRAM': return 'Diagram';
+            default: return type ? type.charAt(0) + type.slice(1).toLowerCase() : '';
         }
     };
 
@@ -54,22 +103,52 @@ export default function WritingPromptListPage() {
             <div className="writing-content">
                 <button className="btn-back" onClick={() => navigate('/dashboard')} id="back-to-dashboard">
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                    Dashboard
+                    Home
                 </button>
 
                 <div className="writing-header">
                     <div>
                         <h1>Writing Practice</h1>
-                        <p className="subtitle">Choose a Task 2 prompt and start writing</p>
+                        <p className="subtitle">
+                            {activeTask === 1
+                                ? 'Select a Task 1 prompt and write a report describing the chart'
+                                : 'Select a Task 2 prompt and start writing your essay'}
+                        </p>
                     </div>
                     <button className="btn btn-outline" onClick={() => navigate('/writing/history')} id="view-writing-history">
                         View History
                     </button>
                 </div>
 
-                {/* Filter */}
+                {/* Task Tabs */}
+                <div className="task-tabs">
+                    <button
+                        className={`task-tab-btn ${activeTask === 1 ? 'active' : ''}`}
+                        onClick={() => setActiveTask(1)}
+                        id="task-tab-1"
+                    >
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
+                        </svg>
+                        Task 1
+                        <span className="task-tab-desc">Chart Description</span>
+                    </button>
+                    <button
+                        className={`task-tab-btn ${activeTask === 2 ? 'active' : ''}`}
+                        onClick={() => setActiveTask(2)}
+                        id="task-tab-2"
+                    >
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>
+                        </svg>
+                        Task 2
+                        <span className="task-tab-desc">Essay Writing</span>
+                    </button>
+                </div>
+
+                {/* Sub-filter */}
                 <div className="writing-filter">
-                    {ESSAY_TYPES.map((t) => (
+                    {filters.map((t) => (
                         <button
                             key={t.value}
                             className={`filter-btn ${filter === t.value ? 'active' : ''}`}
@@ -90,23 +169,30 @@ export default function WritingPromptListPage() {
                     </div>
                 ) : (
                     <div className="prompt-list">
-                        {prompts.length === 0 ? (
+                        {filteredPrompts.length === 0 ? (
                             <p className="empty-msg">No prompts found.</p>
                         ) : (
-                            prompts.map((p) => (
+                            filteredPrompts.map((p) => (
                                 <div
                                     key={p.promptId}
-                                    className="card prompt-card card-clickable"
+                                    className={`card prompt-card card-clickable ${p.imageUrl ? 'prompt-card-with-image' : ''}`}
                                     onClick={() => navigate(`/writing/editor/${p.promptId}`)}
                                     id={`prompt-${p.promptId}`}
                                 >
-                                    <div className="prompt-card-header">
-                                        <span className={`essay-type-badge ${getTypeBadgeClass(p.essayType)}`}>
-                                            {formatType(p.essayType)}
-                                        </span>
+                                    {p.imageUrl && (
+                                        <div className="prompt-card-thumbnail">
+                                            <img src={p.imageUrl} alt="Chart" loading="lazy" />
+                                        </div>
+                                    )}
+                                    <div className="prompt-card-body">
+                                        <div className="prompt-card-header">
+                                            <span className={`essay-type-badge ${getTypeBadgeClass(p.essayType)}`}>
+                                                {formatType(p.essayType)}
+                                            </span>
+                                        </div>
+                                        <p className="prompt-text">{p.promptText}</p>
+                                        <span className="card-action">Start writing &rarr;</span>
                                     </div>
-                                    <p className="prompt-text">{p.promptText}</p>
-                                    <span className="card-action">Start Writing &rarr;</span>
                                 </div>
                             ))
                         )}

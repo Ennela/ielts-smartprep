@@ -52,7 +52,7 @@ export default function ListeningPracticePage() {
         <div className="listening-header">
           <div>
             <h1>Listening Practice</h1>
-            <p className="subtitle">Choose a section to practice or take a full mock test</p>
+            <p className="subtitle">Select a part to practice or start a full mock test</p>
           </div>
           <button
             className="btn btn-primary btn-lg"
@@ -60,7 +60,7 @@ export default function ListeningPracticePage() {
             disabled={mockLoading}
             id="start-mock-test-btn"
           >
-            {mockLoading ? 'Assembling...' : 'Start Mock Test (40 Questions)'}
+            {mockLoading ? 'Preparing...' : 'Start Mock Test (40 Questions)'}
           </button>
         </div>
 

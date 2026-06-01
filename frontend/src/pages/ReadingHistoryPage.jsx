@@ -14,7 +14,7 @@ export default function ReadingHistoryPage() {
         const res = await readingApi.getHistory();
         setHistory(res.data.data || []);
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load history');
+        setError(err.response?.data?.message || 'Unable to load history');
       } finally {
         setLoading(false);
       }
@@ -32,10 +32,10 @@ export default function ReadingHistoryPage() {
         <div className="history-header">
           <button className="btn-back" onClick={() => navigate('/reading')} id="back-to-config">
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            Back
+            Go Back
           </button>
           <h1>Reading History</h1>
-          <p className="subtitle">Your past reading practice sessions</p>
+          <p className="subtitle">Your previous Reading practice sessions</p>
         </div>
 
         {error && <div className="error-msg">{error}</div>}
@@ -47,8 +47,8 @@ export default function ReadingHistoryPage() {
                 <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
               </svg>
             </div>
-            <p>No reading tests completed yet.</p>
-            <button className="btn btn-primary" onClick={() => navigate('/reading')}>Start Your First Test</button>
+            <p>No Reading tests completed yet.</p>
+            <button className="btn btn-primary" onClick={() => navigate('/reading')}>Start your first test</button>
           </div>
         ) : (
           <div className="history-table-wrapper">
@@ -61,6 +61,7 @@ export default function ReadingHistoryPage() {
                   <th>Score</th>
                   <th>Band</th>
                   <th>Date</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -72,6 +73,19 @@ export default function ReadingHistoryPage() {
                     <td>{item.correctAnswers}/{item.totalQuestions}</td>
                     <td><span className={`band-score band-${getBandClass(item.bandScore)}`}>{item.bandScore}</span></td>
                     <td>{formatDate(item.submittedAt || item.createdAt)}</td>
+                    <td>
+                      <button
+                        className="btn btn-sm btn-outline"
+                        onClick={() => navigate(`/reading/result/${item.quizId}`)}
+                        id={`view-detail-${item.quizId}`}
+                      >
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: 4, verticalAlign: 'middle' }}>
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                          <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        View Details
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -93,5 +107,5 @@ function getBandClass(score) {
 function formatDate(dateStr) {
   if (!dateStr) return '-';
   const d = new Date(dateStr);
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
 }

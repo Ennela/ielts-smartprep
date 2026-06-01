@@ -94,7 +94,7 @@ export default function ProfilePage() {
 
         <div className="target-scores-grid">
           <div className="profile-field">
-            <label>Reading Target</label>
+            <label>Target Reading</label>
             <select value={targetReading} onChange={(e) => setTargetReading(e.target.value)} className="profile-input" id="target-reading">
               {[5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0].map(s => (
                 <option key={s} value={s}>{s}</option>
@@ -102,7 +102,7 @@ export default function ProfilePage() {
             </select>
           </div>
           <div className="profile-field">
-            <label>Writing Target</label>
+            <label>Target Writing</label>
             <select value={targetWriting} onChange={(e) => setTargetWriting(e.target.value)} className="profile-input" id="target-writing">
               {[5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0].map(s => (
                 <option key={s} value={s}>{s}</option>
@@ -110,7 +110,7 @@ export default function ProfilePage() {
             </select>
           </div>
           <div className="profile-field">
-            <label>Listening Target</label>
+            <label>Target Listening</label>
             <select value={targetListening} onChange={(e) => setTargetListening(e.target.value)} className="profile-input" id="target-listening">
               {[5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0].map(s => (
                 <option key={s} value={s}>{s}</option>

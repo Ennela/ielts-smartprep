@@ -1,13 +1,13 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 const SKILL_COLORS = {
-  READING: '#4ade80',
-  WRITING: '#60a5fa',
-  LISTENING: '#f59e0b'
+  READING: '#006c4a',   // Success Green
+  WRITING: '#003fb1',   // Trustworthy Blue
+  LISTENING: '#842c00'  // Alert Orange
 };
 
 export default function ScoreTrendChart({ dataPoints = [], targetScore, skill = 'READING' }) {
-  const color = SKILL_COLORS[skill] || '#6366f1';
+  const color = SKILL_COLORS[skill] || '#003fb1';
 
   const chartData = dataPoints.map(dp => ({
     period: dp.period,
@@ -39,17 +39,17 @@ export default function ScoreTrendChart({ dataPoints = [], targetScore, skill = 
   return (
     <ResponsiveContainer width="100%" height={320}>
       <LineChart data={chartData} margin={{ top: 20, right: 30, left: 10, bottom: 10 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle)" />
         <XAxis
           dataKey="period"
-          stroke="rgba(255,255,255,0.3)"
+          stroke="var(--color-text-muted)"
           fontSize={12}
           tickLine={false}
         />
         <YAxis
           domain={[0, 9]}
           ticks={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]}
-          stroke="rgba(255,255,255,0.3)"
+          stroke="var(--color-text-muted)"
           fontSize={12}
           tickLine={false}
         />
@@ -59,13 +59,13 @@ export default function ScoreTrendChart({ dataPoints = [], targetScore, skill = 
         {targetScore && (
           <ReferenceLine
             y={parseFloat(targetScore)}
-            stroke="#ef4444"
+            stroke="#ba1a1a"
             strokeDasharray="8 4"
             strokeWidth={2}
             label={{
               value: `Target ${parseFloat(targetScore).toFixed(1)}`,
               position: 'right',
-              fill: '#ef4444',
+              fill: '#ba1a1a',
               fontSize: 12,
               fontWeight: 600
             }}

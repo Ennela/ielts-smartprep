@@ -34,6 +34,15 @@ export default function WritingHistoryPage() {
     const formatType = (type) => {
         switch (type) {
             case 'CAUSE_AND_EFFECT': return 'Cause & Effect';
+            case 'PROBLEM_AND_SOLUTION': return 'Problem & Solution';
+            case 'ADVANTAGES_DISADVANTAGES': return 'Advantages & Disadvantages';
+            case 'TWO_PART_QUESTION': return 'Two-Part Question';
+            case 'LINE_GRAPH': return 'Line Graph';
+            case 'BAR_CHART': return 'Bar Chart';
+            case 'PIE_CHART': return 'Pie Chart';
+            case 'TABLE': return 'Table';
+            case 'MAP': return 'Map';
+            case 'DIAGRAM': return 'Diagram';
             default: return type ? type.charAt(0) + type.slice(1).toLowerCase() : '';
         }
     };
@@ -54,7 +63,7 @@ export default function WritingHistoryPage() {
                 </button>
 
                 <h1>Writing History</h1>
-                <p className="subtitle">Review your past writing submissions and scores</p>
+                <p className="subtitle">Review your previous essays and scores</p>
 
                 {error && <div className="error-msg">{error}</div>}
 
@@ -65,7 +74,7 @@ export default function WritingHistoryPage() {
                     </div>
                 ) : history.length === 0 ? (
                     <div className="empty-state card">
-                        <p>No writing submissions yet. Start practicing to see your progress!</p>
+                        <p>No essays written yet. Start practicing!</p>
                         <button className="btn btn-primary" onClick={() => navigate('/writing')} style={{ marginTop: 16 }}>
                             Start Writing
                         </button>

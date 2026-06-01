@@ -43,7 +43,7 @@ export default function CountdownTimer({ onTimeUp }) {
           title={visible ? 'Hide timer' : 'Show timer'}
           id="timer-toggle-btn"
         >
-          {visible ? 'Hide' : 'Show'} Timer
+          {visible ? 'Hide' : 'Show'} timer
         </button>
       </div>
       {visible && (

@@ -84,7 +84,7 @@ export default function AudioPlayer({ src, mode = 'practice' }) {
       <div
         className={`audio-seekbar ${isMockTest ? 'audio-seekbar-locked' : ''}`}
         onClick={handleSeek}
-        title={isMockTest ? 'Seeking disabled in mock test mode' : 'Click to seek'}
+        title={isMockTest ? 'Cannot seek in mock test mode' : 'Click to seek'}
       >
         <div className="audio-seekbar-fill" style={{ width: `${progress}%` }} />
         {!isMockTest && (
