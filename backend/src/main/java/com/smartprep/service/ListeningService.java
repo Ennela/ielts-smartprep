@@ -249,8 +249,22 @@ public class ListeningService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         String userPrompt = promptBuilder.buildGeneratePrompt(partNumber, topic);
-        String aiResponse = geminiClient.generate("You are a professional IELTS Listening test designer with 15 years of experience.", userPrompt);
 
+        ListeningPart part = geminiClient.generateAndParse(
+                "You are a professional IELTS Listening test designer with 15 years of experience.",
+                userPrompt,
+                aiResponse -> {
+                    ListeningPart p = parseListeningPart(aiResponse, partNumber, topic);
+                    validateListeningPart(p);
+                    return p;
+                }
+        );
+
+        ListeningPart saved = partRepository.save(part);
+        return toPartResponse(saved);
+    }
+
+    private ListeningPart parseListeningPart(String aiResponse, int partNumber, String topic) {
         try {
             JsonNode root = objectMapper.readTree(aiResponse);
 
@@ -324,12 +338,39 @@ public class ListeningService {
             }
 
             part.setQuestions(questions);
-            ListeningPart saved = partRepository.save(part);
-            return toPartResponse(saved);
+            return part;
 
         } catch (Exception e) {
             log.error("Failed to parse AI listening response: ", e);
-            throw new InvalidAiResponseException("Failed to parse AI response: " + e.getMessage());
+            if (e instanceof InvalidAiResponseException) {
+                throw (InvalidAiResponseException) e;
+            }
+            throw new InvalidAiResponseException("Failed to parse AI response: " + e.getMessage(), e);
+        }
+    }
+
+    private void validateListeningPart(ListeningPart part) {
+        if (part == null) {
+            throw new InvalidAiResponseException("Listening part is null");
+        }
+        if (part.getTranscriptText() == null || part.getTranscriptText().isBlank()) {
+            throw new InvalidAiResponseException("Listening audio script cannot be empty");
+        }
+        if (part.getQuestions() == null || part.getQuestions().isEmpty()) {
+            throw new InvalidAiResponseException("Listening part must contain questions");
+        }
+        for (ListeningQuestion q : part.getQuestions()) {
+            if (q.getQuestionText() == null || q.getQuestionText().isBlank()) {
+                throw new InvalidAiResponseException("Question text cannot be empty");
+            }
+            if (q.getCorrectAnswer() == null || q.getCorrectAnswer().isBlank()) {
+                throw new InvalidAiResponseException("Question correct answer cannot be empty");
+            }
+            if (q.getQuestionType() == QuestionType.MCQ) {
+                if (q.getOptions() == null || q.getOptions().isEmpty()) {
+                    throw new InvalidAiResponseException("MCQ question is missing options");
+                }
+            }
         }
     }
 

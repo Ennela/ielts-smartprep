@@ -74,7 +74,11 @@ class ListeningServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(promptBuilder.buildGeneratePrompt(anyInt(), anyString())).thenReturn("mock prompt");
-        when(geminiClient.generate(anyString(), anyString())).thenReturn(mockAiResponse);
+        when(geminiClient.generateAndParse(anyString(), anyString(), any(GeminiClient.CheckedFunction.class)))
+                .thenAnswer(invocation -> {
+                    GeminiClient.CheckedFunction<String, ListeningPart> parser = invocation.getArgument(2);
+                    return parser.apply(mockAiResponse);
+                });
         when(partRepository.save(any(ListeningPart.class))).thenAnswer(invocation -> {
             ListeningPart part = invocation.getArgument(0);
             part.setPartId(10L);

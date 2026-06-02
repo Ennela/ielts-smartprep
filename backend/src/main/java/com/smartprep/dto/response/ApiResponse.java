@@ -18,6 +18,7 @@ public class ApiResponse<T> {
     private boolean success;
     private T data;
     private String message;
+    private String errorCode;
     private LocalDateTime timestamp;
 
     public static <T> ApiResponse<T> ok(T data) {
@@ -42,6 +43,15 @@ public class ApiResponse<T> {
         return ApiResponse.<T>builder()
                 .success(false)
                 .message(message)
+                .timestamp(LocalDateTime.now())
+                .build();
+    }
+
+    public static <T> ApiResponse<T> error(String message, String errorCode) {
+        return ApiResponse.<T>builder()
+                .success(false)
+                .message(message)
+                .errorCode(errorCode)
                 .timestamp(LocalDateTime.now())
                 .build();
     }

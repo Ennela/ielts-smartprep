@@ -6,6 +6,8 @@ import com.smartprep.exception.AiServiceException;
 import com.smartprep.exception.InvalidAiResponseException;
 import com.smartprep.exception.ServiceUnavailableException;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,8 +23,14 @@ import java.util.Map;
 @Slf4j
 public class GeminiClient {
 
+    @FunctionalInterface
+    public interface CheckedFunction<T, R> {
+        R apply(T t) throws Exception;
+    }
+
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final Retry retry;
 
     @Value("${app.gemini.api-key:}")
     private String apiKey;
@@ -34,53 +42,64 @@ public class GeminiClient {
     private int maxRetries;
 
     public GeminiClient(@Qualifier("geminiRestTemplate") RestTemplate restTemplate,
-                        ObjectMapper objectMapper) {
+                         ObjectMapper objectMapper,
+                         RetryRegistry retryRegistry) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
+        this.retry = retryRegistry.retry("gemini");
+    }
+
+    /**
+     * Send a prompt to Gemini API, parse and validate the response within the retry boundary.
+     * Retries automatically using Resilience4j when timeouts or validation errors occur.
+     */
+    @CircuitBreaker(name = "gemini")
+    public <T> T generateAndParse(String systemPrompt, String userPrompt, CheckedFunction<String, T> parser) {
+        return retry.executeSupplier(() -> {
+            String rawResponse = generateInternal(systemPrompt, userPrompt);
+            try {
+                return parser.apply(rawResponse);
+            } catch (Exception ex) {
+                log.warn("AI response validation/parsing failed: {}", ex.getMessage());
+                if (ex instanceof InvalidAiResponseException) {
+                    throw (InvalidAiResponseException) ex;
+                }
+                throw new InvalidAiResponseException("AI response validation/parsing failed: " + ex.getMessage(), ex);
+            }
+        });
     }
 
     /**
      * Send a prompt to Gemini API and return the text response.
-     * Implements retry with exponential backoff.
-     * Protected by Resilience4j Circuit Breaker.
+     * Protected by Resilience4j Retry & Circuit Breaker.
      */
     @CircuitBreaker(name = "gemini", fallbackMethod = "fallbackGenerate")
     public String generate(String systemPrompt, String userPrompt) {
-        String url = baseUrl + ":generateContent?key=" + apiKey;
+        return retry.executeSupplier(() -> generateInternal(systemPrompt, userPrompt));
+    }
 
+    private String generateInternal(String systemPrompt, String userPrompt) {
+        String url = baseUrl + ":generateContent?key=" + apiKey;
         Map<String, Object> requestBody = buildRequestBody(systemPrompt, userPrompt);
 
-        for (int attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-                HttpHeaders headers = new HttpHeaders();
-                headers.setContentType(MediaType.APPLICATION_JSON);
-                HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-                ResponseEntity<String> response = restTemplate.exchange(
-                        url, HttpMethod.POST, entity, String.class);
-
-                return extractTextFromResponse(response.getBody());
-
-            } catch (ResourceAccessException ex) {
-                log.warn("Gemini API timeout (attempt {}/{}): {}", attempt, maxRetries, ex.getMessage());
-                if (attempt == maxRetries) {
-                    throw new AiServiceException("Gemini API timeout after " + maxRetries + " attempts", ex);
-                }
-                sleepWithBackoff(attempt);
-
-            } catch (AiServiceException | InvalidAiResponseException ex) {
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url, HttpMethod.POST, entity, String.class);
+            return extractTextFromResponse(response.getBody());
+        } catch (ResourceAccessException ex) {
+            log.warn("Gemini API timeout/network access error: {}", ex.getMessage());
+            throw new AiServiceException("Gemini API timeout or connection failure", ex);
+        } catch (Exception ex) {
+            log.warn("Gemini API call failed: {}", ex.getMessage());
+            if (ex instanceof AiServiceException || ex instanceof InvalidAiResponseException) {
                 throw ex;
-
-            } catch (Exception ex) {
-                log.warn("Gemini API error (attempt {}/{}): {}", attempt, maxRetries, ex.getMessage());
-                if (attempt == maxRetries) {
-                    throw new AiServiceException("Gemini API error after " + maxRetries + " attempts", ex);
-                }
-                sleepWithBackoff(attempt);
             }
+            throw new AiServiceException("Gemini API error: " + ex.getMessage(), ex);
         }
-
-        throw new AiServiceException("Gemini API failed after all retries");
     }
 
     /**

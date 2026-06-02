@@ -37,7 +37,13 @@ class GeminiClientTest {
     @BeforeEach
     void setUp() {
         restTemplate = mock(RestTemplate.class);
-        geminiClient = new GeminiClient(restTemplate, new ObjectMapper());
+        io.github.resilience4j.retry.RetryConfig config = io.github.resilience4j.retry.RetryConfig.custom()
+                .maxAttempts(2)
+                .waitDuration(java.time.Duration.ofMillis(10))
+                .retryExceptions(ResourceAccessException.class, AiServiceException.class)
+                .build();
+        io.github.resilience4j.retry.RetryRegistry registry = io.github.resilience4j.retry.RetryRegistry.of(config);
+        geminiClient = new GeminiClient(restTemplate, new ObjectMapper(), registry);
         ReflectionTestUtils.setField(geminiClient, "apiKey", "test-api-key");
         ReflectionTestUtils.setField(geminiClient, "baseUrl", "https://api.example.com/model");
         ReflectionTestUtils.setField(geminiClient, "maxRetries", 2);

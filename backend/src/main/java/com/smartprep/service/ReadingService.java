@@ -85,11 +85,16 @@ public class ReadingService {
         String systemPrompt = promptBuilder.buildSystemPrompt(difficulty);
         String userPrompt = promptBuilder.buildUserPrompt(topic, difficulty);
 
-        // Call Gemini API
-        String aiResponse = geminiClient.generate(systemPrompt, userPrompt);
-
-        // Parse AI response
-        ReadingQuiz quiz = parseAiResponse(aiResponse, user, topic, difficulty);
+        // Call Gemini API with automatic retry and parsing validation
+        ReadingQuiz quiz = geminiClient.generateAndParse(
+                systemPrompt,
+                userPrompt,
+                aiResponse -> {
+                    ReadingQuiz q = parseAiResponse(aiResponse, user, topic, difficulty);
+                    validateReadingQuiz(q);
+                    return q;
+                }
+        );
 
         // Save to database
         quiz = quizRepository.save(quiz);
@@ -376,6 +381,31 @@ public class ReadingService {
     // =========================================================================
     // Private helpers
     // =========================================================================
+
+    private void validateReadingQuiz(ReadingQuiz quiz) {
+        if (quiz == null) {
+            throw new InvalidAiResponseException("Reading quiz is null");
+        }
+        if (quiz.getPassageText() == null || quiz.getPassageText().isBlank()) {
+            throw new InvalidAiResponseException("Reading passage text cannot be empty");
+        }
+        if (quiz.getQuestions() == null || quiz.getQuestions().isEmpty()) {
+            throw new InvalidAiResponseException("Reading quiz must contain at least one question");
+        }
+        for (ReadingQuestion q : quiz.getQuestions()) {
+            if (q.getQuestionText() == null || q.getQuestionText().isBlank()) {
+                throw new InvalidAiResponseException("Question text cannot be empty");
+            }
+            if (q.getCorrectAnswer() == null || q.getCorrectAnswer().isBlank()) {
+                throw new InvalidAiResponseException("Question correct answer cannot be empty");
+            }
+            if (q.getQuestionType() == QuestionType.MCQ) {
+                if (q.getOptions() == null || q.getOptions().isEmpty()) {
+                    throw new InvalidAiResponseException("MCQ question is missing options");
+                }
+            }
+        }
+    }
 
     /**
      * Parse AI response in the new questionGroups format.

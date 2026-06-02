@@ -28,6 +28,10 @@ app:
     base-url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash
     timeout-seconds: 30
     max-retries: 3
+  rate-limit:
+    capacity: 10
+    refill-tokens: 10
+    refill-duration-minutes: 1
 
 management:
   endpoints:
@@ -44,7 +48,7 @@ springdoc:
     tags-sorter: alpha
     operations-sorter: method
 
-# --- Resilience4j Circuit Breaker ---
+# --- Resilience4j Circuit Breaker & Retry ---
 resilience4j:
   circuitbreaker:
     instances:
@@ -60,3 +64,14 @@ resilience4j:
     instances:
       gemini:
         timeoutDuration: 35s
+  retry:
+    instances:
+      gemini:
+        maxAttempts: 3
+        waitDuration: 1s
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+        retryExceptions:
+          - org.springframework.web.client.ResourceAccessException
+          - com.smartprep.exception.InvalidAiResponseException
+          - com.smartprep.exception.AiServiceException

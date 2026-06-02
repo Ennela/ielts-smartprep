@@ -23,6 +23,15 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
     private final ConcurrentHashMap<String, Bucket> bucketCache = new ConcurrentHashMap<>();
 
+    @org.springframework.beans.factory.annotation.Value("${app.rate-limit.capacity:10}")
+    private int capacity;
+
+    @org.springframework.beans.factory.annotation.Value("${app.rate-limit.refill-tokens:10}")
+    private int refillTokens;
+
+    @org.springframework.beans.factory.annotation.Value("${app.rate-limit.refill-duration-minutes:1}")
+    private int refillDurationMinutes;
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         String userId = extractUserId(request);
@@ -39,13 +48,13 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
         log.warn("Rate limit exceeded for user: {} on path: {}", userId, request.getRequestURI());
         throw new RateLimitExceededException(
-                "Too many AI requests. Please wait a moment before trying again. Limit: 10 requests per minute.");
+                "Too many AI requests. Please wait a moment before trying again. Limit: " + capacity + " requests per " + refillDurationMinutes + " minute(s).");
     }
 
     private Bucket createBucket(String userId) {
         Bandwidth limit = Bandwidth.builder()
-                .capacity(10)
-                .refillIntervally(10, Duration.ofMinutes(1))
+                .capacity(capacity)
+                .refillIntervally(refillTokens, Duration.ofMinutes(refillDurationMinutes))
                 .build();
         return Bucket.builder()
                 .addLimit(limit)

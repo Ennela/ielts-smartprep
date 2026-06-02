@@ -55,8 +55,17 @@ public class WritingGradingService {
             isTask1 ? "Task 1" : "Task 2", promptText, essayText
         );
 
-        String gradingResponse = geminiClient.generate(systemPrompt, userPrompt);
-        JsonNode gradingJson = parseJson(gradingResponse);
+        JsonNode gradingJson = geminiClient.generateAndParse(
+                systemPrompt,
+                userPrompt,
+                aiResponse -> {
+                    JsonNode json = parseJson(aiResponse);
+                    validateGradingJson(json);
+                    return json;
+                }
+        );
+
+        String gradingResponse = gradingJson.toString();
 
         // Extract scores
         BigDecimal taskResponse = extractScore(gradingJson, "taskResponse");
@@ -87,8 +96,15 @@ public class WritingGradingService {
             isTask1 ? "Task 1" : "Task 2", promptText, essayText, gradingResponse
         );
 
-        String rewriteResponse = geminiClient.generate(rewriteSystemPrompt, rewriteUserPrompt);
-        JsonNode rewriteJson = parseJson(rewriteResponse);
+        JsonNode rewriteJson = geminiClient.generateAndParse(
+                rewriteSystemPrompt,
+                rewriteUserPrompt,
+                aiResponse -> {
+                    JsonNode json = parseJson(aiResponse);
+                    validateRewriteJson(json);
+                    return json;
+                }
+        );
 
         String rewrittenEssay = rewriteJson.path("rewrittenEssay").asText("");
         
@@ -114,6 +130,42 @@ public class WritingGradingService {
                 .build();
     }
 
+    private void validateGradingJson(JsonNode json) {
+        if (json == null) {
+            throw new InvalidAiResponseException("Grading JSON is null");
+        }
+        if (!json.has("taskResponse") && !json.has("taskAchievement")) {
+            throw new InvalidAiResponseException("Grading response missing task response/achievement score");
+        }
+        if (!json.has("coherence")) {
+            throw new InvalidAiResponseException("Grading response missing coherence score");
+        }
+        if (!json.has("lexical")) {
+            throw new InvalidAiResponseException("Grading response missing lexical score");
+        }
+        if (!json.has("grammar")) {
+            throw new InvalidAiResponseException("Grading response missing grammar score");
+        }
+        if (json.path("generalFeedback").asText("").isBlank()) {
+            throw new InvalidAiResponseException("Grading response missing general feedback");
+        }
+        if (!json.path("errors").isArray()) {
+            throw new InvalidAiResponseException("Grading response missing errors array");
+        }
+    }
+
+    private void validateRewriteJson(JsonNode json) {
+        if (json == null) {
+            throw new InvalidAiResponseException("Rewrite JSON is null");
+        }
+        if (json.path("rewrittenEssay").asText("").isBlank()) {
+            throw new InvalidAiResponseException("Rewrite response missing rewritten essay");
+        }
+        if (!json.path("improvementNotes").isArray()) {
+            throw new InvalidAiResponseException("Rewrite response missing improvement notes array");
+        }
+    }
+
     private JsonNode parseJson(String response) {
         try {
             objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, true);
@@ -126,6 +178,9 @@ public class WritingGradingService {
     }
 
     private BigDecimal extractScore(JsonNode json, String field) {
+        if ("taskResponse".equals(field) && !json.has("taskResponse") && json.has("taskAchievement")) {
+            field = "taskAchievement";
+        }
         double score = json.path(field).asDouble(5.0);
         score = Math.max(0, Math.min(9, score));
         score = Math.round(score * 2) / 2.0;
