@@ -157,7 +157,7 @@ public class IeltsScoringUtils {
             case MATCHING_HEADINGS ->
                 correct.equalsIgnoreCase(answer);
 
-            case SENTENCE_COMPLETION, SUMMARY_COMPLETION -> {
+            case SENTENCE_COMPLETION, SUMMARY_COMPLETION, FILL_BLANK -> {
                 String normCorrect = normalizeCompletionText(correct);
                 String normAnswer = normalizeCompletionText(answer);
                 yield normCorrect.equals(normAnswer);

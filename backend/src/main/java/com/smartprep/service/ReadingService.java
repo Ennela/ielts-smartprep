@@ -4,15 +4,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartprep.dto.request.ReadingGenerateRequest;
 import com.smartprep.dto.request.ReadingSubmitRequest;
-import com.smartprep.dto.response.ReadingHistoryResponse;
-import com.smartprep.dto.response.ReadingQuizResponse;
-import com.smartprep.dto.response.ReadingResultResponse;
+import com.smartprep.dto.request.ReadingSubmitFullRequest;
+import com.smartprep.dto.response.*;
 import com.smartprep.exception.InvalidAiResponseException;
 import com.smartprep.exception.ResourceNotFoundException;
-import com.smartprep.model.entity.ReadingQuestion;
-import com.smartprep.model.entity.ReadingQuiz;
-import com.smartprep.model.entity.ScoreHistory;
-import com.smartprep.model.entity.User;
+import com.smartprep.model.entity.*;
 import com.smartprep.model.enums.Difficulty;
 import com.smartprep.model.enums.QuestionType;
 import com.smartprep.model.enums.SkillType;
@@ -128,6 +124,10 @@ public class ReadingService {
             throw new IllegalArgumentException("Target quiz is not a template");
         }
 
+        return startTemplateQuizInternal(user, template);
+    }
+
+    private ReadingQuizResponse startTemplateQuizInternal(User user, ReadingQuiz template) {
         ReadingQuiz userQuiz = ReadingQuiz.builder()
                 .user(user)
                 .topic(template.getTopic())
@@ -136,33 +136,146 @@ public class ReadingService {
                 .timeLimitSeconds(template.getTimeLimitSeconds())
                 .totalQuestions(template.getTotalQuestions())
                 .isTemplate(false)
-                .parentTemplateId(templateId)
+                .parentTemplateId(template.getQuizId())
                 .build();
 
         List<ReadingQuestion> questions = template.getQuestions().stream()
-                .map(q -> ReadingQuestion.builder()
-                        .quiz(userQuiz)
-                        .questionType(q.getQuestionType())
-                        .questionText(q.getQuestionText())
-                        .optionA(q.getOptionA())
-                        .optionB(q.getOptionB())
-                        .optionC(q.getOptionC())
-                        .optionD(q.getOptionD())
-                        .correctAnswer(q.getCorrectAnswer())
-                        .explanation(q.getExplanation())
-                        .orderIndex(q.getOrderIndex())
-                        .optionsJson(q.getOptionsJson())
-                        .wordLimit(q.getWordLimit())
-                        .groupLabel(q.getGroupLabel())
-                        .groupId(q.getGroupId())
-                        .groupContext(q.getGroupContext())
-                        .build())
+                .map(q -> {
+                    ReadingQuestion question = ReadingQuestion.builder()
+                            .quiz(userQuiz)
+                            .questionType(q.getQuestionType())
+                            .questionText(q.getQuestionText())
+                            .correctAnswer(q.getCorrectAnswer())
+                            .explanation(q.getExplanation())
+                            .orderIndex(q.getOrderIndex())
+                            .optionsJson(q.getOptionsJson())
+                            .wordLimit(q.getWordLimit())
+                            .groupLabel(q.getGroupLabel())
+                            .groupId(q.getGroupId())
+                            .groupContext(q.getGroupContext())
+                            .build();
+
+                    List<QuestionOption> options = new ArrayList<>();
+                    if (q.getOptions() != null) {
+                        for (QuestionOption opt : q.getOptions()) {
+                            options.add(QuestionOption.builder()
+                                    .readingQuestion(question)
+                                    .label(opt.getLabel())
+                                    .content(opt.getContent())
+                                    .isCorrect(opt.getIsCorrect())
+                                    .orderIndex(opt.getOrderIndex())
+                                    .build());
+                        }
+                    }
+                    question.setOptions(options);
+                    return question;
+                })
                 .collect(Collectors.toList());
 
         userQuiz.setQuestions(questions);
         ReadingQuiz saved = quizRepository.save(userQuiz);
 
         return mapToQuizResponse(saved);
+    }
+
+    /**
+     * Assemble 3 Reading passages (Passage 1, Passage 2, Passage 3) for a full test.
+     */
+    @Transactional
+    public List<ReadingQuizResponse> assembleMockTest(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        List<ReadingQuizResponse> quizzes = new ArrayList<>();
+        Difficulty[] difficulties = {Difficulty.PASSAGE_1, Difficulty.PASSAGE_2, Difficulty.PASSAGE_3};
+
+        for (Difficulty difficulty : difficulties) {
+            // Try to find admin templates first
+            org.springframework.data.domain.Page<ReadingQuiz> templatePage = quizRepository.findQuizzesForAdmin(
+                    null, difficulty, "ADMIN", PageRequest.of(0, 100)
+            );
+            List<ReadingQuiz> candidates = new ArrayList<>(templatePage.getContent());
+
+            // If no templates, fall back to AI generated templates/quizzes
+            if (candidates.isEmpty()) {
+                org.springframework.data.domain.Page<ReadingQuiz> aiPage = quizRepository.findQuizzesForAdmin(
+                        null, difficulty, "AI", PageRequest.of(0, 100)
+                );
+                candidates.addAll(aiPage.getContent());
+            }
+
+            if (candidates.isEmpty()) {
+                throw new ResourceNotFoundException("No reading quizzes available for difficulty " + difficulty.name() + ". Please generate one first.");
+            }
+
+            // Pick a random quiz and clone it for the user
+            ReadingQuiz template = candidates.get(new java.util.Random().nextInt(candidates.size()));
+            ReadingQuizResponse userQuiz = startTemplateQuizInternal(user, template);
+            quizzes.add(userQuiz);
+        }
+
+        return quizzes;
+    }
+
+    /**
+     * Submit full Reading test (3 passages), calculate overall band score out of 40.
+     */
+    @Transactional
+    public ReadingFullResultResponse submitFullQuiz(Long userId, ReadingSubmitFullRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        List<ReadingResultResponse> quizResults = new ArrayList<>();
+        int totalCorrect = 0;
+        int totalQuestions = 0;
+
+        for (Long quizId : request.getQuizIds()) {
+            ReadingQuiz quiz = quizRepository.findByQuizIdAndUserUserId(quizId, userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Quiz not found with ID: " + quizId));
+
+            Map<Long, String> answers = request.getAnswers();
+            int quizCorrect = 0;
+
+            for (ReadingQuestion question : quiz.getQuestions()) {
+                totalQuestions++;
+                String userAnswer = answers.getOrDefault(question.getQuestionId(), "");
+                question.setUserAnswer(userAnswer);
+
+                boolean correct = isCorrect(question, userAnswer);
+                if (correct) {
+                    quizCorrect++;
+                    totalCorrect++;
+                }
+            }
+
+            // Grade this quiz locally (out of 13) for individual presentation fallback
+            BigDecimal quizBand = calculateBandScore(quizCorrect);
+            quiz.setCorrectAnswers(quizCorrect);
+            quiz.setScore(quizBand);
+            quiz.setSubmittedAt(LocalDateTime.now());
+            quizRepository.save(quiz);
+
+            quizResults.add(mapToResultResponse(quiz));
+        }
+
+        // Calculate overall Reading band score from cumulative correct answers out of 40
+        BigDecimal overallBand = com.smartprep.service.util.IeltsScoringUtils.calculateReadingBand(totalCorrect);
+
+        // Save a single entry to score history representing the full Reading test attempt
+        ScoreHistory history = ScoreHistory.builder()
+                .user(user)
+                .skillType(SkillType.READING)
+                .score(overallBand)
+                .build();
+        scoreHistoryRepository.save(history);
+
+        return ReadingFullResultResponse.builder()
+                .overallBand(overallBand)
+                .totalCorrect(totalCorrect)
+                .totalQuestions(totalQuestions)
+                .submittedAt(LocalDateTime.now())
+                .quizResults(quizResults)
+                .build();
     }
 
     /**
@@ -318,7 +431,7 @@ public class ReadingService {
                     String rawCorrectAnswer = qNode.path("correctAnswer").asText("").trim();
                     String normalizedAnswer = normalizeCorrectAnswer(rawCorrectAnswer, qType);
 
-                    ReadingQuestion.ReadingQuestionBuilder builder = ReadingQuestion.builder()
+                    ReadingQuestion question = ReadingQuestion.builder()
                             .quiz(quiz)
                             .questionType(qType)
                             .questionText(qNode.path("questionText").asText(""))
@@ -328,27 +441,42 @@ public class ReadingService {
                             .groupLabel(groupLabel)
                             .groupId(groupIdCounter)
                             .groupContext(groupContext)
-                            .wordLimit(wordLimit);
+                            .wordLimit(wordLimit)
+                            .build();
 
-                    // Question-level options (for MCQ inline options)
+                    List<QuestionOption> options = new ArrayList<>();
                     JsonNode qOptionsNode = qNode.path("options");
                     if (qOptionsNode.isArray() && !qOptionsNode.isEmpty()) {
-                        // MCQ: set optionA-D from question-level options
                         if (qType == QuestionType.MCQ) {
-                            if (qOptionsNode.size() > 0) builder.optionA(stripOptionPrefix(qOptionsNode.get(0).asText()));
-                            if (qOptionsNode.size() > 1) builder.optionB(stripOptionPrefix(qOptionsNode.get(1).asText()));
-                            if (qOptionsNode.size() > 2) builder.optionC(stripOptionPrefix(qOptionsNode.get(2).asText()));
-                            if (qOptionsNode.size() > 3) builder.optionD(stripOptionPrefix(qOptionsNode.get(3).asText()));
+                            int optIndex = 1;
+                            for (JsonNode optNode : qOptionsNode) {
+                                String label;
+                                String content;
+                                if (optNode.isObject()) {
+                                    label = optNode.path("label").asText();
+                                    content = optNode.path("content").asText();
+                                } else {
+                                    String optText = optNode.asText();
+                                    label = optText.length() > 0 ? optText.substring(0, 1).toUpperCase() : "";
+                                    content = stripOptionPrefix(optText);
+                                }
+                                options.add(QuestionOption.builder()
+                                        .readingQuestion(question)
+                                        .label(label)
+                                        .content(content)
+                                        .isCorrect(normalizedAnswer.equalsIgnoreCase(label))
+                                        .orderIndex(optIndex++)
+                                        .build());
+                            }
                         } else {
-                            // For other types with question-level options, store as JSON
-                            builder.optionsJson(qOptionsNode.toString());
+                            question.setOptionsJson(qOptionsNode.toString());
                         }
                     } else if (groupOptionsJson != null) {
-                        // Use group-level options
-                        builder.optionsJson(groupOptionsJson);
+                        question.setOptionsJson(groupOptionsJson);
                     }
 
-                    questions.add(builder.build());
+                    question.setOptions(options);
+                    questions.add(question);
                 }
 
                 groupIdCounter++;
@@ -391,23 +519,42 @@ public class ReadingService {
             QuestionType qType = parseQuestionType(qNode.path("type").asText());
             String normalizedCorrectAnswer = normalizeCorrectAnswer(rawCorrectAnswer, qType);
 
-            ReadingQuestion.ReadingQuestionBuilder builder = ReadingQuestion.builder()
+            ReadingQuestion question = ReadingQuestion.builder()
                     .quiz(quiz)
                     .questionType(qType)
                     .questionText(qNode.path("questionText").asText())
                     .correctAnswer(normalizedCorrectAnswer)
                     .explanation(qNode.path("explanation").asText())
-                    .orderIndex(i + 1);
+                    .orderIndex(i + 1)
+                    .build();
 
+            List<QuestionOption> options = new ArrayList<>();
             JsonNode optionsNode = qNode.path("options");
             if (optionsNode.isArray() && !optionsNode.isEmpty()) {
-                if (optionsNode.size() > 0) builder.optionA(stripOptionPrefix(optionsNode.get(0).asText()));
-                if (optionsNode.size() > 1) builder.optionB(stripOptionPrefix(optionsNode.get(1).asText()));
-                if (optionsNode.size() > 2) builder.optionC(stripOptionPrefix(optionsNode.get(2).asText()));
-                if (optionsNode.size() > 3) builder.optionD(stripOptionPrefix(optionsNode.get(3).asText()));
+                int optIndex = 1;
+                for (JsonNode optNode : optionsNode) {
+                    String label;
+                    String content;
+                    if (optNode.isObject()) {
+                        label = optNode.path("label").asText();
+                        content = optNode.path("content").asText();
+                    } else {
+                        String optText = optNode.asText();
+                        label = optText.length() > 0 ? optText.substring(0, 1).toUpperCase() : "";
+                        content = stripOptionPrefix(optText);
+                    }
+                    options.add(QuestionOption.builder()
+                            .readingQuestion(question)
+                            .label(label)
+                            .content(content)
+                            .isCorrect(normalizedCorrectAnswer.equalsIgnoreCase(label))
+                            .orderIndex(optIndex++)
+                            .build());
+                }
             }
 
-            questions.add(builder.build());
+            question.setOptions(options);
+            questions.add(question);
         }
 
         quiz.setQuestions(questions);
@@ -455,7 +602,7 @@ public class ReadingService {
                     // Roman numeral comparison (case-insensitive)
                     correct.equalsIgnoreCase(answer);
 
-            case SENTENCE_COMPLETION, SUMMARY_COMPLETION -> {
+            case SENTENCE_COMPLETION, SUMMARY_COMPLETION, FILL_BLANK -> {
                 // Flexible text matching: case-insensitive, strip articles and extra spaces
                 String normCorrect = normalizeCompletionText(correct);
                 String normAnswer = normalizeCompletionText(answer);
@@ -501,7 +648,7 @@ public class ReadingService {
                 // Extract the first letter (A, B, C, or D)
                 String trimmed = raw.trim();
                 if (!trimmed.isEmpty()) {
-                    char firstChar = Character.toUpperCase(trimmed.charAt(0));
+                     char firstChar = Character.toUpperCase(trimmed.charAt(0));
                     if (firstChar >= 'A' && firstChar <= 'D') {
                         yield String.valueOf(firstChar);
                     }
@@ -523,7 +670,7 @@ public class ReadingService {
                 // Roman numeral — keep as-is but lowercase
                 yield raw.trim().toLowerCase();
             }
-            case SENTENCE_COMPLETION, SUMMARY_COMPLETION -> {
+            case SENTENCE_COMPLETION, SUMMARY_COMPLETION, FILL_BLANK -> {
                 // Keep original text, just trim
                 yield raw.trim();
             }
@@ -549,10 +696,7 @@ public class ReadingService {
                         .questionId(q.getQuestionId())
                         .questionType(q.getQuestionType().name())
                         .questionText(q.getQuestionText())
-                        .optionA(q.getOptionA())
-                        .optionB(q.getOptionB())
-                        .optionC(q.getOptionC())
-                        .optionD(q.getOptionD())
+                        .options(mapOptions(q.getOptions(), false))
                         .orderIndex(q.getOrderIndex())
                         .optionsJson(q.getOptionsJson())
                         .wordLimit(q.getWordLimit())
@@ -580,10 +724,7 @@ public class ReadingService {
                         .questionId(q.getQuestionId())
                         .questionType(q.getQuestionType().name())
                         .questionText(q.getQuestionText())
-                        .optionA(q.getOptionA())
-                        .optionB(q.getOptionB())
-                        .optionC(q.getOptionC())
-                        .optionD(q.getOptionD())
+                        .options(mapOptions(q.getOptions(), true))
                         .orderIndex(q.getOrderIndex())
                         .correctAnswer(q.getCorrectAnswer())
                         .userAnswer(q.getUserAnswer())
@@ -607,6 +748,18 @@ public class ReadingService {
                 .bandScore(quiz.getScore())
                 .questions(questionDtos)
                 .build();
+    }
+
+    private List<QuestionOptionResponse> mapOptions(List<QuestionOption> options, boolean showCorrect) {
+        if (options == null) return null;
+        return options.stream()
+                .map(o -> QuestionOptionResponse.builder()
+                        .optionId(o.getOptionId())
+                        .label(o.getLabel())
+                        .content(o.getContent())
+                        .isCorrect(showCorrect ? o.getIsCorrect() : null)
+                        .build())
+                .collect(Collectors.toList());
     }
 
     private <E extends Enum<E>> E parseEnum(Class<E> enumClass, String value, String errorMsg) {

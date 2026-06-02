@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer, useCallback } from 'react';
 
-const ReadingContext = createContext(null);
+export const ReadingContext = createContext(null);
 
 const initialState = {
   quiz: null,

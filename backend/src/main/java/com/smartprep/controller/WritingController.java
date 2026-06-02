@@ -1,6 +1,7 @@
 package com.smartprep.controller;
 
 import com.smartprep.dto.request.WritingGradeRequest;
+import com.smartprep.dto.request.WritingSubmitFullRequest;
 import com.smartprep.dto.response.*;
 import com.smartprep.model.entity.User;
 import com.smartprep.service.WritingService;
@@ -74,5 +75,27 @@ public class WritingController {
             @PathVariable Long submissionId) {
         WritingGradeResponse submission = writingService.getSubmission(user.getUserId(), submissionId);
         return ResponseEntity.ok(ApiResponse.ok(submission));
+    }
+
+    /**
+     * Assemble one random Task 1 prompt and one random Task 2 prompt for a full Writing test.
+     * GET /api/v1/writing/assemble
+     */
+    @GetMapping("/assemble")
+    public ResponseEntity<ApiResponse<List<WritingPromptResponse>>> assemble() {
+        List<WritingPromptResponse> prompts = writingService.assembleMockTest();
+        return ResponseEntity.ok(ApiResponse.ok(prompts, "Full Writing mock test assembled successfully"));
+    }
+
+    /**
+     * Submit essays for both Task 1 and Task 2 prompts of a full Writing test.
+     * POST /api/v1/writing/submit-full
+     */
+    @PostMapping("/submit-full")
+    public ResponseEntity<ApiResponse<WritingFullResultResponse>> submitFull(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody WritingSubmitFullRequest request) {
+        WritingFullResultResponse result = writingService.submitFullWriting(user.getUserId(), request);
+        return ResponseEntity.ok(ApiResponse.ok(result, "Full Writing test submitted and graded successfully"));
     }
 }

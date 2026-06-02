@@ -203,12 +203,15 @@ function ResultQuestionItem({ q, idx }) {
       {/* MCQ: Show options with highlights */}
       {q.questionType === 'MCQ' && (
         <div className="rq-options">
-          {[
-            { key: 'A', text: q.optionA },
-            { key: 'B', text: q.optionB },
-            { key: 'C', text: q.optionC },
-            { key: 'D', text: q.optionD },
-          ].filter(o => o.text).map(opt => {
+          {(q.options && q.options.length > 0
+            ? q.options.map(opt => ({ key: opt.label, text: opt.content }))
+            : [
+                { key: 'A', text: q.optionA },
+                { key: 'B', text: q.optionB },
+                { key: 'C', text: q.optionC },
+                { key: 'D', text: q.optionD },
+              ].filter(o => o.text)
+          ).map(opt => {
             const isCorrectAnswer = opt.key === q.correctAnswer;
             const isUserAnswer = opt.key === q.userAnswer;
             const isWrongSelection = isUserAnswer && !q.correct;

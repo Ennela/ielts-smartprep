@@ -29,6 +29,10 @@ import AdminUsersPage from './pages/AdminUsersPage';
 import AdminMockTestsPage from './pages/AdminMockTestsPage';
 import AdminWritingPromptsPage from './pages/AdminWritingPromptsPage';
 import AdminReadingQuizzesPage from './pages/AdminReadingQuizzesPage';
+import ReadingFullExamPage from './pages/ReadingFullExamPage';
+import ReadingFullResultPage from './pages/ReadingFullResultPage';
+import WritingFullExamPage from './pages/WritingFullExamPage';
+import WritingFullResultPage from './pages/WritingFullResultPage';
 
 import './index.css';
 
@@ -59,12 +63,14 @@ export default function App() {
             <Route path="/reading/result/:quizId" element={
               <ReadingProvider><ReadingResultPage /></ReadingProvider>
             } />
+            <Route path="/reading/full-result" element={<ReadingFullResultPage />} />
             <Route path="/reading/history" element={<ReadingHistoryPage />} />
 
             {/* Writing */}
             <Route path="/writing" element={<WritingPromptListPage />} />
             <Route path="/writing/editor/:promptId" element={<WritingEditorPage />} />
             <Route path="/writing/result/:submissionId" element={<WritingResultPage />} />
+            <Route path="/writing/full-result" element={<WritingFullResultPage />} />
             <Route path="/writing/history" element={<WritingHistoryPage />} />
 
             {/* Listening (practice, result, history use MainLayout) */}
@@ -87,6 +93,12 @@ export default function App() {
             <ProtectedRoute>
               <ReadingProvider><ReadingExamPage /></ReadingProvider>
             </ProtectedRoute>
+          } />
+          <Route path="/reading/full-exam" element={
+            <ProtectedRoute><ReadingFullExamPage /></ProtectedRoute>
+          } />
+          <Route path="/writing/full-exam" element={
+            <ProtectedRoute><WritingFullExamPage /></ProtectedRoute>
           } />
           <Route path="/listening/exam" element={
             <ProtectedRoute><ListeningExamPage /></ProtectedRoute>

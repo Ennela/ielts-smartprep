@@ -47,6 +47,22 @@ export default function ReadingConfigPage() {
   const [filterDifficulty, setFilterDifficulty] = useState('');
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [assembling, setAssembling] = useState(false);
+
+  const handleStartFullTest = async () => {
+    setAssembling(true);
+    setError('');
+    try {
+      const res = await readingApi.assembleMockTest();
+      const quizzes = res.data.data;
+      const quizIds = quizzes.map(q => q.quizId).join(',');
+      navigate(`/reading/full-exam?quizIds=${quizIds}`);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to assemble mock test');
+    } finally {
+      setAssembling(false);
+    }
+  };
 
   useEffect(() => {
     if (activeTab === 'admin') {
@@ -99,13 +115,25 @@ export default function ReadingConfigPage() {
   return (
     <div className="reading-config-page">
       <div className="reading-config-content">
-        <div className="reading-config-header">
-          <button className="btn-back" onClick={() => navigate('/dashboard')} id="back-to-dashboard">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            Home
+        <div className="reading-config-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <button className="btn-back" onClick={() => navigate('/dashboard')} id="back-to-dashboard">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+              Home
+            </button>
+            <h1>Reading Practice</h1>
+            <p className="subtitle">Practice your reading skills with AI or template tests</p>
+          </div>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={handleStartFullTest}
+            disabled={assembling}
+            id="start-reading-full-test"
+            style={{ padding: '0.75rem 1.5rem', height: 'fit-content' }}
+          >
+            {assembling ? 'Assembling test...' : 'Start Mock Test (3 Passages)'}
           </button>
-          <h1>Reading Practice</h1>
-          <p className="subtitle">Practice your reading skills with AI or template tests</p>
         </div>
 
         {/* Tab Container */}
@@ -229,7 +257,7 @@ export default function ReadingConfigPage() {
                 <select
                   value={filterTopic}
                   onChange={(e) => { setFilterTopic(e.target.value); setPage(0); }}
-                  className="form-input"
+                  className="matching-select"
                   style={{ width: '100%' }}
                 >
                   <option value="">All Topics</option>
@@ -244,7 +272,7 @@ export default function ReadingConfigPage() {
                 <select
                   value={filterDifficulty}
                   onChange={(e) => { setFilterDifficulty(e.target.value); setPage(0); }}
-                  className="form-input"
+                  className="matching-select"
                   style={{ width: '100%' }}
                 >
                   <option value="">All Difficulties</option>

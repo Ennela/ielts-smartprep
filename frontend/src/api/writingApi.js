@@ -18,6 +18,12 @@ const writingApi = {
 
     getSubmission: (submissionId) =>
         axiosClient.get(`/writing/submissions/${submissionId}`),
+
+    assembleMockTest: () =>
+        axiosClient.get('/writing/assemble'),
+
+    submitFullWriting: (data) =>
+        axiosClient.post('/writing/submit-full', data),
 };
 
 export default writingApi;

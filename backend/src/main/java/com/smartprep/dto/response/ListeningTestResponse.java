@@ -36,6 +36,7 @@ public class ListeningTestResponse {
         private Long questionId;
         private String questionType;
         private String questionText;
+        private List<QuestionOptionResponse> options;
         private String correctAnswer;
         private String userAnswer;
         private Boolean isCorrect;

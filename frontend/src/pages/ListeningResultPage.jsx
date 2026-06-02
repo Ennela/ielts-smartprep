@@ -134,8 +134,42 @@ export default function ListeningResultPage() {
                         <span className="answer-type">{q.questionType}</span>
                       </div>
                       <p className="answer-question-text">
-                        {q.questionType === 'MCQ' ? q.questionText.split('\n')[0] : q.questionText}
+                        {q.questionType === 'MCQ' ? (q.options && q.options.length > 0 ? q.questionText : q.questionText.split('\n')[0]) : q.questionText}
                       </p>
+                      {q.questionType === 'MCQ' && q.options && q.options.length > 0 && (
+                        <div className="mcq-options-review" style={{ marginTop: 12, marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          {q.options.map(opt => {
+                            const isUserSelected = q.userAnswer === opt.label;
+                            const isCorrectOption = opt.isCorrect || q.correctAnswer === opt.label;
+                            let optBg = 'transparent';
+                            let optBorder = '1px solid var(--outline-variant)';
+                            if (isCorrectOption) {
+                              optBg = 'rgba(76, 175, 80, 0.1)';
+                              optBorder = '1px solid #4CAF50';
+                            } else if (isUserSelected) {
+                              optBg = 'rgba(244, 67, 54, 0.1)';
+                              optBorder = '1px solid #F44336';
+                            }
+                            return (
+                              <div key={opt.optionId} style={{
+                                padding: '6px 12px',
+                                borderRadius: 'var(--radius-md)',
+                                background: optBg,
+                                border: optBorder,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                fontSize: '0.875rem'
+                              }}>
+                                <strong style={{ color: isCorrectOption ? '#4CAF50' : (isUserSelected ? '#F44336' : 'inherit') }}>
+                                  {opt.label}.
+                                </strong>
+                                <span>{opt.content}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                       <div className="answer-comparison">
                         <div className="answer-row">
                           <span className="answer-label">Your answer:</span>

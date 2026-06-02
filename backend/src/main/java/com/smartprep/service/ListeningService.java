@@ -7,10 +7,12 @@ import com.smartprep.dto.response.*;
 import com.smartprep.exception.InvalidAiResponseException;
 import com.smartprep.exception.ResourceNotFoundException;
 import com.smartprep.model.entity.*;
+import com.smartprep.model.enums.QuestionType;
 import com.smartprep.model.enums.SkillType;
 import com.smartprep.model.enums.TestMode;
 import com.smartprep.repository.*;
 import com.smartprep.service.ai.GeminiClient;
+import com.smartprep.service.ai.ListeningPromptBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,6 +35,7 @@ public class ListeningService {
     private final UserRepository userRepository;
     private final GeminiClient geminiClient;
     private final ObjectMapper objectMapper;
+    private final ListeningPromptBuilder promptBuilder;
 
     // IELTS Listening band score map (out of 40 questions)
     private static final Map<Integer, BigDecimal> BAND_SCORE_MAP = new LinkedHashMap<>();
@@ -147,6 +150,7 @@ public class ListeningService {
                         .questionId(q.getQuestionId())
                         .questionType(q.getQuestionType().name())
                         .questionText(q.getQuestionText())
+                        .options(mapOptions(q.getOptions(), true))
                         .correctAnswer(q.getCorrectAnswer())
                         .userAnswer(userAnswer)
                         .isCorrect(isCorrect)
@@ -235,6 +239,98 @@ public class ListeningService {
                         .submittedAt(t.getSubmittedAt())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    // ========== AI Generation ==========
+
+    @Transactional
+    public ListeningPartResponse generatePart(Long userId, int partNumber, String topic) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        String userPrompt = promptBuilder.buildGeneratePrompt(partNumber, topic);
+        String aiResponse = geminiClient.generate("You are a professional IELTS Listening test designer with 15 years of experience.", userPrompt);
+
+        try {
+            JsonNode root = objectMapper.readTree(aiResponse);
+
+            String title = root.path("title").asText("AI Generated Part " + partNumber);
+            String chosenTopic = root.path("topic").asText(topic != null ? topic : "General");
+            String script = root.path("script").asText();
+            if (script == null || script.isBlank()) {
+                throw new InvalidAiResponseException("AI response missing 'script' field");
+            }
+
+            ListeningPart part = ListeningPart.builder()
+                    .partNumber(partNumber)
+                    .title(title)
+                    .topic(chosenTopic)
+                    .audioUrl("/api/v1/listening/audio/generated_" + System.currentTimeMillis() + ".mp3")
+                    .transcriptText(script)
+                    .durationSeconds(180 + partNumber * 60)
+                    .build();
+
+            List<ListeningQuestion> questions = new ArrayList<>();
+            JsonNode questionsNode = root.path("questions");
+            if (questionsNode.isArray()) {
+                for (JsonNode qNode : questionsNode) {
+                    int questionNumber = qNode.path("questionNumber").asInt();
+                    String typeStr = qNode.path("questionType").asText("").toUpperCase();
+                    QuestionType questionType = (typeStr.contains("MCQ") || typeStr.contains("MULTIPLE_CHOICE")) 
+                            ? QuestionType.MCQ 
+                            : QuestionType.FILL_BLANK;
+
+                    String questionText = qNode.path("questionText").asText();
+                    String correctAnswer = qNode.path("correctAnswer").asText();
+
+                    ListeningQuestion question = ListeningQuestion.builder()
+                            .part(part)
+                            .questionType(questionType)
+                            .questionText(questionText)
+                            .correctAnswer(correctAnswer)
+                            .orderIndex(questionNumber)
+                            .build();
+
+                    List<QuestionOption> options = new ArrayList<>();
+                    JsonNode optionsNode = qNode.path("options");
+                    if (questionType == QuestionType.MCQ && optionsNode.isArray() && !optionsNode.isEmpty()) {
+                        int optIndex = 1;
+                        for (JsonNode optNode : optionsNode) {
+                            String label;
+                            String content;
+                            if (optNode.isObject()) {
+                                label = optNode.path("label").asText();
+                                content = optNode.path("content").asText();
+                            } else {
+                                String optText = optNode.asText();
+                                label = optText.length() > 0 ? optText.substring(0, 1).toUpperCase() : "";
+                                content = optText;
+                                if (optText.length() > 2 && (optText.charAt(1) == '.' || optText.charAt(1) == ')')) {
+                                    content = optText.substring(2).trim();
+                                }
+                            }
+                            options.add(QuestionOption.builder()
+                                    .listeningQuestion(question)
+                                    .label(label)
+                                    .content(content)
+                                    .isCorrect(correctAnswer.equalsIgnoreCase(label))
+                                    .orderIndex(optIndex++)
+                                    .build());
+                        }
+                    }
+                    question.setOptions(options);
+                    questions.add(question);
+                }
+            }
+
+            part.setQuestions(questions);
+            ListeningPart saved = partRepository.save(part);
+            return toPartResponse(saved);
+
+        } catch (Exception e) {
+            log.error("Failed to parse AI listening response: ", e);
+            throw new InvalidAiResponseException("Failed to parse AI response: " + e.getMessage());
+        }
     }
 
     // ========== AI Post-Analysis ==========
@@ -362,6 +458,7 @@ public class ListeningService {
                         .questionId(q.getQuestionId())
                         .questionType(q.getQuestionType().name())
                         .questionText(q.getQuestionText())
+                        .options(mapOptions(q.getOptions(), false))
                         .orderIndex(q.getOrderIndex())
                         .build())
                 .collect(Collectors.toList());
@@ -376,6 +473,18 @@ public class ListeningService {
                 .questionCount(questions.size())
                 .questions(questions)
                 .build();
+    }
+
+    private List<QuestionOptionResponse> mapOptions(List<QuestionOption> options, boolean showCorrect) {
+        if (options == null) return null;
+        return options.stream()
+                .map(o -> QuestionOptionResponse.builder()
+                        .optionId(o.getOptionId())
+                        .label(o.getLabel())
+                        .content(o.getContent())
+                        .isCorrect(showCorrect ? o.getIsCorrect() : null)
+                        .build())
+                .collect(Collectors.toList());
     }
 
     // ========== AI System Prompts ==========

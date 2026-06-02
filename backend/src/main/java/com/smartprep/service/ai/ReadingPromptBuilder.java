@@ -109,7 +109,12 @@ public class ReadingPromptBuilder {
                   "questions": [
                     {
                       "questionText": "What is the main purpose of...?",
-                      "options": ["A. option text", "B. option text", "C. option text", "D. option text"],
+                      "options": [
+                        { "label": "A", "content": "option text" },
+                        { "label": "B", "content": "option text" },
+                        { "label": "C", "content": "option text" },
+                        { "label": "D", "content": "option text" }
+                      ],
                       "correctAnswer": "B",
                       "explanation": "Detailed explanation."
                     }
@@ -231,7 +236,12 @@ public class ReadingPromptBuilder {
                   "questions": [
                     {
                       "questionText": "What is the writer's main argument?",
-                      "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
+                      "options": [
+                        { "label": "A", "content": "..." },
+                        { "label": "B", "content": "..." },
+                        { "label": "C", "content": "..." },
+                        { "label": "D", "content": "..." }
+                      ],
                       "correctAnswer": "C",
                       "explanation": "Detailed explanation."
                     }

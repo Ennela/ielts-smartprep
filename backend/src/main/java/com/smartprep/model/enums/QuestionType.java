@@ -4,6 +4,7 @@ public enum QuestionType {
     // Original types
     MCQ,
     TFNG,
+    FILL_BLANK,
 
     // New IELTS question types
     YNNG,

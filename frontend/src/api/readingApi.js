@@ -25,6 +25,12 @@ const readingApi = {
 
     startTemplateQuiz: (templateId) =>
         axiosClient.post(`/reading/templates/${templateId}/start`),
+
+    assembleMockTest: () =>
+        axiosClient.get('/reading/assemble'),
+
+    submitFullQuiz: (quizIds, answers) =>
+        axiosClient.post('/reading/submit-full', { quizIds, answers }),
 };
 
 export default readingApi;

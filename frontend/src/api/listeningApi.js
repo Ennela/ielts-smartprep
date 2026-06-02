@@ -37,6 +37,9 @@ const listeningApi = {
 
     extractVocabulary: (partId) =>
         axiosClient.post(`/listening/vocabulary/${partId}`),
+
+    generatePart: (partNumber, topic) =>
+        axiosClient.post('/listening/generate', { partNumber, topic }),
 };
 
 export default listeningApi;

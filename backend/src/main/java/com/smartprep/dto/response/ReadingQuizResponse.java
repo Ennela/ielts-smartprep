@@ -31,10 +31,7 @@ public class ReadingQuizResponse {
         private Long questionId;
         private String questionType;
         private String questionText;
-        private String optionA;
-        private String optionB;
-        private String optionC;
-        private String optionD;
+        private List<QuestionOptionResponse> options;
         private Integer orderIndex;
 
         // New fields for advanced question types

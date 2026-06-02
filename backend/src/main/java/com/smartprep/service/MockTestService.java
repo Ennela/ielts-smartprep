@@ -423,6 +423,7 @@ public class MockTestService {
                                 .questionId(q.getQuestionId())
                                 .questionType(q.getQuestionType().name())
                                 .questionText(q.getQuestionText())
+                                .options(mapOptions(q.getOptions(), false))
                                 .orderIndex(q.getOrderIndex())
                                 .build())
                         .collect(Collectors.toList()))
@@ -443,10 +444,7 @@ public class MockTestService {
                                 .questionId(q.getQuestionId())
                                 .questionType(q.getQuestionType().name())
                                 .questionText(q.getQuestionText())
-                                .optionA(q.getOptionA())
-                                .optionB(q.getOptionB())
-                                .optionC(q.getOptionC())
-                                .optionD(q.getOptionD())
+                                .options(mapOptions(q.getOptions(), false))
                                 .orderIndex(q.getOrderIndex())
                                 .optionsJson(q.getOptionsJson())
                                 .wordLimit(q.getWordLimit())
@@ -456,6 +454,18 @@ public class MockTestService {
                                 .build())
                         .collect(Collectors.toList()))
                 .build();
+    }
+
+    private List<QuestionOptionResponse> mapOptions(List<QuestionOption> options, boolean showCorrect) {
+        if (options == null) return null;
+        return options.stream()
+                .map(o -> QuestionOptionResponse.builder()
+                        .optionId(o.getOptionId())
+                        .label(o.getLabel())
+                        .content(o.getContent())
+                        .isCorrect(showCorrect ? o.getIsCorrect() : null)
+                        .build())
+                .collect(Collectors.toList());
     }
 
     private WritingPromptResponse mapToWritingPromptResponse(WritingPrompt prompt) {

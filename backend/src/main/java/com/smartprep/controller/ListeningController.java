@@ -1,5 +1,6 @@
 package com.smartprep.controller;
 
+import com.smartprep.dto.request.ListeningGenerateRequest;
 import com.smartprep.dto.request.ListeningSubmitRequest;
 import com.smartprep.dto.response.*;
 import com.smartprep.model.entity.User;
@@ -88,6 +89,18 @@ public class ListeningController {
     public ResponseEntity<ApiResponse<Map<String, Object>>> extractVocabulary(
             @PathVariable Long partId) {
         return ResponseEntity.ok(ApiResponse.ok(listeningService.extractVocabulary(partId)));
+    }
+
+    /**
+     * Generate a new listening part using AI.
+     * POST /api/v1/listening/generate
+     */
+    @PostMapping("/generate")
+    public ResponseEntity<ApiResponse<ListeningPartResponse>> generatePart(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody ListeningGenerateRequest request) {
+        ListeningPartResponse response = listeningService.generatePart(user.getUserId(), request.getPartNumber(), request.getTopic());
+        return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
     /**

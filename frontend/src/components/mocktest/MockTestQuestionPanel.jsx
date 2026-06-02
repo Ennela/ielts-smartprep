@@ -179,12 +179,20 @@ function QuestionInput({ question, selected, onChange, disabled, groupOptions })
 // MCQ — Multiple Choice (radio buttons A/B/C/D)
 // ============================================================
 function McqOptions({ question, selected, onChange, disabled }) {
-  const options = [
-    { key: 'A', text: question.optionA },
-    { key: 'B', text: question.optionB },
-    { key: 'C', text: question.optionC },
-    { key: 'D', text: question.optionD },
-  ].filter((o) => o.text);
+  let options = [];
+  if (question.options && question.options.length > 0) {
+    options = question.options.map(opt => ({
+      key: opt.label,
+      text: opt.content
+    }));
+  } else {
+    options = [
+      { key: 'A', text: question.optionA },
+      { key: 'B', text: question.optionB },
+      { key: 'C', text: question.optionC },
+      { key: 'D', text: question.optionD },
+    ].filter((o) => o.text);
+  }
 
   return (
     <div className="mcq-options">

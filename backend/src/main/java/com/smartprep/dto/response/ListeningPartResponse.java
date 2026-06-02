@@ -23,6 +23,7 @@ public class ListeningPartResponse {
         private Long questionId;
         private String questionType;
         private String questionText;
+        private List<QuestionOptionResponse> options;
         private Integer orderIndex;
     }
 }

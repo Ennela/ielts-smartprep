@@ -33,10 +33,7 @@ public class AdminReadingQuizResponse {
         private Long questionId;
         private String questionType;
         private String questionText;
-        private String optionA;
-        private String optionB;
-        private String optionC;
-        private String optionD;
+        private List<QuestionOptionResponse> options;
         private String correctAnswer;
         private String explanation;
         private Integer orderIndex;

@@ -205,23 +205,37 @@ public class AdminService {
                 .build();
 
         List<ReadingQuestion> questions = request.getQuestions().stream()
-                .map(q -> ReadingQuestion.builder()
-                        .quiz(quiz)
-                        .questionType(QuestionType.valueOf(q.getQuestionType().toUpperCase()))
-                        .questionText(q.getQuestionText())
-                        .optionA(q.getOptionA())
-                        .optionB(q.getOptionB())
-                        .optionC(q.getOptionC())
-                        .optionD(q.getOptionD())
-                        .correctAnswer(q.getCorrectAnswer().trim())
-                        .explanation(q.getExplanation())
-                        .orderIndex(q.getOrderIndex())
-                        .optionsJson(q.getOptionsJson())
-                        .wordLimit(q.getWordLimit())
-                        .groupLabel(q.getGroupLabel())
-                        .groupId(q.getGroupId())
-                        .groupContext(q.getGroupContext())
-                        .build())
+                .map(q -> {
+                    ReadingQuestion question = ReadingQuestion.builder()
+                            .quiz(quiz)
+                            .questionType(QuestionType.valueOf(q.getQuestionType().toUpperCase()))
+                            .questionText(q.getQuestionText())
+                            .correctAnswer(q.getCorrectAnswer().trim())
+                            .explanation(q.getExplanation())
+                            .orderIndex(q.getOrderIndex())
+                            .optionsJson(q.getOptionsJson())
+                            .wordLimit(q.getWordLimit())
+                            .groupLabel(q.getGroupLabel())
+                            .groupId(q.getGroupId())
+                            .groupContext(q.getGroupContext())
+                            .build();
+
+                    List<QuestionOption> options = new ArrayList<>();
+                    if (q.getOptions() != null) {
+                        int optIndex = 1;
+                        for (AdminReadingQuizRequest.QuestionRequest.OptionRequest optReq : q.getOptions()) {
+                            options.add(QuestionOption.builder()
+                                    .readingQuestion(question)
+                                    .label(optReq.getLabel())
+                                    .content(optReq.getContent())
+                                    .isCorrect(q.getCorrectAnswer().equalsIgnoreCase(optReq.getLabel()))
+                                    .orderIndex(optIndex++)
+                                    .build());
+                        }
+                    }
+                    question.setOptions(options);
+                    return question;
+                })
                 .collect(java.util.stream.Collectors.toList());
 
         quiz.setQuestions(questions);
@@ -244,23 +258,37 @@ public class AdminService {
         quiz.getQuestions().clear();
 
         List<ReadingQuestion> questions = request.getQuestions().stream()
-                .map(q -> ReadingQuestion.builder()
-                        .quiz(quiz)
-                        .questionType(QuestionType.valueOf(q.getQuestionType().toUpperCase()))
-                        .questionText(q.getQuestionText())
-                        .optionA(q.getOptionA())
-                        .optionB(q.getOptionB())
-                        .optionC(q.getOptionC())
-                        .optionD(q.getOptionD())
-                        .correctAnswer(q.getCorrectAnswer().trim())
-                        .explanation(q.getExplanation())
-                        .orderIndex(q.getOrderIndex())
-                        .optionsJson(q.getOptionsJson())
-                        .wordLimit(q.getWordLimit())
-                        .groupLabel(q.getGroupLabel())
-                        .groupId(q.getGroupId())
-                        .groupContext(q.getGroupContext())
-                        .build())
+                .map(q -> {
+                    ReadingQuestion question = ReadingQuestion.builder()
+                            .quiz(quiz)
+                            .questionType(QuestionType.valueOf(q.getQuestionType().toUpperCase()))
+                            .questionText(q.getQuestionText())
+                            .correctAnswer(q.getCorrectAnswer().trim())
+                            .explanation(q.getExplanation())
+                            .orderIndex(q.getOrderIndex())
+                            .optionsJson(q.getOptionsJson())
+                            .wordLimit(q.getWordLimit())
+                            .groupLabel(q.getGroupLabel())
+                            .groupId(q.getGroupId())
+                            .groupContext(q.getGroupContext())
+                            .build();
+
+                    List<QuestionOption> options = new ArrayList<>();
+                    if (q.getOptions() != null) {
+                        int optIndex = 1;
+                        for (AdminReadingQuizRequest.QuestionRequest.OptionRequest optReq : q.getOptions()) {
+                            options.add(QuestionOption.builder()
+                                    .readingQuestion(question)
+                                    .label(optReq.getLabel())
+                                    .content(optReq.getContent())
+                                    .isCorrect(q.getCorrectAnswer().equalsIgnoreCase(optReq.getLabel()))
+                                    .orderIndex(optIndex++)
+                                    .build());
+                        }
+                    }
+                    question.setOptions(options);
+                    return question;
+                })
                 .collect(java.util.stream.Collectors.toList());
 
         quiz.getQuestions().addAll(questions);
@@ -283,10 +311,7 @@ public class AdminService {
                         .questionId(q.getQuestionId())
                         .questionType(q.getQuestionType().name())
                         .questionText(q.getQuestionText())
-                        .optionA(q.getOptionA())
-                        .optionB(q.getOptionB())
-                        .optionC(q.getOptionC())
-                        .optionD(q.getOptionD())
+                        .options(mapOptions(q.getOptions(), true))
                         .correctAnswer(q.getCorrectAnswer())
                         .explanation(q.getExplanation())
                         .orderIndex(q.getOrderIndex())
@@ -401,5 +426,17 @@ public class AdminService {
                 .readingQuizIds(test.getReadingQuizzes().stream().map(ReadingQuiz::getQuizId).collect(Collectors.toList()))
                 .writingPromptIds(test.getWritingPrompts().stream().map(WritingPrompt::getPromptId).collect(Collectors.toList()))
                 .build();
+    }
+
+    private List<QuestionOptionResponse> mapOptions(List<QuestionOption> options, boolean showCorrect) {
+        if (options == null) return null;
+        return options.stream()
+                .map(o -> QuestionOptionResponse.builder()
+                        .optionId(o.getOptionId())
+                        .label(o.getLabel())
+                        .content(o.getContent())
+                        .isCorrect(showCorrect ? o.getIsCorrect() : null)
+                        .build())
+                .collect(Collectors.toList());
     }
 }

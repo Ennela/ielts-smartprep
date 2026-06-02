@@ -4,6 +4,9 @@ import com.smartprep.model.enums.QuestionType;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "listening_questions")
 @Data @NoArgsConstructor @AllArgsConstructor @Builder
@@ -22,6 +25,11 @@ public class ListeningQuestion {
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String questionText;
+
+    @OneToMany(mappedBy = "listeningQuestion", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("orderIndex ASC")
+    @Builder.Default
+    private List<QuestionOption> options = new ArrayList<>();
 
     @Column(nullable = false)
     private String correctAnswer;

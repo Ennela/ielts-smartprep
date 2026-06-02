@@ -100,7 +100,20 @@ export default function AdminReadingQuizzesPage() {
       difficulty: quiz.difficulty || 'PASSAGE_1',
       passageText: quiz.passageText || '',
       timeLimitSeconds: quiz.timeLimitSeconds || 600,
-      questions: quiz.questions ? quiz.questions.map(q => ({ ...q })) : []
+      questions: quiz.questions ? quiz.questions.map(q => {
+        const mappedQ = { ...q };
+        if (q.options && q.options.length > 0) {
+          const optA = q.options.find(o => o.label === 'A')?.content || '';
+          const optB = q.options.find(o => o.label === 'B')?.content || '';
+          const optC = q.options.find(o => o.label === 'C')?.content || '';
+          const optD = q.options.find(o => o.label === 'D')?.content || '';
+          mappedQ.optionA = optA;
+          mappedQ.optionB = optB;
+          mappedQ.optionC = optC;
+          mappedQ.optionD = optD;
+        }
+        return mappedQ;
+      }) : []
     });
     setModalOpen(true);
   };
@@ -180,21 +193,42 @@ export default function AdminReadingQuizzesPage() {
       if (!q.questionText.trim()) { setError(`Question #${i + 1}: Question text cannot be empty`); return; }
       if (!q.correctAnswer.trim()) { setError(`Question #${i + 1}: Correct answer cannot be empty`); return; }
       if (q.questionType === 'MCQ') {
-        if (!q.optionA.trim() || !q.optionB.trim()) {
+        if (!q.optionA || !q.optionA.trim() || !q.optionB || !q.optionB.trim()) {
           setError(`Question #${i + 1} (Multiple Choice): Must have at least Option A and Option B`);
           return;
         }
       }
     }
 
+    // Format request payload to include structured options list
+    const formattedQuestions = form.questions.map(q => {
+      const copy = { ...q };
+      if (q.questionType === 'MCQ') {
+        const opts = [];
+        if (q.optionA && q.optionA.trim()) opts.push({ label: 'A', content: q.optionA.trim() });
+        if (q.optionB && q.optionB.trim()) opts.push({ label: 'B', content: q.optionB.trim() });
+        if (q.optionC && q.optionC.trim()) opts.push({ label: 'C', content: q.optionC.trim() });
+        if (q.optionD && q.optionD.trim()) opts.push({ label: 'D', content: q.optionD.trim() });
+        copy.options = opts;
+      } else {
+        copy.options = null;
+      }
+      return copy;
+    });
+
+    const payload = {
+      ...form,
+      questions: formattedQuestions
+    };
+
     setSaving(true);
     setError(null);
     try {
       if (editing) {
-        await adminApi.updateReadingQuiz(editing.quizId, form);
+        await adminApi.updateReadingQuiz(editing.quizId, payload);
         setSuccessMsg('Reading passage updated successfully!');
       } else {
-        await adminApi.createReadingQuiz(form);
+        await adminApi.createReadingQuiz(payload);
         setSuccessMsg('Reading passage created successfully!');
       }
       closeModal();
@@ -253,8 +287,8 @@ export default function AdminReadingQuizzesPage() {
         <select
           value={filterTopic}
           onChange={(e) => { setFilterTopic(e.target.value); setPage(0); }}
-          className="form-input"
-          style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', minWidth: '180px' }}
+          className="matching-select"
+          style={{ minWidth: '180px', width: 'auto' }}
         >
           <option value="">All Topics</option>
           {TOPICS.map(t => (
@@ -265,8 +299,8 @@ export default function AdminReadingQuizzesPage() {
         <select
           value={filterDifficulty}
           onChange={(e) => { setFilterDifficulty(e.target.value); setPage(0); }}
-          className="form-input"
-          style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', minWidth: '180px' }}
+          className="matching-select"
+          style={{ minWidth: '180px', width: 'auto' }}
         >
           <option value="">All Difficulties</option>
           {DIFFICULTIES.map(d => (
@@ -277,8 +311,8 @@ export default function AdminReadingQuizzesPage() {
         <select
           value={filterSource}
           onChange={(e) => { setFilterSource(e.target.value); setPage(0); }}
-          className="form-input"
-          style={{ padding: '0.5rem 1rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-card)', minWidth: '180px' }}
+          className="matching-select"
+          style={{ minWidth: '180px', width: 'auto' }}
         >
           <option value="">All Sources</option>
           <option value="ADMIN">Admin Created</option>

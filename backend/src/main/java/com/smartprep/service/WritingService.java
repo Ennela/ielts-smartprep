@@ -4,12 +4,15 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartprep.dto.request.WritingGradeRequest;
+import com.smartprep.dto.request.WritingSubmitFullRequest;
 import com.smartprep.dto.response.WritingGradeResponse;
 import com.smartprep.dto.response.WritingHistoryResponse;
 import com.smartprep.dto.response.WritingPromptResponse;
+import com.smartprep.dto.response.WritingFullResultResponse;
 import com.smartprep.exception.InvalidAiResponseException;
 import com.smartprep.exception.ResourceNotFoundException;
 import com.smartprep.exception.WordCountTooLowException;
+import java.time.LocalDateTime;
 import com.smartprep.model.entity.ScoreHistory;
 import com.smartprep.model.entity.User;
 import com.smartprep.model.entity.WritingPrompt;
@@ -163,6 +166,153 @@ public class WritingService {
                 .build();
         scoreHistoryRepository.save(history);
 
+        return buildGradeResponse(submission, prompt, errors, improvementNotes);
+    }
+
+    /**
+     * Assemble one random Task 1 prompt and one random Task 2 prompt for a full practice test.
+     */
+    @Transactional(readOnly = true)
+    public List<WritingPromptResponse> assembleMockTest() {
+        List<WritingPrompt> allPrompts = promptRepository.findAll();
+
+        List<WritingPrompt> task1Prompts = allPrompts.stream()
+                .filter(p -> p.getEssayType().isTask1())
+                .collect(Collectors.toList());
+
+        List<WritingPrompt> task2Prompts = allPrompts.stream()
+                .filter(p -> !p.getEssayType().isTask1())
+                .collect(Collectors.toList());
+
+        if (task1Prompts.isEmpty() || task2Prompts.isEmpty()) {
+            throw new ResourceNotFoundException("Not enough prompts in the database to assemble a full Writing test.");
+        }
+
+        java.util.Random rand = new java.util.Random();
+        WritingPrompt t1 = task1Prompts.get(rand.nextInt(task1Prompts.size()));
+        WritingPrompt t2 = task2Prompts.get(rand.nextInt(task2Prompts.size()));
+
+        return List.of(
+                WritingPromptResponse.builder()
+                        .promptId(t1.getPromptId())
+                        .promptText(t1.getPromptText())
+                        .essayType(t1.getEssayType().name())
+                        .imageUrl(t1.getImageUrl())
+                        .build(),
+                WritingPromptResponse.builder()
+                        .promptId(t2.getPromptId())
+                        .promptText(t2.getPromptText())
+                        .essayType(t2.getEssayType().name())
+                        .imageUrl(t2.getImageUrl())
+                        .build()
+        );
+    }
+
+    /**
+     * Submit essays for a full Writing test (both Task 1 and Task 2 prompts).
+     * Calculates the weighted Writing band score: (Task 1 + 2 * Task 2) / 3.
+     */
+    @Transactional
+    public WritingFullResultResponse submitFullWriting(Long userId, WritingSubmitFullRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        WritingPrompt prompt1 = promptRepository.findById(request.getTask1PromptId())
+                .orElseThrow(() -> new ResourceNotFoundException("Writing Task 1 prompt not found: " + request.getTask1PromptId()));
+        WritingPrompt prompt2 = promptRepository.findById(request.getTask2PromptId())
+                .orElseThrow(() -> new ResourceNotFoundException("Writing Task 2 prompt not found: " + request.getTask2PromptId()));
+
+        int w1 = countWords(request.getTask1EssayText());
+        int w2 = countWords(request.getTask2EssayText());
+
+        if (w1 < MIN_WORD_COUNT_TASK1) {
+            throw new WordCountTooLowException("Task 1 essay must be at least " + MIN_WORD_COUNT_TASK1 + " words. Current: " + w1);
+        }
+        if (w2 < MIN_WORD_COUNT_TASK2) {
+            throw new WordCountTooLowException("Task 2 essay must be at least " + MIN_WORD_COUNT_TASK2 + " words. Current: " + w2);
+        }
+
+        // Evaluate Task 1
+        WritingGradeResponse res1 = evaluateAndSaveSubmission(user, prompt1, request.getTask1EssayText(), w1);
+
+        // Evaluate Task 2
+        WritingGradeResponse res2 = evaluateAndSaveSubmission(user, prompt2, request.getTask2EssayText(), w2);
+
+        // Calculate weighted score (Task 2 is double weighted)
+        BigDecimal weightedSum = res1.getOverallBand().add(res2.getOverallBand().multiply(BigDecimal.valueOf(2)));
+        BigDecimal average = weightedSum.divide(BigDecimal.valueOf(3), 4, RoundingMode.HALF_UP);
+        BigDecimal overallWritingBand = com.smartprep.service.util.IeltsScoringUtils.roundOverallBand(average);
+
+        // Save a single entry to score history representing this full Writing test attempt
+        ScoreHistory history = ScoreHistory.builder()
+                .user(user)
+                .skillType(SkillType.WRITING)
+                .score(overallWritingBand)
+                .build();
+        scoreHistoryRepository.save(history);
+
+        return WritingFullResultResponse.builder()
+                .overallWritingBand(overallWritingBand)
+                .task1Result(res1)
+                .task2Result(res2)
+                .submittedAt(LocalDateTime.now())
+                .build();
+    }
+
+    private WritingGradeResponse evaluateAndSaveSubmission(User user, WritingPrompt prompt, String essayText, int wordCount) {
+        boolean isTask1 = prompt.getEssayType().isTask1();
+
+        // Step 1: Call AI for grading
+        String systemPrompt = isTask1 ? TASK1_GRADING_SYSTEM_PROMPT : GRADING_SYSTEM_PROMPT;
+        String gradingResponse = geminiClient.generate(
+                systemPrompt,
+                buildGradingUserPrompt(prompt.getPromptText(), essayText, isTask1)
+        );
+        JsonNode gradingJson = parseJson(gradingResponse);
+
+        BigDecimal taskResponse = extractScore(gradingJson, "taskResponse");
+        BigDecimal coherence = extractScore(gradingJson, "coherence");
+        BigDecimal lexical = extractScore(gradingJson, "lexical");
+        BigDecimal grammar = extractScore(gradingJson, "grammar");
+        BigDecimal overallBand = calculateOverallBand(taskResponse, coherence, lexical, grammar);
+
+        List<WritingGradeResponse.ErrorDto> errors = extractErrors(gradingJson);
+        String generalFeedback = gradingJson.path("generalFeedback").asText("");
+
+        // Step 2: Call AI for rewrite
+        String rewriteSystemPrompt = isTask1 ? TASK1_REWRITE_SYSTEM_PROMPT : REWRITE_SYSTEM_PROMPT;
+        String rewriteResponse = geminiClient.generate(
+                rewriteSystemPrompt,
+                buildRewriteUserPrompt(prompt.getPromptText(), essayText, gradingResponse, isTask1)
+        );
+        JsonNode rewriteJson = parseJson(rewriteResponse);
+
+        String rewrittenEssay = rewriteJson.path("rewrittenEssay").asText("");
+        List<String> improvementNotes = extractImprovementNotes(rewriteJson);
+
+        String errorListJson;
+        try {
+            errorListJson = objectMapper.writeValueAsString(errors);
+        } catch (Exception e) {
+            errorListJson = "[]";
+        }
+
+        WritingSubmission submission = WritingSubmission.builder()
+                .user(user)
+                .prompt(prompt)
+                .essayText(essayText)
+                .wordCount(wordCount)
+                .overallBand(overallBand)
+                .taskResponseScore(taskResponse)
+                .coherenceScore(coherence)
+                .lexicalScore(lexical)
+                .grammarScore(grammar)
+                .errorListJson(errorListJson)
+                .rewrittenVersion(rewrittenEssay)
+                .aiFeedback(generalFeedback)
+                .build();
+
+        submission = submissionRepository.save(submission);
         return buildGradeResponse(submission, prompt, errors, improvementNotes);
     }
 

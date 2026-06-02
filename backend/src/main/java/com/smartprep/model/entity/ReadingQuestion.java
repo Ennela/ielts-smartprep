@@ -4,6 +4,9 @@ import com.smartprep.model.enums.QuestionType;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "reading_questions")
 @Data @NoArgsConstructor @AllArgsConstructor @Builder
@@ -23,10 +26,10 @@ public class ReadingQuestion {
     @Column(columnDefinition = "TEXT", nullable = false)
     private String questionText;
 
-    private String optionA;
-    private String optionB;
-    private String optionC;
-    private String optionD;
+    @OneToMany(mappedBy = "readingQuestion", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("orderIndex ASC")
+    @Builder.Default
+    private List<QuestionOption> options = new ArrayList<>();
 
     @Column(nullable = false)
     private String correctAnswer;
@@ -49,7 +52,7 @@ public class ReadingQuestion {
     private Integer wordLimit;
 
     /** Group label, e.g. "Questions 1-5: Matching Headings" */
-    @Column(length = 100)
+    @Column(length = 255)
     private String groupLabel;
 
     /** Questions sharing the same group share this ID */

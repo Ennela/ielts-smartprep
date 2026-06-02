@@ -46,10 +46,16 @@ public class AdminReadingQuizRequest {
         @NotBlank(message = "Question text is required")
         private String questionText;
 
-        private String optionA;
-        private String optionB;
-        private String optionC;
-        private String optionD;
+        private List<OptionRequest> options;
+
+        @Data
+        @Builder
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class OptionRequest {
+            private String label;
+            private String content;
+        }
 
         @NotBlank(message = "Correct answer is required")
         private String correctAnswer;

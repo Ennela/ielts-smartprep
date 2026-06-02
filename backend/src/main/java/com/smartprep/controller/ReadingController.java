@@ -2,6 +2,7 @@ package com.smartprep.controller;
 
 import com.smartprep.dto.request.ReadingGenerateRequest;
 import com.smartprep.dto.request.ReadingSubmitRequest;
+import com.smartprep.dto.request.ReadingSubmitFullRequest;
 import com.smartprep.dto.response.*;
 import com.smartprep.model.entity.User;
 import com.smartprep.service.ReadingService;
@@ -108,5 +109,28 @@ public class ReadingController {
             @AuthenticationPrincipal User user) {
         List<ReadingHistoryResponse> historyList = readingService.getHistory(user.getUserId());
         return ResponseEntity.ok(ApiResponse.ok(historyList));
+    }
+
+    /**
+     * Assemble 3 passages for a full Reading test practice session.
+     * GET /api/v1/reading/assemble
+     */
+    @GetMapping("/assemble")
+    public ResponseEntity<ApiResponse<List<ReadingQuizResponse>>> assemble(
+            @AuthenticationPrincipal User user) {
+        List<ReadingQuizResponse> quizzes = readingService.assembleMockTest(user.getUserId());
+        return ResponseEntity.ok(ApiResponse.ok(quizzes, "Full Reading mock test assembled successfully"));
+    }
+
+    /**
+     * Submit answers for a full Reading test session.
+     * POST /api/v1/reading/submit-full
+     */
+    @PostMapping("/submit-full")
+    public ResponseEntity<ApiResponse<ReadingFullResultResponse>> submitFull(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody ReadingSubmitFullRequest request) {
+        ReadingFullResultResponse result = readingService.submitFullQuiz(user.getUserId(), request);
+        return ResponseEntity.ok(ApiResponse.ok(result, "Full Reading test submitted successfully"));
     }
 }

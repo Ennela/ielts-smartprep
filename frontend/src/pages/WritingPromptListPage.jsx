@@ -32,6 +32,22 @@ export default function WritingPromptListPage() {
     const [filter, setFilter] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [assembling, setAssembling] = useState(false);
+
+    const handleStartFullTest = async () => {
+        setAssembling(true);
+        setError('');
+        try {
+            const res = await writingApi.assembleMockTest();
+            const prompt1Id = res.data.data[0].promptId;
+            const prompt2Id = res.data.data[1].promptId;
+            navigate(`/writing/full-exam?task1Id=${prompt1Id}&task2Id=${prompt2Id}`);
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to assemble Writing test');
+        } finally {
+            setAssembling(false);
+        }
+    };
 
     useEffect(() => {
         loadPrompts();
@@ -106,7 +122,7 @@ export default function WritingPromptListPage() {
                     Home
                 </button>
 
-                <div className="writing-header">
+                <div className="writing-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                     <div>
                         <h1>Writing Practice</h1>
                         <p className="subtitle">
@@ -115,9 +131,19 @@ export default function WritingPromptListPage() {
                                 : 'Select a Task 2 prompt and start writing your essay'}
                         </p>
                     </div>
-                    <button className="btn btn-outline" onClick={() => navigate('/writing/history')} id="view-writing-history">
-                        View History
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        <button
+                            className="btn btn-primary"
+                            onClick={handleStartFullTest}
+                            disabled={assembling}
+                            id="start-writing-full-test"
+                        >
+                            {assembling ? 'Assembling...' : 'Start Mock Test (Both Tasks)'}
+                        </button>
+                        <button className="btn btn-outline" onClick={() => navigate('/writing/history')} id="view-writing-history">
+                            View History
+                        </button>
+                    </div>
                 </div>
 
                 {/* Task Tabs */}
