@@ -7,6 +7,7 @@ import com.smartprep.dto.response.*;
 import com.smartprep.exception.InvalidAiResponseException;
 import com.smartprep.exception.ResourceNotFoundException;
 import com.smartprep.model.entity.*;
+import com.smartprep.model.enums.AudioStatus;
 import com.smartprep.model.enums.QuestionType;
 import com.smartprep.model.enums.SkillType;
 import com.smartprep.model.enums.TestMode;
@@ -15,6 +16,7 @@ import com.smartprep.service.ai.GeminiClient;
 import com.smartprep.service.ai.ListeningPromptBuilder;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +24,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,6 +39,10 @@ public class ListeningService {
     private final GeminiClient geminiClient;
     private final ObjectMapper objectMapper;
     private final ListeningPromptBuilder promptBuilder;
+    private final TtsService ttsService;
+    private final StorageService storageService;
+
+    private static final Pattern ANS_MARKER_PATTERN = Pattern.compile("\\[ANS_\\d+]|\\[/ANS_\\d+]");
 
     // IELTS Listening band score map (out of 40 questions)
     private static final Map<Integer, BigDecimal> BAND_SCORE_MAP = new LinkedHashMap<>();
@@ -206,12 +213,46 @@ public class ListeningService {
         test.setTestParts(testParts);
         test = testRepository.save(test);
 
-        // Save score history
+        // Save score history with user answers
         ScoreHistory history = ScoreHistory.builder()
                 .user(user)
                 .skillType(SkillType.LISTENING)
                 .score(bandScore)
                 .build();
+        // Build user answers for review
+        List<UserAnswer> userAnswerList = new ArrayList<>();
+        int questionNo = 0;
+        for (ListeningPart part : parts) {
+            for (ListeningQuestion q : part.getQuestions()) {
+                questionNo++;
+                String userAns = request.getAnswers().getOrDefault(q.getQuestionId(), "");
+                boolean correct = checkAnswer(q.getCorrectAnswer(), userAns, q.getQuestionType().name());
+
+                String optSnapshot = null;
+                if (q.getOptions() != null && !q.getOptions().isEmpty()) {
+                    try {
+                        optSnapshot = objectMapper.writeValueAsString(
+                                q.getOptions().stream()
+                                        .map(o -> Map.of("label", o.getLabel(), "content", o.getContent()))
+                                        .collect(Collectors.toList()));
+                    } catch (Exception e) {
+                        log.warn("Failed to serialize options: {}", e.getMessage());
+                    }
+                }
+
+                userAnswerList.add(UserAnswer.builder()
+                        .scoreHistory(history)
+                        .questionNo(questionNo)
+                        .questionText(q.getQuestionText())
+                        .questionType(q.getQuestionType().name())
+                        .userAnswer(userAns)
+                        .correctAnswer(q.getCorrectAnswer())
+                        .isCorrect(correct)
+                        .optionsJson(optSnapshot)
+                        .build());
+            }
+        }
+        history.setUserAnswers(userAnswerList);
         scoreHistoryRepository.save(history);
 
         return ListeningTestResponse.builder()
@@ -229,15 +270,32 @@ public class ListeningService {
 
     @Transactional(readOnly = true)
     public List<ListeningHistoryResponse> getHistory(Long userId) {
+        // Pre-load listening score histories for historyId lookup
+        List<ScoreHistory> listeningHistories = scoreHistoryRepository
+                .findByUserUserIdOrderByRecordedAtDesc(userId).stream()
+                .filter(sh -> sh.getSkillType() == SkillType.LISTENING)
+                .collect(Collectors.toList());
+
         return testRepository.findByUserUserIdOrderBySubmittedAtDesc(userId).stream()
-                .map(t -> ListeningHistoryResponse.builder()
-                        .testId(t.getTestId())
-                        .testMode(t.getTestMode().name())
-                        .score(t.getScore())
-                        .totalQuestions(t.getTotalQuestions())
-                        .correctAnswers(t.getCorrectAnswers())
-                        .submittedAt(t.getSubmittedAt())
-                        .build())
+                .map(t -> {
+                    Long historyId = listeningHistories.stream()
+                            .filter(sh -> sh.getScore().compareTo(t.getScore()) == 0)
+                            .filter(sh -> !sh.getRecordedAt().isBefore(t.getSubmittedAt().minusSeconds(5)))
+                            .filter(sh -> !sh.getRecordedAt().isAfter(t.getSubmittedAt().plusSeconds(5)))
+                            .map(ScoreHistory::getHistoryId)
+                            .findFirst()
+                            .orElse(null);
+
+                    return ListeningHistoryResponse.builder()
+                            .testId(t.getTestId())
+                            .historyId(historyId)
+                            .testMode(t.getTestMode().name())
+                            .score(t.getScore())
+                            .totalQuestions(t.getTotalQuestions())
+                            .correctAnswers(t.getCorrectAnswers())
+                            .submittedAt(t.getSubmittedAt())
+                            .build();
+                })
                 .collect(Collectors.toList());
     }
 
@@ -261,7 +319,83 @@ public class ListeningService {
         );
 
         ListeningPart saved = partRepository.save(part);
+
+        // Trigger async audio generation if TTS is available
+        if (ttsService.isAvailable()) {
+            generateAudioAsync(saved.getPartId());
+        } else {
+            log.info("TTS unavailable, part {} will use silent fallback", saved.getPartId());
+        }
+
         return toPartResponse(saved);
+    }
+
+    // ========== Audio Generation ==========
+
+    /**
+     * Manually trigger audio generation for a listening part.
+     */
+    @Transactional
+    public void generateAudio(Long partId) {
+        ListeningPart part = partRepository.findById(partId)
+                .orElseThrow(() -> new ResourceNotFoundException("Listening part not found: " + partId));
+
+        if (part.getAudioStatus() == AudioStatus.READY) {
+            log.info("Audio already generated for part {}", partId);
+            return;
+        }
+
+        if (!ttsService.isAvailable()) {
+            throw new IllegalStateException("TTS service is not available");
+        }
+
+        part.setAudioStatus(AudioStatus.PENDING);
+        partRepository.save(part);
+        generateAudioAsync(partId);
+    }
+
+    /**
+     * Asynchronously generate TTS audio for a listening part.
+     */
+    @Async("ttsExecutor")
+    public void generateAudioAsync(Long partId) {
+        try {
+            ListeningPart part = partRepository.findById(partId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Part not found: " + partId));
+
+            String cleanScript = cleanScript(part.getTranscriptText());
+            log.info("Generating TTS audio for part {} ({} chars)", partId, cleanScript.length());
+
+            byte[] mp3Bytes = ttsService.synthesizeMultiVoice(cleanScript);
+
+            String key = "part_" + partId + "_" + System.currentTimeMillis() + ".mp3";
+            String audioUrl = storageService.uploadAudio(key, mp3Bytes);
+
+            part.setAudioUrl(audioUrl);
+            part.setAudioStatus(AudioStatus.READY);
+            partRepository.save(part);
+
+            log.info("TTS audio generated for part {}: {}", partId, audioUrl);
+        } catch (Exception e) {
+            log.error("Failed to generate TTS audio for part {}: {}", partId, e.getMessage(), e);
+            try {
+                ListeningPart part = partRepository.findById(partId).orElse(null);
+                if (part != null) {
+                    part.setAudioStatus(AudioStatus.FAILED);
+                    partRepository.save(part);
+                }
+            } catch (Exception ex) {
+                log.error("Failed to update audio status for part {}: {}", partId, ex.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Remove [ANS_X] and [/ANS_X] markers from script, keeping the text inside.
+     */
+    String cleanScript(String script) {
+        if (script == null) return "";
+        return ANS_MARKER_PATTERN.matcher(script).replaceAll("").trim();
     }
 
     private ListeningPart parseListeningPart(String aiResponse, int partNumber, String topic) {
@@ -510,6 +644,7 @@ public class ListeningService {
                 .title(part.getTitle())
                 .topic(part.getTopic())
                 .audioUrl(part.getAudioUrl())
+                .audioStatus(part.getAudioStatus() != null ? part.getAudioStatus().name() : AudioStatus.PENDING.name())
                 .durationSeconds(part.getDurationSeconds())
                 .questionCount(questions.size())
                 .questions(questions)

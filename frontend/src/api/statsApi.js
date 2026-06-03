@@ -12,6 +12,13 @@ const statsApi = {
         if (skill) params.skill = skill;
         return axiosClient.get('/stats/history', { params });
     },
+
+    // Review detail APIs
+    getHistoryDetail: (historyId) =>
+        axiosClient.get(`/history/${historyId}/answers`),
+
+    explainAnswer: (historyId, answerId) =>
+        axiosClient.post(`/history/${historyId}/answers/${answerId}/explain`),
 };
 
 export default statsApi;

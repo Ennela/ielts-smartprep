@@ -33,6 +33,7 @@ import ReadingFullExamPage from './pages/ReadingFullExamPage';
 import ReadingFullResultPage from './pages/ReadingFullResultPage';
 import WritingFullExamPage from './pages/WritingFullExamPage';
 import WritingFullResultPage from './pages/WritingFullResultPage';
+import HistoryReviewPage from './pages/HistoryReviewPage';
 
 import './index.css';
 
@@ -77,6 +78,9 @@ export default function App() {
             <Route path="/listening" element={<ListeningPracticePage />} />
             <Route path="/listening/result/:testId" element={<ListeningResultPage />} />
             <Route path="/listening/history" element={<ListeningHistoryPage />} />
+
+            {/* History Review (across all skills) */}
+            <Route path="/history/:historyId/review" element={<HistoryReviewPage />} />
 
             {/* Admin (guard: ADMIN role only) */}
             <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />

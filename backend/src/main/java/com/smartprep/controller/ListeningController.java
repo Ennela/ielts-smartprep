@@ -5,8 +5,10 @@ import com.smartprep.dto.request.ListeningSubmitRequest;
 import com.smartprep.dto.response.*;
 import com.smartprep.model.entity.User;
 import com.smartprep.service.ListeningService;
+import com.smartprep.service.StorageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -17,9 +19,11 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/listening")
 @RequiredArgsConstructor
+@Slf4j
 public class ListeningController {
 
     private final ListeningService listeningService;
+    private final StorageService storageService;
 
     /**
      * Get all listening parts.
@@ -104,13 +108,40 @@ public class ListeningController {
     }
 
     /**
-     * Serve listening audio files. Falls back to a 1-second silent MP3 if physical file does not exist.
+     * Manually trigger audio generation for a listening part.
+     * POST /api/v1/listening/{partId}/generate-audio
+     */
+    @PostMapping("/{partId}/generate-audio")
+    public ResponseEntity<ApiResponse<Map<String, String>>> generateAudio(@PathVariable Long partId) {
+        listeningService.generateAudio(partId);
+        return ResponseEntity.accepted()
+                .body(ApiResponse.ok(
+                        Map.of("status", "PENDING", "message", "Audio generation started"),
+                        "Audio generation queued"));
+    }
+
+    /**
+     * Serve listening audio files.
+     * First tries MinIO (real TTS audio), then falls back to silent MP3.
      * GET /api/v1/listening/audio/{fileName}
      */
     @GetMapping(value = "/audio/{fileName}")
     public ResponseEntity<org.springframework.core.io.Resource> getAudioFile(@PathVariable String fileName) {
+        // Try MinIO first (real TTS audio)
         try {
-            org.springframework.core.io.ClassPathResource resource = 
+            byte[] audioBytes = storageService.downloadAudio(fileName);
+            org.springframework.core.io.ByteArrayResource resource =
+                new org.springframework.core.io.ByteArrayResource(audioBytes);
+            return ResponseEntity.ok()
+                    .contentType(org.springframework.http.MediaType.parseMediaType("audio/mpeg"))
+                    .body(resource);
+        } catch (Exception e) {
+            log.debug("Audio not found in MinIO for '{}', trying classpath", fileName);
+        }
+
+        // Try classpath static resource
+        try {
+            org.springframework.core.io.ClassPathResource resource =
                 new org.springframework.core.io.ClassPathResource("static/api/v1/listening/audio/" + fileName);
             if (resource.exists()) {
                 return ResponseEntity.ok()
@@ -121,10 +152,11 @@ public class ListeningController {
             // Fall through to silence fallback
         }
 
-        // Fallback to 1-second silent MP3
+        // Fallback to 1-second silent MP3 (only when TTS fails)
+        log.debug("Falling back to silent MP3 for '{}'", fileName);
         String base64Mp3 = "SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAAwAAAbAAqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV////////////////////////////////////////////AAAAAExhdmM1OC4xMwAAAAAAAAAAAAAAACQDkAAAAAAAAAGw9wrNaQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/+MYxAAAAANIAAAAAExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV/+MYxDsAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV/+MYxHYAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
         byte[] audioBytes = java.util.Base64.getDecoder().decode(base64Mp3);
-        org.springframework.core.io.ByteArrayResource byteArrayResource = 
+        org.springframework.core.io.ByteArrayResource byteArrayResource =
             new org.springframework.core.io.ByteArrayResource(audioBytes);
         return ResponseEntity.ok()
                 .contentType(org.springframework.http.MediaType.parseMediaType("audio/mpeg"))

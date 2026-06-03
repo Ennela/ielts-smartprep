@@ -5,6 +5,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "score_history")
@@ -27,6 +29,11 @@ public class ScoreHistory {
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime recordedAt;
+
+    @OneToMany(mappedBy = "scoreHistory", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("questionNo ASC")
+    @Builder.Default
+    private List<UserAnswer> userAnswers = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() { recordedAt = LocalDateTime.now(); }

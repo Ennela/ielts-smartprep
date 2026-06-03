@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 public class ReadingHistoryResponse {
 
     private Long quizId;
+    private Long historyId;
     private String topic;
     private String difficulty;
     private BigDecimal bandScore;

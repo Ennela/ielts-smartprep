@@ -1,5 +1,6 @@
 package com.smartprep.model.entity;
 
+import com.smartprep.model.enums.AudioStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.ArrayList;
@@ -24,6 +25,11 @@ public class ListeningPart {
 
     @Column(nullable = false)
     private String audioUrl;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    @Builder.Default
+    private AudioStatus audioStatus = AudioStatus.PENDING;
 
     @Column(columnDefinition = "TEXT")
     private String transcriptText;

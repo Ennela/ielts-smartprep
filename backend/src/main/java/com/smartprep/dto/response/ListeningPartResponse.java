@@ -14,6 +14,7 @@ public class ListeningPartResponse {
     private String title;
     private String topic;
     private String audioUrl;
+    private String audioStatus;
     private Integer durationSeconds;
     private Integer questionCount;
     private List<QuestionDto> questions;

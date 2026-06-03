@@ -3,6 +3,7 @@ package com.smartprep.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartprep.dto.response.ListeningPartResponse;
 import com.smartprep.model.entity.*;
+import com.smartprep.model.enums.AudioStatus;
 import com.smartprep.model.enums.QuestionType;
 import com.smartprep.repository.*;
 import com.smartprep.service.ai.GeminiClient;
@@ -33,6 +34,8 @@ class ListeningServiceTest {
     @Mock private ScoreHistoryRepository scoreHistoryRepository;
     @Mock private GeminiClient geminiClient;
     @Mock private ListeningPromptBuilder promptBuilder;
+    @Mock private TtsService ttsService;
+    @Mock private StorageService storageService;
 
     @Spy private ObjectMapper objectMapper = new ObjectMapper();
 
@@ -74,6 +77,7 @@ class ListeningServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(promptBuilder.buildGeneratePrompt(anyInt(), anyString())).thenReturn("mock prompt");
+        when(ttsService.isAvailable()).thenReturn(false); // TTS disabled for this test
         when(geminiClient.generateAndParse(anyString(), anyString(), any(GeminiClient.CheckedFunction.class)))
                 .thenAnswer(invocation -> {
                     GeminiClient.CheckedFunction<String, ListeningPart> parser = invocation.getArgument(2);
@@ -110,5 +114,111 @@ class ListeningServiceTest {
         assertEquals(3, qDto.getOptions().size());
         assertEquals("A", qDto.getOptions().get(0).getLabel());
         assertEquals("Gold membership", qDto.getOptions().get(0).getContent());
+    }
+
+    // ========== Audio Generation Tests ==========
+
+    @Test
+    @DisplayName("cleanScript: removes ANS markers but keeps text inside")
+    void cleanScript_removesAnsMarkers() {
+        String script = "The opening hours are from [ANS_1]nine in the morning[/ANS_1] until six.";
+
+        String result = listeningService.cleanScript(script);
+
+        assertEquals("The opening hours are from nine in the morning until six.", result);
+    }
+
+    @Test
+    @DisplayName("cleanScript: handles multiple ANS markers")
+    void cleanScript_handlesMultipleMarkers() {
+        String script = "Name: [ANS_1]Davies[/ANS_1], Phone: [ANS_2]07123456[/ANS_2]";
+
+        String result = listeningService.cleanScript(script);
+
+        assertEquals("Name: Davies, Phone: 07123456", result);
+    }
+
+    @Test
+    @DisplayName("cleanScript: returns empty string for null input")
+    void cleanScript_nullInput_returnsEmpty() {
+        assertEquals("", listeningService.cleanScript(null));
+    }
+
+    @Test
+    @DisplayName("generateAudio: throws when part not found")
+    void generateAudio_partNotFound_throwsException() {
+        when(partRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThrows(Exception.class, () -> listeningService.generateAudio(999L));
+    }
+
+    @Test
+    @DisplayName("generateAudio: skips if already READY")
+    void generateAudio_alreadyReady_skips() {
+        ListeningPart part = ListeningPart.builder()
+                .partId(1L)
+                .audioStatus(AudioStatus.READY)
+                .build();
+        when(partRepository.findById(1L)).thenReturn(Optional.of(part));
+
+        listeningService.generateAudio(1L);
+
+        // Should not call TTS or save again
+        verify(ttsService, never()).synthesizeMultiVoice(anyString());
+    }
+
+    @Test
+    @DisplayName("generateAudio: throws when TTS unavailable")
+    void generateAudio_ttsUnavailable_throws() {
+        ListeningPart part = ListeningPart.builder()
+                .partId(1L)
+                .audioStatus(AudioStatus.PENDING)
+                .build();
+        when(partRepository.findById(1L)).thenReturn(Optional.of(part));
+        when(ttsService.isAvailable()).thenReturn(false);
+
+        assertThrows(IllegalStateException.class, () -> listeningService.generateAudio(1L));
+    }
+
+    @Test
+    @DisplayName("generateAudioAsync: success updates status to READY")
+    void generateAudioAsync_success_updatesStatusToReady() {
+        ListeningPart part = ListeningPart.builder()
+                .partId(1L)
+                .transcriptText("Sarah: Hello there.\nJohn: Hi!")
+                .audioStatus(AudioStatus.PENDING)
+                .build();
+
+        when(partRepository.findById(1L)).thenReturn(Optional.of(part));
+        when(ttsService.synthesizeMultiVoice(anyString())).thenReturn(new byte[]{1, 2, 3});
+        when(storageService.uploadAudio(anyString(), any(byte[].class))).thenReturn("/api/v1/listening/audio/part_1.mp3");
+        when(partRepository.save(any(ListeningPart.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        listeningService.generateAudioAsync(1L);
+
+        verify(ttsService).synthesizeMultiVoice(anyString());
+        verify(storageService).uploadAudio(anyString(), any(byte[].class));
+        verify(partRepository).save(argThat(p ->
+                p.getAudioStatus() == AudioStatus.READY &&
+                p.getAudioUrl().contains("part_1")));
+    }
+
+    @Test
+    @DisplayName("generateAudioAsync: TTS failure sets status to FAILED")
+    void generateAudioAsync_ttsFailure_statusSetToFailed() {
+        ListeningPart part = ListeningPart.builder()
+                .partId(1L)
+                .transcriptText("Some script")
+                .audioStatus(AudioStatus.PENDING)
+                .build();
+
+        when(partRepository.findById(1L)).thenReturn(Optional.of(part));
+        when(ttsService.synthesizeMultiVoice(anyString())).thenThrow(new RuntimeException("TTS API error"));
+        when(partRepository.save(any(ListeningPart.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        listeningService.generateAudioAsync(1L);
+
+        verify(partRepository, atLeastOnce()).save(argThat(p ->
+                p.getAudioStatus() == AudioStatus.FAILED));
     }
 }

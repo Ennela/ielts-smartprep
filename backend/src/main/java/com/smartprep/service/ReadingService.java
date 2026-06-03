@@ -234,6 +234,9 @@ public class ReadingService {
         int totalCorrect = 0;
         int totalQuestions = 0;
 
+        List<UserAnswer> allUserAnswers = new ArrayList<>();
+        int questionCounter = 0;
+
         for (Long quizId : request.getQuizIds()) {
             ReadingQuiz quiz = quizRepository.findByQuizIdAndUserUserId(quizId, userId)
                     .orElseThrow(() -> new ResourceNotFoundException("Quiz not found with ID: " + quizId));
@@ -243,6 +246,7 @@ public class ReadingService {
 
             for (ReadingQuestion question : quiz.getQuestions()) {
                 totalQuestions++;
+                questionCounter++;
                 String userAnswer = answers.getOrDefault(question.getQuestionId(), "");
                 question.setUserAnswer(userAnswer);
 
@@ -251,6 +255,8 @@ public class ReadingService {
                     quizCorrect++;
                     totalCorrect++;
                 }
+
+                allUserAnswers.add(buildUserAnswer(null, questionCounter, question, userAnswer, correct));
             }
 
             // Grade this quiz locally (out of 13) for individual presentation fallback
@@ -272,6 +278,9 @@ public class ReadingService {
                 .skillType(SkillType.READING)
                 .score(overallBand)
                 .build();
+        // Attach user answers for cascade persist
+        allUserAnswers.forEach(ua -> ua.setScoreHistory(history));
+        history.setUserAnswers(allUserAnswers);
         scoreHistoryRepository.save(history);
 
         return ReadingFullResultResponse.builder()
@@ -345,7 +354,7 @@ public class ReadingService {
         quiz.setSubmittedAt(LocalDateTime.now());
         quizRepository.save(quiz);
 
-        // Save to score history
+        // Save to score history with user answers
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         ScoreHistory history = ScoreHistory.builder()
@@ -353,6 +362,14 @@ public class ReadingService {
                 .skillType(SkillType.READING)
                 .score(bandScore)
                 .build();
+        // Build and attach user answers
+        List<UserAnswer> userAnswerList = new ArrayList<>();
+        for (ReadingQuestion question : quiz.getQuestions()) {
+            String ua = answers.getOrDefault(question.getQuestionId(), "");
+            boolean correct = isCorrect(question, ua);
+            userAnswerList.add(buildUserAnswer(history, question.getOrderIndex(), question, ua, correct));
+        }
+        history.setUserAnswers(userAnswerList);
         scoreHistoryRepository.save(history);
 
         return mapToResultResponse(quiz);
@@ -363,24 +380,75 @@ public class ReadingService {
      */
     @Transactional(readOnly = true)
     public List<ReadingHistoryResponse> getHistory(Long userId) {
+        // Pre-load score histories indexed by recordedAt for historyId lookup
+        List<ScoreHistory> readingHistories = scoreHistoryRepository
+                .findByUserUserIdOrderByRecordedAtDesc(userId).stream()
+                .filter(sh -> sh.getSkillType() == SkillType.READING)
+                .collect(Collectors.toList());
+
         return quizRepository.findByUserUserIdOrderByCreatedAtDesc(userId).stream()
                 .filter(q -> q.getSubmittedAt() != null)
-                .map(q -> ReadingHistoryResponse.builder()
-                        .quizId(q.getQuizId())
-                        .topic(q.getTopic().name())
-                        .difficulty(q.getDifficulty().name())
-                        .bandScore(q.getScore())
-                        .correctAnswers(q.getCorrectAnswers())
-                        .totalQuestions(q.getTotalQuestions())
-                        .createdAt(q.getCreatedAt())
-                        .submittedAt(q.getSubmittedAt())
-                        .build())
+                .map(q -> {
+                    // Find matching ScoreHistory by closest recordedAt to submittedAt
+                    Long historyId = readingHistories.stream()
+                            .filter(sh -> sh.getScore().compareTo(q.getScore()) == 0)
+                            .filter(sh -> !sh.getRecordedAt().isBefore(q.getSubmittedAt().minusSeconds(5)))
+                            .filter(sh -> !sh.getRecordedAt().isAfter(q.getSubmittedAt().plusSeconds(5)))
+                            .map(ScoreHistory::getHistoryId)
+                            .findFirst()
+                            .orElse(null);
+
+                    return ReadingHistoryResponse.builder()
+                            .quizId(q.getQuizId())
+                            .historyId(historyId)
+                            .topic(q.getTopic().name())
+                            .difficulty(q.getDifficulty().name())
+                            .bandScore(q.getScore())
+                            .correctAnswers(q.getCorrectAnswers())
+                            .totalQuestions(q.getTotalQuestions())
+                            .createdAt(q.getCreatedAt())
+                            .submittedAt(q.getSubmittedAt())
+                            .build();
+                })
                 .collect(Collectors.toList());
     }
 
     // =========================================================================
     // Private helpers
     // =========================================================================
+
+    /**
+     * Build a UserAnswer entity from a ReadingQuestion for persistence with ScoreHistory.
+     */
+    private UserAnswer buildUserAnswer(ScoreHistory history, int questionNo,
+                                        ReadingQuestion question, String userAnswerText, boolean correct) {
+        // Build options JSON snapshot for MCQ questions
+        String optionsSnapshot = null;
+        if (question.getOptions() != null && !question.getOptions().isEmpty()) {
+            try {
+                optionsSnapshot = objectMapper.writeValueAsString(
+                        question.getOptions().stream()
+                                .map(o -> Map.of("label", o.getLabel(), "content", o.getContent()))
+                                .collect(Collectors.toList()));
+            } catch (Exception e) {
+                log.warn("Failed to serialize options for question {}: {}", question.getQuestionId(), e.getMessage());
+            }
+        } else if (question.getOptionsJson() != null) {
+            optionsSnapshot = question.getOptionsJson();
+        }
+
+        return UserAnswer.builder()
+                .scoreHistory(history)
+                .questionNo(questionNo)
+                .questionText(question.getQuestionText())
+                .questionType(question.getQuestionType().name())
+                .userAnswer(userAnswerText)
+                .correctAnswer(question.getCorrectAnswer())
+                .isCorrect(correct)
+                .explanation(question.getExplanation())
+                .optionsJson(optionsSnapshot)
+                .build();
+    }
 
     private void validateReadingQuiz(ReadingQuiz quiz) {
         if (quiz == null) {

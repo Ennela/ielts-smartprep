@@ -60,6 +60,19 @@ export default function ListeningHistoryPage() {
                         {item.totalQuestions ? Math.round((item.correctAnswers / item.totalQuestions) * 100) : 0}% accuracy
                       </span>
                     </div>
+                    {item.historyId && (
+                      <button
+                        className="btn btn-sm btn-primary"
+                        style={{ marginTop: '0.75rem' }}
+                        onClick={() => navigate(`/history/${item.historyId}/review`)}
+                        id={`review-listening-${item.testId}`}
+                      >
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: 4, verticalAlign: 'middle' }}>
+                          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                        Review Answers
+                      </button>
+                    )}
                   </div>
                 </div>
               );

@@ -74,17 +74,31 @@ export default function ReadingHistoryPage() {
                     <td><span className={`band-score band-${getBandClass(item.bandScore)}`}>{item.bandScore}</span></td>
                     <td>{formatDate(item.submittedAt || item.createdAt)}</td>
                     <td>
-                      <button
-                        className="btn btn-sm btn-outline"
-                        onClick={() => navigate(`/reading/result/${item.quizId}`)}
-                        id={`view-detail-${item.quizId}`}
-                      >
-                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: 4, verticalAlign: 'middle' }}>
-                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                          <circle cx="12" cy="12" r="3"/>
-                        </svg>
-                        View Details
-                      </button>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          className="btn btn-sm btn-outline"
+                          onClick={() => navigate(`/reading/result/${item.quizId}`)}
+                          id={`view-detail-${item.quizId}`}
+                        >
+                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: 4, verticalAlign: 'middle' }}>
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                          </svg>
+                          Details
+                        </button>
+                        {item.historyId && (
+                          <button
+                            className="btn btn-sm btn-primary"
+                            onClick={() => navigate(`/history/${item.historyId}/review`)}
+                            id={`review-answers-${item.quizId}`}
+                          >
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: 4, verticalAlign: 'middle' }}>
+                              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                            </svg>
+                            Review
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

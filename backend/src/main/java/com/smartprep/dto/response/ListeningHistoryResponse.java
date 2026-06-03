@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class ListeningHistoryResponse {
     private Long testId;
+    private Long historyId;
     private String testMode;
     private BigDecimal score;
     private Integer totalQuestions;

@@ -28,6 +28,15 @@ app:
     base-url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash
     timeout-seconds: 30
     max-retries: 3
+  tts:
+    enabled: ${TTS_ENABLED:true}
+    edge-tts-url: ${EDGE_TTS_URL:http://localhost:8000}
+    speaking-rate: -8%  # edge-tts rate offset format (-8% matches standard IELTS speed)
+  minio:
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ACCESS_KEY:minioadmin}
+    secret-key: ${MINIO_SECRET_KEY:minioadmin}
+    bucket: ${MINIO_BUCKET:listening-audio}
   rate-limit:
     capacity: 10
     refill-tokens: 10
