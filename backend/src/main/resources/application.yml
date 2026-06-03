@@ -26,7 +26,7 @@ app:
   gemini:
     api-key: ${GEMINI_API_KEY:}
     base-url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash
-    timeout-seconds: 30
+    timeout-seconds: 60
     max-retries: 3
   tts:
     enabled: ${TTS_ENABLED:true}
@@ -64,20 +64,20 @@ resilience4j:
       gemini:
         registerHealthIndicator: true
         slidingWindowType: COUNT_BASED
-        slidingWindowSize: 5
-        failureRateThreshold: 50
-        waitDurationInOpenState: 30s
-        permittedNumberOfCallsInHalfOpenState: 2
-        minimumNumberOfCalls: 3
+        slidingWindowSize: 10
+        failureRateThreshold: 60
+        waitDurationInOpenState: 60s
+        permittedNumberOfCallsInHalfOpenState: 3
+        minimumNumberOfCalls: 5
   timelimiter:
     instances:
       gemini:
-        timeoutDuration: 35s
+        timeoutDuration: 65s
   retry:
     instances:
       gemini:
         maxAttempts: 3
-        waitDuration: 1s
+        waitDuration: 2s
         enableExponentialBackoff: true
         exponentialBackoffMultiplier: 2
         retryExceptions:
