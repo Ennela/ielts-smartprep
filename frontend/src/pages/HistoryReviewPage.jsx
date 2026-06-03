@@ -316,7 +316,9 @@ function AnswerCard({ answer, onExplain, isExplaining }) {
             </svg>
             Explanation
           </div>
-          <p className="rac-explanation-text">{answer.explanation}</p>
+          <p className="rac-explanation-text" style={{ whiteSpace: 'pre-line' }}>
+            {renderExplanationText(answer.explanation)}
+          </p>
         </div>
       ) : (
         !answer.isCorrect && (
@@ -369,4 +371,64 @@ function formatDate(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr);
   return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function renderExplanationText(text) {
+  if (!text) return null;
+  
+  // Regex to match [ANS_XX]content[/ANS_XX] or similar variations (case-insensitive)
+  const regex = /\[ANS_(\d+)\](.*?)\[\/ANS_\1\]/gi;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    const qIndex = match.index;
+    const qNum = match[1];
+    const content = match[2];
+
+    // Push the text before the match
+    if (qIndex > lastIndex) {
+      parts.push(text.substring(lastIndex, qIndex));
+    }
+
+    // Push the highlighted component
+    parts.push(
+      <span key={qIndex} className="answer-highlight" style={{
+        backgroundColor: 'rgba(251, 191, 36, 0.25)', // soft amber background
+        borderBottom: '2px solid #f59e0b',
+        padding: '0.1rem 0.3rem',
+        borderRadius: '4px',
+        fontWeight: '600',
+        color: 'var(--text-main)',
+        margin: '0 0.1rem',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px'
+      }}>
+        {content}
+        <span style={{
+          backgroundColor: '#f59e0b',
+          color: '#fff',
+          fontSize: '0.7rem',
+          padding: '0.05rem 0.25rem',
+          borderRadius: '3px',
+          fontWeight: 'bold',
+          lineHeight: '1',
+          marginLeft: '2px'
+        }}>
+          Q{qNum}
+        </span>
+      </span>
+    );
+
+    lastIndex = regex.lastIndex;
+  }
+
+  // Push any remaining text
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  return parts;
 }

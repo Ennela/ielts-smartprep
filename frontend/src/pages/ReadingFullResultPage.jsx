@@ -281,8 +281,8 @@ function ResultQuestionItem({ q, idx }) {
 
       {/* Explanation */}
       {q.explanation && (
-        <div className="rq-explanation" style={{ marginTop: '1rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)', fontSize: '0.875rem' }}>
-          <strong>Explanation:</strong> {q.explanation}
+        <div className="rq-explanation" style={{ marginTop: '1rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)', fontSize: '0.875rem', whiteSpace: 'pre-line' }}>
+          <strong>Explanation:</strong> {renderExplanationText(q.explanation)}
         </div>
       )}
     </div>
@@ -349,4 +349,60 @@ function formatQuestionType(type) {
     MATCHING_SENTENCE_ENDINGS: 'Matching Endings',
   };
   return labels[type] || type;
+}
+
+function renderExplanationText(text) {
+  if (!text) return null;
+  
+  const regex = /\[ANS_(\d+)\](.*?)\[\/ANS_\1\]/gi;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    const qIndex = match.index;
+    const qNum = match[1];
+    const content = match[2];
+
+    if (qIndex > lastIndex) {
+      parts.push(text.substring(lastIndex, qIndex));
+    }
+
+    parts.push(
+      <span key={qIndex} className="answer-highlight" style={{
+        backgroundColor: 'rgba(251, 191, 36, 0.25)',
+        borderBottom: '2px solid #f59e0b',
+        padding: '0.1rem 0.3rem',
+        borderRadius: '4px',
+        fontWeight: '600',
+        color: 'var(--text-main)',
+        margin: '0 0.1rem',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '4px'
+      }}>
+        {content}
+        <span style={{
+          backgroundColor: '#f59e0b',
+          color: '#fff',
+          fontSize: '0.7rem',
+          padding: '0.05rem 0.25rem',
+          borderRadius: '3px',
+          fontWeight: 'bold',
+          lineHeight: '1',
+          marginLeft: '2px'
+        }}>
+          Q{qNum}
+        </span>
+      </span>
+    );
+
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex));
+  }
+
+  return parts;
 }
