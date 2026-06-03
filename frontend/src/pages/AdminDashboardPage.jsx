@@ -144,6 +144,17 @@ export default function AdminDashboardPage() {
             <p>Create, edit, and delete Task 1 and Task 2 writing prompts</p>
             <span className="card-action">Manage prompts →</span>
           </div>
+
+          <div className="card card-clickable" onClick={() => navigate('/admin/listening')} id="admin-nav-listening">
+            <div className="admin-quick-icon" style={{ background: 'rgba(16,185,129,0.08)', color: 'var(--color-success)' }}>
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 18v-6a9 9 0 0 1 18 0v6" /><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
+              </svg>
+            </div>
+            <h3>Listening Parts Management</h3>
+            <p>Create, edit, delete listening parts and manage TTS audio generation</p>
+            <span className="card-action">Manage listening →</span>
+          </div>
         </div>
       </div>
     </div>

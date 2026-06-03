@@ -16,6 +16,7 @@ const ADMIN_MENU_ITEMS = [
   { path: '/admin/mock-tests',       label: 'Mock Tests', icon: 'quiz',         end: false },
   { path: '/admin/writing-prompts',  label: 'Writing Prompts',   icon: 'description',  end: false },
   { path: '/admin/reading-quizzes',  label: 'Reading Quizzes',   icon: 'menu_book',    end: false },
+  { path: '/admin/listening',        label: 'Listening Parts',   icon: 'headphones',   end: false },
 ];
 
 export default function MainLayout() {

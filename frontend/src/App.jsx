@@ -29,6 +29,8 @@ import AdminUsersPage from './pages/AdminUsersPage';
 import AdminMockTestsPage from './pages/AdminMockTestsPage';
 import AdminWritingPromptsPage from './pages/AdminWritingPromptsPage';
 import AdminReadingQuizzesPage from './pages/AdminReadingQuizzesPage';
+import AdminListeningListPage from './pages/AdminListeningListPage';
+import AdminPartEditorPage from './pages/AdminPartEditorPage';
 import ReadingFullExamPage from './pages/ReadingFullExamPage';
 import ReadingFullResultPage from './pages/ReadingFullResultPage';
 import WritingFullExamPage from './pages/WritingFullExamPage';
@@ -88,6 +90,9 @@ export default function App() {
             <Route path="/admin/mock-tests" element={<AdminRoute><AdminMockTestsPage /></AdminRoute>} />
             <Route path="/admin/writing-prompts" element={<AdminRoute><AdminWritingPromptsPage /></AdminRoute>} />
             <Route path="/admin/reading-quizzes" element={<AdminRoute><AdminReadingQuizzesPage /></AdminRoute>} />
+            <Route path="/admin/listening" element={<AdminRoute><AdminListeningListPage /></AdminRoute>} />
+            <Route path="/admin/listening/new" element={<AdminRoute><AdminPartEditorPage /></AdminRoute>} />
+            <Route path="/admin/listening/edit/:partId" element={<AdminRoute><AdminPartEditorPage /></AdminRoute>} />
 
 
           </Route>
