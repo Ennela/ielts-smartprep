@@ -41,6 +41,7 @@ public class ListeningService {
     private final ListeningPromptBuilder promptBuilder;
     private final TtsService ttsService;
     private final StorageService storageService;
+    private final AudioGenerationService audioGenerationService;
 
     private static final Pattern ANS_MARKER_PATTERN = Pattern.compile("\\[ANS_\\d+]|\\[/ANS_\\d+]");
 
@@ -78,6 +79,16 @@ public class ListeningService {
         BAND_SCORE_MAP.put(12, new BigDecimal("4.0"));
         BAND_SCORE_MAP.put(11, new BigDecimal("4.0"));
         BAND_SCORE_MAP.put(10, new BigDecimal("4.0"));
+        BAND_SCORE_MAP.put(9, new BigDecimal("3.5"));
+        BAND_SCORE_MAP.put(8, new BigDecimal("3.5"));
+        BAND_SCORE_MAP.put(7, new BigDecimal("3.0"));
+        BAND_SCORE_MAP.put(6, new BigDecimal("3.0"));
+        BAND_SCORE_MAP.put(5, new BigDecimal("2.5"));
+        BAND_SCORE_MAP.put(4, new BigDecimal("2.5"));
+        BAND_SCORE_MAP.put(3, new BigDecimal("2.0"));
+        BAND_SCORE_MAP.put(2, new BigDecimal("2.0"));
+        BAND_SCORE_MAP.put(1, new BigDecimal("1.0"));
+        BAND_SCORE_MAP.put(0, new BigDecimal("0.0"));
     }
 
     // ========== List Parts ==========
@@ -322,7 +333,7 @@ public class ListeningService {
 
         // Trigger async audio generation if TTS is available
         if (ttsService.isAvailable()) {
-            generateAudioAsync(saved.getPartId());
+            audioGenerationService.generateAudioAsync(saved.getPartId());
         } else {
             log.info("TTS unavailable, part {} will use silent fallback", saved.getPartId());
         }
@@ -349,45 +360,14 @@ public class ListeningService {
             throw new IllegalStateException("TTS service is not available");
         }
 
-        part.setAudioStatus(AudioStatus.PENDING);
-        partRepository.save(part);
-        generateAudioAsync(partId);
+        audioGenerationService.generateAudioAsync(partId);
     }
 
     /**
-     * Asynchronously generate TTS audio for a listening part.
+     * Delegate to AudioGenerationService to maintain compatibility with test cases.
      */
-    @Async("ttsExecutor")
     public void generateAudioAsync(Long partId) {
-        try {
-            ListeningPart part = partRepository.findById(partId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Part not found: " + partId));
-
-            String cleanScript = cleanScript(part.getTranscriptText());
-            log.info("Generating TTS audio for part {} ({} chars)", partId, cleanScript.length());
-
-            byte[] mp3Bytes = ttsService.synthesizeMultiVoice(cleanScript);
-
-            String key = "part_" + partId + "_" + System.currentTimeMillis() + ".mp3";
-            String audioUrl = storageService.uploadAudio(key, mp3Bytes);
-
-            part.setAudioUrl(audioUrl);
-            part.setAudioStatus(AudioStatus.READY);
-            partRepository.save(part);
-
-            log.info("TTS audio generated for part {}: {}", partId, audioUrl);
-        } catch (Exception e) {
-            log.error("Failed to generate TTS audio for part {}: {}", partId, e.getMessage(), e);
-            try {
-                ListeningPart part = partRepository.findById(partId).orElse(null);
-                if (part != null) {
-                    part.setAudioStatus(AudioStatus.FAILED);
-                    partRepository.save(part);
-                }
-            } catch (Exception ex) {
-                log.error("Failed to update audio status for part {}: {}", partId, ex.getMessage());
-            }
-        }
+        audioGenerationService.generateAudioAsync(partId);
     }
 
     /**
@@ -615,13 +595,13 @@ public class ListeningService {
 
         // For mock tests with 40 questions, use the standard map
         if (total == 40) {
-            return BAND_SCORE_MAP.getOrDefault(Math.min(correct, 40), new BigDecimal("3.5"));
+            return BAND_SCORE_MAP.getOrDefault(Math.min(correct, 40), BigDecimal.ZERO);
         }
 
         // For practice mode (fewer questions), scale proportionally
         double scaled = ((double) correct / total) * 40.0;
         int scaledInt = (int) Math.round(scaled);
-        return BAND_SCORE_MAP.getOrDefault(Math.min(scaledInt, 40), new BigDecimal("3.5"));
+        return BAND_SCORE_MAP.getOrDefault(Math.min(scaledInt, 40), BigDecimal.ZERO);
     }
 
     // ========== Mapping Helpers ==========
