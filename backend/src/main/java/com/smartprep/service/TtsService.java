@@ -4,7 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import jakarta.annotation.PostConstruct;
 import java.util.*;
@@ -173,16 +172,25 @@ public class TtsService {
     // ========== HTTP TTS Service Call ==========
 
     private byte[] callTtsApi(String text, String voice) {
-        String url = UriComponentsBuilder.fromHttpUrl(edgeTtsUrl)
+        // Build URL with UriComponentsBuilder.
+        // Use build(true) to indicate values are already encoded, preventing double-encoding.
+        // Rate (e.g. "-8%") and text are URL-encoded manually so they survive correctly.
+        String encodedText = java.net.URLEncoder.encode(text, java.nio.charset.StandardCharsets.UTF_8);
+        String encodedVoice = java.net.URLEncoder.encode(voice, java.nio.charset.StandardCharsets.UTF_8);
+        // Encode rate: -8% → -8%25 — FastAPI will URL-decode it back to -8%
+        String encodedRate = java.net.URLEncoder.encode(speakingRate, java.nio.charset.StandardCharsets.UTF_8);
+
+        java.net.URI uri = org.springframework.web.util.UriComponentsBuilder
+                .fromHttpUrl(edgeTtsUrl)
                 .path("/synthesize")
-                .queryParam("text", text)
-                .queryParam("voice", voice)
-                .queryParam("rate", speakingRate)
-                .toUriString();
+                .query("text=" + encodedText + "&voice=" + encodedVoice + "&rate=" + encodedRate)
+                .build(true)  // treat values as already encoded
+                .toUri();
 
         try {
-            log.debug("Calling Edge TTS: voice={}, textLength={}", voice, text.length());
-            byte[] response = restTemplate.getForObject(url, byte[].class);
+            log.debug("Calling Edge TTS: voice={}, textLength={}, rate={}, url={}",
+                    voice, text.length(), speakingRate, uri);
+            byte[] response = restTemplate.getForObject(uri, byte[].class);
             if (response == null || response.length == 0) {
                 throw new RuntimeException("Empty response received from Edge TTS service");
             }

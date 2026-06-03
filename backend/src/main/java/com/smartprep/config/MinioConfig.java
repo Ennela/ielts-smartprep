@@ -1,10 +1,11 @@
 package com.smartprep.config;
 
-import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.event.EventListener;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
@@ -40,7 +41,11 @@ public class MinioConfig {
                 .build();
     }
 
-    @PostConstruct
+    /**
+     * Auto-create the audio bucket on application startup.
+     * Uses ApplicationReadyEvent to avoid circular reference with @PostConstruct.
+     */
+    @EventListener(ApplicationReadyEvent.class)
     public void initBucket() {
         try {
             S3Client client = s3Client();
@@ -57,3 +62,4 @@ public class MinioConfig {
         }
     }
 }
+
