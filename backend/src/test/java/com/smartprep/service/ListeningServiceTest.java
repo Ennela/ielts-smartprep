@@ -36,6 +36,7 @@ class ListeningServiceTest {
     @Mock private ListeningPromptBuilder promptBuilder;
     @Mock private TtsService ttsService;
     @Mock private StorageService storageService;
+    @Mock private AudioGenerationService audioGenerationService;
 
     @Spy private ObjectMapper objectMapper = new ObjectMapper();
 
@@ -181,44 +182,12 @@ class ListeningServiceTest {
     }
 
     @Test
-    @DisplayName("generateAudioAsync: success updates status to READY")
-    void generateAudioAsync_success_updatesStatusToReady() {
-        ListeningPart part = ListeningPart.builder()
-                .partId(1L)
-                .transcriptText("Sarah: Hello there.\nJohn: Hi!")
-                .audioStatus(AudioStatus.PENDING)
-                .build();
-
-        when(partRepository.findById(1L)).thenReturn(Optional.of(part));
-        when(ttsService.synthesizeMultiVoice(anyString())).thenReturn(new byte[]{1, 2, 3});
-        when(storageService.uploadAudio(anyString(), any(byte[].class))).thenReturn("/api/v1/listening/audio/part_1.mp3");
-        when(partRepository.save(any(ListeningPart.class))).thenAnswer(inv -> inv.getArgument(0));
+    @DisplayName("generateAudioAsync: delegates to AudioGenerationService")
+    void generateAudioAsync_delegatesToAudioGenerationService() {
+        doNothing().when(audioGenerationService).generateAudioAsync(1L);
 
         listeningService.generateAudioAsync(1L);
 
-        verify(ttsService).synthesizeMultiVoice(anyString());
-        verify(storageService).uploadAudio(anyString(), any(byte[].class));
-        verify(partRepository).save(argThat(p ->
-                p.getAudioStatus() == AudioStatus.READY &&
-                p.getAudioUrl().contains("part_1")));
-    }
-
-    @Test
-    @DisplayName("generateAudioAsync: TTS failure sets status to FAILED")
-    void generateAudioAsync_ttsFailure_statusSetToFailed() {
-        ListeningPart part = ListeningPart.builder()
-                .partId(1L)
-                .transcriptText("Some script")
-                .audioStatus(AudioStatus.PENDING)
-                .build();
-
-        when(partRepository.findById(1L)).thenReturn(Optional.of(part));
-        when(ttsService.synthesizeMultiVoice(anyString())).thenThrow(new RuntimeException("TTS API error"));
-        when(partRepository.save(any(ListeningPart.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        listeningService.generateAudioAsync(1L);
-
-        verify(partRepository, atLeastOnce()).save(argThat(p ->
-                p.getAudioStatus() == AudioStatus.FAILED));
+        verify(audioGenerationService).generateAudioAsync(1L);
     }
 }

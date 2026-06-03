@@ -65,4 +65,23 @@ public class StorageService {
         // Use the backend proxy endpoint so audio is served through our API
         return "/api/v1/listening/audio/" + key;
     }
+
+    /**
+     * Delete an audio file from MinIO.
+     *
+     * @param key the object key to delete
+     */
+    public void deleteAudio(String key) {
+        try {
+            software.amazon.awssdk.services.s3.model.DeleteObjectRequest deleteRequest =
+                    software.amazon.awssdk.services.s3.model.DeleteObjectRequest.builder()
+                            .bucket(bucket)
+                            .key(key)
+                            .build();
+            s3Client.deleteObject(deleteRequest);
+            log.info("Deleted audio from MinIO: bucket={}, key={}", bucket, key);
+        } catch (Exception e) {
+            log.warn("Failed to delete audio from MinIO: bucket={}, key={}, error={}", bucket, key, e.getMessage());
+        }
+    }
 }

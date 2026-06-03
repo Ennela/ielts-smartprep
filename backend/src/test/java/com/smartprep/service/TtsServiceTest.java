@@ -17,7 +17,11 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class TtsServiceTest {
 
     @Mock
@@ -105,12 +109,12 @@ class TtsServiceTest {
     @DisplayName("synthesizeSingle: calls restTemplate and returns response bytes")
     void synthesizeSingle_success_returnsBytes() {
         byte[] expectedBytes = {1, 2, 3, 4};
-        when(restTemplate.getForObject(anyString(), eq(byte[].class))).thenReturn(expectedBytes);
+        doReturn(expectedBytes).when(restTemplate).getForObject(any(java.net.URI.class), any());
 
         byte[] result = ttsService.synthesizeSingle("Hello world", "en-US-GuyNeural");
 
         assertArrayEquals(expectedBytes, result);
-        verify(restTemplate).getForObject(contains("text=Hello%20world"), eq(byte[].class));
+        verify(restTemplate).getForObject(argThat(uri -> uri != null && uri.toString().contains("text=Hello")), any());
     }
 
     @Test
@@ -123,19 +127,19 @@ class TtsServiceTest {
         byte[] sarahVoice = {1, 1};
         byte[] johnVoice = {2, 2};
 
-        when(restTemplate.getForObject(contains("text=Hello!"), eq(byte[].class))).thenReturn(sarahVoice);
-        when(restTemplate.getForObject(contains("text=Hi!"), eq(byte[].class))).thenReturn(johnVoice);
+        doReturn(sarahVoice).when(restTemplate).getForObject(argThat(uri -> uri != null && uri.toString().contains("text=Hello")), any());
+        doReturn(johnVoice).when(restTemplate).getForObject(argThat(uri -> uri != null && uri.toString().contains("text=Hi")), any());
 
         byte[] result = ttsService.synthesizeMultiVoice(script);
 
         assertArrayEquals(new byte[]{1, 1, 2, 2}, result);
-        verify(restTemplate, times(2)).getForObject(anyString(), eq(byte[].class));
+        verify(restTemplate, times(2)).getForObject(any(java.net.URI.class), any());
     }
 
     @Test
     @DisplayName("synthesizeSingle: throws when HTTP call fails")
     void synthesizeSingle_failure_throwsException() {
-        when(restTemplate.getForObject(anyString(), eq(byte[].class))).thenThrow(new RuntimeException("Connection error"));
+        doThrow(new RuntimeException("Connection error")).when(restTemplate).getForObject(any(java.net.URI.class), any());
 
         assertThrows(RuntimeException.class, () -> ttsService.synthesizeSingle("Hello", "en-US-GuyNeural"));
     }

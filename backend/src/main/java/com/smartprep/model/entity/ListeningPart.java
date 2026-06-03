@@ -39,4 +39,14 @@ public class ListeningPart {
     @OneToMany(mappedBy = "part", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<ListeningQuestion> questions = new ArrayList<>();
+
+    @Column(nullable = false, updatable = false)
+    @Builder.Default
+    private java.time.LocalDateTime createdAt = java.time.LocalDateTime.now();
+
+    private java.time.LocalDateTime updatedAt;
+
+    @Column(nullable = false, length = 100)
+    @Builder.Default
+    private String createdBy = "SYSTEM";
 }
