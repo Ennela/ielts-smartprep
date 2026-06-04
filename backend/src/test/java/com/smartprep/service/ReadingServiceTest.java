@@ -11,6 +11,7 @@ import com.smartprep.repository.ReadingQuizRepository;
 import com.smartprep.repository.ScoreHistoryRepository;
 import com.smartprep.repository.UserRepository;
 import com.smartprep.service.ai.GeminiClient;
+import com.smartprep.service.ai.ReadingGenerationService;
 import com.smartprep.service.ai.ReadingPromptBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -39,10 +40,11 @@ class ReadingServiceTest {
     @Mock private ReadingPromptBuilder promptBuilder;
     @Mock private org.springframework.cache.CacheManager cacheManager;
     @Mock private AdaptiveService adaptiveService;
+    @Mock private ReadingQueryService readingQueryService;
 
     @Spy private ObjectMapper objectMapper = new ObjectMapper();
 
-    @InjectMocks private ReadingService readingService;
+    @InjectMocks private ReadingGenerationService readingGenerationService;
 
     private User user;
 
@@ -108,7 +110,35 @@ class ReadingServiceTest {
             return quiz;
         });
 
-        ReadingQuizResponse response = readingService.generateQuiz(1L, request);
+        // Mock the mapping method on ReadingQueryService
+        when(readingQueryService.mapToQuizResponse(any(ReadingQuiz.class))).thenAnswer(invocation -> {
+            ReadingQuiz quiz = invocation.getArgument(0);
+            return ReadingQuizResponse.builder()
+                    .quizId(quiz.getQuizId())
+                    .topic(quiz.getTopic().name())
+                    .difficulty(quiz.getDifficulty().name())
+                    .passageText(quiz.getPassageText())
+                    .timeLimitSeconds(quiz.getTimeLimitSeconds())
+                    .submitted(false)
+                    .questions(quiz.getQuestions().stream().map(q ->
+                            ReadingQuizResponse.QuestionDto.builder()
+                                    .questionId(q.getQuestionId())
+                                    .questionType(q.getQuestionType().name())
+                                    .questionText(q.getQuestionText())
+                                    .orderIndex(q.getOrderIndex())
+                                    .options(q.getOptions() != null ? q.getOptions().stream().map(o ->
+                                            com.smartprep.dto.response.QuestionOptionResponse.builder()
+                                                    .optionId(o.getOptionId())
+                                                    .label(o.getLabel())
+                                                    .content(o.getContent())
+                                                    .build()
+                                    ).toList() : null)
+                                    .build()
+                    ).toList())
+                    .build();
+        });
+
+        ReadingQuizResponse response = readingGenerationService.generateQuiz(1L, request);
 
         assertNotNull(response);
         assertEquals("TECHNOLOGY", response.getTopic());

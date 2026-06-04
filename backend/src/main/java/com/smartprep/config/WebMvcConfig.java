@@ -23,7 +23,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/v1/listening/generate",
                         "/api/v1/writing/grade",
                         "/api/v1/listening/ai-analyze/**",
-                        "/api/v1/listening/vocabulary/**"
+                        "/api/v1/listening/vocabulary/**",
+                        "/api/v1/vocab/ai-suggest"
                 );
     }
 }

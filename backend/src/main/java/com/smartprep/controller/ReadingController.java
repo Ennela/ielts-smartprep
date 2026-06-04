@@ -5,7 +5,10 @@ import com.smartprep.dto.request.ReadingSubmitRequest;
 import com.smartprep.dto.request.ReadingSubmitFullRequest;
 import com.smartprep.dto.response.*;
 import com.smartprep.model.entity.User;
-import com.smartprep.service.ReadingService;
+import com.smartprep.service.ReadingAssemblyService;
+import com.smartprep.service.ReadingGradingService;
+import com.smartprep.service.ReadingQueryService;
+import com.smartprep.service.ai.ReadingGenerationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -21,7 +24,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ReadingController {
 
-    private final ReadingService readingService;
+    private final ReadingGenerationService readingGenerationService;
+    private final ReadingGradingService readingGradingService;
+    private final ReadingQueryService readingQueryService;
+    private final ReadingAssemblyService readingAssemblyService;
 
     /**
      * Generate a new reading quiz using AI.
@@ -31,7 +37,7 @@ public class ReadingController {
     public ResponseEntity<ApiResponse<ReadingQuizResponse>> generate(
             @AuthenticationPrincipal User user,
             @Valid @RequestBody ReadingGenerateRequest request) {
-        ReadingQuizResponse quiz = readingService.generateQuiz(user.getUserId(), request);
+        ReadingQuizResponse quiz = readingGenerationService.generateQuiz(user.getUserId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok(quiz, "Reading quiz generated successfully"));
     }
@@ -46,7 +52,7 @@ public class ReadingController {
             @RequestParam(required = false) String difficulty,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        Page<ReadingQuizResponse> templates = readingService.getTemplateList(topic, difficulty, page, size);
+        Page<ReadingQuizResponse> templates = readingQueryService.getTemplateList(topic, difficulty, page, size);
         return ResponseEntity.ok(ApiResponse.ok(templates));
     }
 
@@ -58,7 +64,7 @@ public class ReadingController {
     public ResponseEntity<ApiResponse<ReadingQuizResponse>> startTemplate(
             @AuthenticationPrincipal User user,
             @PathVariable Long templateId) {
-        ReadingQuizResponse quiz = readingService.startTemplateQuiz(user.getUserId(), templateId);
+        ReadingQuizResponse quiz = readingAssemblyService.startTemplateQuiz(user.getUserId(), templateId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.ok(quiz, "Reading quiz template started successfully"));
     }
@@ -71,7 +77,7 @@ public class ReadingController {
     public ResponseEntity<ApiResponse<ReadingQuizResponse>> getQuiz(
             @AuthenticationPrincipal User user,
             @PathVariable Long quizId) {
-        ReadingQuizResponse quiz = readingService.getQuiz(quizId, user.getUserId());
+        ReadingQuizResponse quiz = readingQueryService.getQuiz(quizId, user.getUserId());
         return ResponseEntity.ok(ApiResponse.ok(quiz));
     }
 
@@ -84,7 +90,7 @@ public class ReadingController {
             @AuthenticationPrincipal User user,
             @PathVariable Long quizId,
             @Valid @RequestBody ReadingSubmitRequest request) {
-        ReadingResultResponse result = readingService.submitQuiz(quizId, user.getUserId(), request);
+        ReadingResultResponse result = readingGradingService.submitQuiz(quizId, user.getUserId(), request);
         return ResponseEntity.ok(ApiResponse.ok(result, "Quiz submitted successfully"));
     }
 
@@ -96,7 +102,7 @@ public class ReadingController {
     public ResponseEntity<ApiResponse<ReadingResultResponse>> getResult(
             @AuthenticationPrincipal User user,
             @PathVariable Long quizId) {
-        ReadingResultResponse result = readingService.getResult(quizId, user.getUserId());
+        ReadingResultResponse result = readingQueryService.getResult(quizId, user.getUserId());
         return ResponseEntity.ok(ApiResponse.ok(result));
     }
 
@@ -107,7 +113,7 @@ public class ReadingController {
     @GetMapping("/history")
     public ResponseEntity<ApiResponse<List<ReadingHistoryResponse>>> history(
             @AuthenticationPrincipal User user) {
-        List<ReadingHistoryResponse> historyList = readingService.getHistory(user.getUserId());
+        List<ReadingHistoryResponse> historyList = readingQueryService.getHistory(user.getUserId());
         return ResponseEntity.ok(ApiResponse.ok(historyList));
     }
 
@@ -118,7 +124,7 @@ public class ReadingController {
     @GetMapping("/assemble")
     public ResponseEntity<ApiResponse<List<ReadingQuizResponse>>> assemble(
             @AuthenticationPrincipal User user) {
-        List<ReadingQuizResponse> quizzes = readingService.assembleMockTest(user.getUserId());
+        List<ReadingQuizResponse> quizzes = readingAssemblyService.assembleMockTest(user.getUserId());
         return ResponseEntity.ok(ApiResponse.ok(quizzes, "Full Reading mock test assembled successfully"));
     }
 
@@ -130,7 +136,7 @@ public class ReadingController {
     public ResponseEntity<ApiResponse<ReadingFullResultResponse>> submitFull(
             @AuthenticationPrincipal User user,
             @Valid @RequestBody ReadingSubmitFullRequest request) {
-        ReadingFullResultResponse result = readingService.submitFullQuiz(user.getUserId(), request);
+        ReadingFullResultResponse result = readingGradingService.submitFullQuiz(user.getUserId(), request);
         return ResponseEntity.ok(ApiResponse.ok(result, "Full Reading test submitted successfully"));
     }
 }

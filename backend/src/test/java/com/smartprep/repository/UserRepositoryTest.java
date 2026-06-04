@@ -1,39 +1,26 @@
 package com.smartprep.repository;
 
 import com.smartprep.model.entity.User;
+import com.smartprep.model.enums.Role;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Integration test for {@link UserRepository}.
+ * Uses shared Testcontainers MySQL container.
+ */
 @DataJpaTest
-@Testcontainers
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-class UserRepositoryTest {
-
-    @Container
-    static MySQLContainer<?> mysql = new MySQLContainer<>("mysql:8.0")
-            .withDatabaseName("ielts_smartprep_test")
-            .withUsername("test")
-            .withPassword("test");
-
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", mysql::getJdbcUrl);
-        registry.add("spring.datasource.username", mysql::getUsername);
-        registry.add("spring.datasource.password", mysql::getPassword);
-        registry.add("spring.flyway.enabled", () -> "true");
-    }
+@ActiveProfiles("test")
+class UserRepositoryTest extends AbstractMySQLContainerTest {
 
     @Autowired
     private UserRepository userRepository;
@@ -46,15 +33,15 @@ class UserRepositoryTest {
                 .passwordHash("secure_password")
                 .email("integration@example.com")
                 .displayName("Integration Test")
-                .role(com.smartprep.model.enums.Role.STUDENT)
+                .role(Role.STUDENT)
                 .build();
 
         User savedUser = userRepository.save(user);
-        assertNotNull(savedUser.getUserId());
+        assertThat(savedUser.getUserId()).isNotNull();
 
         Optional<User> foundUser = userRepository.findByUsername("integration_test_user");
-        assertTrue(foundUser.isPresent());
-        assertEquals("integration@example.com", foundUser.get().getEmail());
+        assertThat(foundUser).isPresent();
+        assertThat(foundUser.get().getEmail()).isEqualTo("integration@example.com");
     }
 
     @Test
@@ -64,15 +51,15 @@ class UserRepositoryTest {
                 .username("exist_check_user")
                 .passwordHash("password")
                 .email("exists@example.com")
-                .role(com.smartprep.model.enums.Role.STUDENT)
+                .role(Role.STUDENT)
                 .build();
 
         userRepository.save(user);
 
-        assertTrue(userRepository.existsByUsername("exist_check_user"));
-        assertFalse(userRepository.existsByUsername("non_existent"));
+        assertThat(userRepository.existsByUsername("exist_check_user")).isTrue();
+        assertThat(userRepository.existsByUsername("non_existent")).isFalse();
 
-        assertTrue(userRepository.existsByEmail("exists@example.com"));
-        assertFalse(userRepository.existsByEmail("other@example.com"));
+        assertThat(userRepository.existsByEmail("exists@example.com")).isTrue();
+        assertThat(userRepository.existsByEmail("other@example.com")).isFalse();
     }
 }

@@ -7,6 +7,7 @@ import com.smartprep.model.enums.AudioStatus;
 import com.smartprep.model.enums.QuestionType;
 import com.smartprep.repository.*;
 import com.smartprep.service.ai.GeminiClient;
+import com.smartprep.service.ai.ListeningGenerationService;
 import com.smartprep.service.ai.ListeningPromptBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -23,26 +24,29 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ListeningServiceTest {
 
+    // === ListeningGenerationService dependencies ===
     @Mock private ListeningPartRepository partRepository;
-    @Mock private ListeningTestRepository testRepository;
     @Mock private UserRepository userRepository;
-    @Mock private ScoreHistoryRepository scoreHistoryRepository;
     @Mock private GeminiClient geminiClient;
     @Mock private ListeningPromptBuilder promptBuilder;
     @Mock private TtsService ttsService;
-    @Mock private StorageService storageService;
     @Mock private AudioGenerationService audioGenerationService;
     @Mock private org.springframework.cache.CacheManager cacheManager;
     @Mock private AdaptiveService adaptiveService;
+    @Mock private ListeningQueryService listeningQueryService;
 
     @Spy private ObjectMapper objectMapper = new ObjectMapper();
 
-    @InjectMocks private ListeningService listeningService;
+    @InjectMocks private ListeningGenerationService listeningGenerationService;
+
+    // === ListeningAudioService (separate tests) ===
+    private ListeningAudioService listeningAudioService;
 
     private User user;
 
@@ -52,6 +56,7 @@ class ListeningServiceTest {
                 .userId(1L)
                 .username("teststudent")
                 .build();
+        listeningAudioService = new ListeningAudioService(partRepository, ttsService, audioGenerationService);
     }
 
     @Test
@@ -80,7 +85,7 @@ class ListeningServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(promptBuilder.buildGeneratePrompt(anyInt(), anyString(), any())).thenReturn("mock prompt");
-        when(ttsService.isAvailable()).thenReturn(false); // TTS disabled for this test
+        when(ttsService.isAvailable()).thenReturn(false);
         when(geminiClient.generate(anyString(), anyString())).thenReturn(mockAiResponse);
         when(partRepository.save(any(ListeningPart.class))).thenAnswer(invocation -> {
             ListeningPart part = invocation.getArgument(0);
@@ -100,7 +105,37 @@ class ListeningServiceTest {
             return part;
         });
 
-        ListeningPartResponse response = listeningService.generatePart(1L, 1, "gym");
+        // Mock the mapping method on ListeningQueryService
+        when(listeningQueryService.toPartResponse(any(ListeningPart.class))).thenAnswer(invocation -> {
+            ListeningPart part = invocation.getArgument(0);
+            return ListeningPartResponse.builder()
+                    .partId(part.getPartId())
+                    .partNumber(part.getPartNumber())
+                    .title(part.getTitle())
+                    .topic(part.getTopic())
+                    .audioUrl(part.getAudioUrl())
+                    .audioStatus(AudioStatus.PENDING.name())
+                    .durationSeconds(part.getDurationSeconds())
+                    .questionCount(part.getQuestions().size())
+                    .questions(part.getQuestions().stream().map(q ->
+                            ListeningPartResponse.QuestionDto.builder()
+                                    .questionId(q.getQuestionId())
+                                    .questionType(q.getQuestionType().name())
+                                    .questionText(q.getQuestionText())
+                                    .orderIndex(q.getOrderIndex())
+                                    .options(q.getOptions() != null ? q.getOptions().stream().map(o ->
+                                            com.smartprep.dto.response.QuestionOptionResponse.builder()
+                                                    .optionId(o.getOptionId())
+                                                    .label(o.getLabel())
+                                                    .content(o.getContent())
+                                                    .build()
+                                    ).toList() : null)
+                                    .build()
+                    ).toList())
+                    .build();
+        });
+
+        ListeningPartResponse response = listeningGenerationService.generatePart(1L, 1, "gym");
 
         assertNotNull(response);
         assertEquals("Part 1 practice", response.getTitle());
@@ -115,15 +150,13 @@ class ListeningServiceTest {
         assertEquals("Gold membership", qDto.getOptions().get(0).getContent());
     }
 
-    // ========== Audio Generation Tests ==========
+    // ========== Audio Tests (using ListeningAudioService) ==========
 
     @Test
     @DisplayName("cleanScript: removes ANS markers but keeps text inside")
     void cleanScript_removesAnsMarkers() {
         String script = "The opening hours are from [ANS_1]nine in the morning[/ANS_1] until six.";
-
-        String result = listeningService.cleanScript(script);
-
+        String result = listeningAudioService.cleanScript(script);
         assertEquals("The opening hours are from nine in the morning until six.", result);
     }
 
@@ -131,24 +164,21 @@ class ListeningServiceTest {
     @DisplayName("cleanScript: handles multiple ANS markers")
     void cleanScript_handlesMultipleMarkers() {
         String script = "Name: [ANS_1]Davies[/ANS_1], Phone: [ANS_2]07123456[/ANS_2]";
-
-        String result = listeningService.cleanScript(script);
-
+        String result = listeningAudioService.cleanScript(script);
         assertEquals("Name: Davies, Phone: 07123456", result);
     }
 
     @Test
     @DisplayName("cleanScript: returns empty string for null input")
     void cleanScript_nullInput_returnsEmpty() {
-        assertEquals("", listeningService.cleanScript(null));
+        assertEquals("", listeningAudioService.cleanScript(null));
     }
 
     @Test
     @DisplayName("generateAudio: throws when part not found")
     void generateAudio_partNotFound_throwsException() {
         when(partRepository.findById(999L)).thenReturn(Optional.empty());
-
-        assertThrows(Exception.class, () -> listeningService.generateAudio(999L));
+        assertThrows(Exception.class, () -> listeningAudioService.generateAudio(999L));
     }
 
     @Test
@@ -160,7 +190,7 @@ class ListeningServiceTest {
                 .build();
         when(partRepository.findById(1L)).thenReturn(Optional.of(part));
 
-        listeningService.generateAudio(1L);
+        listeningAudioService.generateAudio(1L);
 
         // Should not call TTS or save again
         verify(ttsService, never()).synthesizeMultiVoice(anyString());
@@ -176,7 +206,7 @@ class ListeningServiceTest {
         when(partRepository.findById(1L)).thenReturn(Optional.of(part));
         when(ttsService.isAvailable()).thenReturn(false);
 
-        assertThrows(IllegalStateException.class, () -> listeningService.generateAudio(1L));
+        assertThrows(IllegalStateException.class, () -> listeningAudioService.generateAudio(1L));
     }
 
     @Test
@@ -184,7 +214,7 @@ class ListeningServiceTest {
     void generateAudioAsync_delegatesToAudioGenerationService() {
         doNothing().when(audioGenerationService).generateAudioAsync(1L);
 
-        listeningService.generateAudioAsync(1L);
+        listeningAudioService.generateAudioAsync(1L);
 
         verify(audioGenerationService).generateAudioAsync(1L);
     }

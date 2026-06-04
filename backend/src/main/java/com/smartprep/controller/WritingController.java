@@ -4,6 +4,9 @@ import com.smartprep.dto.request.WritingGradeRequest;
 import com.smartprep.dto.request.WritingSubmitFullRequest;
 import com.smartprep.dto.response.*;
 import com.smartprep.model.entity.User;
+import com.smartprep.service.WritingAssemblyService;
+import com.smartprep.service.WritingPromptService;
+import com.smartprep.service.WritingQueryService;
 import com.smartprep.service.WritingService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,7 +24,10 @@ import java.util.List;
 @Tag(name = "Writing", description = "IELTS Writing practice and AI-grading API")
 public class WritingController {
 
+    private final WritingPromptService writingPromptService;
     private final WritingService writingService;
+    private final WritingQueryService writingQueryService;
+    private final WritingAssemblyService writingAssemblyService;
 
     /**
      * Get all writing prompts, optionally filtered by essay type.
@@ -31,7 +37,7 @@ public class WritingController {
     @Operation(summary = "Get all writing prompts", description = "Lists writing prompts, optionally filtered by essay type (e.g. OPINION, GRAPH)")
     public ResponseEntity<ApiResponse<List<WritingPromptResponse>>> getPrompts(
             @RequestParam(required = false) String essayType) {
-        List<WritingPromptResponse> prompts = writingService.getPrompts(essayType);
+        List<WritingPromptResponse> prompts = writingPromptService.getPrompts(essayType);
         return ResponseEntity.ok(ApiResponse.ok(prompts));
     }
 
@@ -43,7 +49,7 @@ public class WritingController {
     @Operation(summary = "Get a specific writing prompt by ID")
     public ResponseEntity<ApiResponse<WritingPromptResponse>> getPromptById(
             @PathVariable Long promptId) {
-        WritingPromptResponse prompt = writingService.getPromptById(promptId);
+        WritingPromptResponse prompt = writingPromptService.getPromptById(promptId);
         return ResponseEntity.ok(ApiResponse.ok(prompt));
     }
 
@@ -68,7 +74,7 @@ public class WritingController {
     @Operation(summary = "Get writing submission history for current user")
     public ResponseEntity<ApiResponse<List<WritingHistoryResponse>>> getHistory(
             @AuthenticationPrincipal User user) {
-        List<WritingHistoryResponse> history = writingService.getHistory(user.getUserId());
+        List<WritingHistoryResponse> history = writingQueryService.getHistory(user.getUserId());
         return ResponseEntity.ok(ApiResponse.ok(history));
     }
 
@@ -81,7 +87,7 @@ public class WritingController {
     public ResponseEntity<ApiResponse<WritingGradeResponse>> getSubmission(
             @AuthenticationPrincipal User user,
             @PathVariable Long submissionId) {
-        WritingGradeResponse submission = writingService.getSubmission(user.getUserId(), submissionId);
+        WritingGradeResponse submission = writingQueryService.getSubmission(user.getUserId(), submissionId);
         return ResponseEntity.ok(ApiResponse.ok(submission));
     }
 
@@ -92,7 +98,7 @@ public class WritingController {
     @GetMapping("/assemble")
     @Operation(summary = "Assemble a full mock Writing test", description = "Selects one Task 1 and one Task 2 prompt at random")
     public ResponseEntity<ApiResponse<List<WritingPromptResponse>>> assemble() {
-        List<WritingPromptResponse> prompts = writingService.assembleMockTest();
+        List<WritingPromptResponse> prompts = writingAssemblyService.assembleMockTest();
         return ResponseEntity.ok(ApiResponse.ok(prompts, "Full Writing mock test assembled successfully"));
     }
 
@@ -105,7 +111,7 @@ public class WritingController {
     public ResponseEntity<ApiResponse<WritingFullResultResponse>> submitFull(
             @AuthenticationPrincipal User user,
             @Valid @RequestBody WritingSubmitFullRequest request) {
-        WritingFullResultResponse result = writingService.submitFullWriting(user.getUserId(), request);
+        WritingFullResultResponse result = writingAssemblyService.submitFullWriting(user.getUserId(), request);
         return ResponseEntity.ok(ApiResponse.ok(result, "Full Writing test submitted and graded successfully"));
     }
 }

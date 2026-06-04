@@ -4,8 +4,11 @@ import com.smartprep.dto.request.ListeningGenerateRequest;
 import com.smartprep.dto.request.ListeningSubmitRequest;
 import com.smartprep.dto.response.*;
 import com.smartprep.model.entity.User;
-import com.smartprep.service.ListeningService;
+import com.smartprep.service.ListeningAudioService;
+import com.smartprep.service.ListeningGradingService;
+import com.smartprep.service.ListeningQueryService;
 import com.smartprep.service.StorageService;
+import com.smartprep.service.ai.ListeningGenerationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +25,10 @@ import java.util.Map;
 @Slf4j
 public class ListeningController {
 
-    private final ListeningService listeningService;
+    private final ListeningGenerationService listeningGenerationService;
+    private final ListeningGradingService listeningGradingService;
+    private final ListeningQueryService listeningQueryService;
+    private final ListeningAudioService listeningAudioService;
     private final StorageService storageService;
 
     /**
@@ -31,7 +37,7 @@ public class ListeningController {
      */
     @GetMapping("/parts")
     public ResponseEntity<ApiResponse<List<ListeningPartResponse>>> getAllParts() {
-        return ResponseEntity.ok(ApiResponse.ok(listeningService.getAllParts()));
+        return ResponseEntity.ok(ApiResponse.ok(listeningQueryService.getAllParts()));
     }
 
     /**
@@ -40,7 +46,7 @@ public class ListeningController {
      */
     @GetMapping("/parts/{partId}")
     public ResponseEntity<ApiResponse<ListeningPartResponse>> getPartById(@PathVariable Long partId) {
-        return ResponseEntity.ok(ApiResponse.ok(listeningService.getPartById(partId)));
+        return ResponseEntity.ok(ApiResponse.ok(listeningQueryService.getPartById(partId)));
     }
 
     /**
@@ -50,7 +56,7 @@ public class ListeningController {
     @GetMapping("/mock-test")
     public ResponseEntity<ApiResponse<List<ListeningPartResponse>>> assembleMockTest(
             @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(ApiResponse.ok(listeningService.assembleMockTest(user.getUserId())));
+        return ResponseEntity.ok(ApiResponse.ok(listeningQueryService.assembleMockTest(user.getUserId())));
     }
 
     /**
@@ -61,7 +67,7 @@ public class ListeningController {
     public ResponseEntity<ApiResponse<ListeningTestResponse>> submitTest(
             @AuthenticationPrincipal User user,
             @Valid @RequestBody ListeningSubmitRequest request) {
-        ListeningTestResponse result = listeningService.submitTest(user.getUserId(), request);
+        ListeningTestResponse result = listeningGradingService.submitTest(user.getUserId(), request);
         return ResponseEntity.ok(ApiResponse.ok(result, "Test graded successfully"));
     }
 
@@ -72,7 +78,7 @@ public class ListeningController {
     @GetMapping("/history")
     public ResponseEntity<ApiResponse<List<ListeningHistoryResponse>>> getHistory(
             @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(ApiResponse.ok(listeningService.getHistory(user.getUserId())));
+        return ResponseEntity.ok(ApiResponse.ok(listeningQueryService.getHistory(user.getUserId())));
     }
 
     /**
@@ -82,7 +88,7 @@ public class ListeningController {
     @PostMapping("/ai-analyze/{questionId}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> analyzeQuestion(
             @PathVariable Long questionId) {
-        return ResponseEntity.ok(ApiResponse.ok(listeningService.analyzeQuestion(questionId)));
+        return ResponseEntity.ok(ApiResponse.ok(listeningGenerationService.analyzeQuestion(questionId)));
     }
 
     /**
@@ -92,7 +98,7 @@ public class ListeningController {
     @PostMapping("/vocabulary/{partId}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> extractVocabulary(
             @PathVariable Long partId) {
-        return ResponseEntity.ok(ApiResponse.ok(listeningService.extractVocabulary(partId)));
+        return ResponseEntity.ok(ApiResponse.ok(listeningGenerationService.extractVocabulary(partId)));
     }
 
     /**
@@ -103,7 +109,7 @@ public class ListeningController {
     public ResponseEntity<ApiResponse<ListeningPartResponse>> generatePart(
             @AuthenticationPrincipal User user,
             @Valid @RequestBody ListeningGenerateRequest request) {
-        ListeningPartResponse response = listeningService.generatePart(user.getUserId(), request);
+        ListeningPartResponse response = listeningGenerationService.generatePart(user.getUserId(), request);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
@@ -113,7 +119,7 @@ public class ListeningController {
      */
     @PostMapping("/{partId}/generate-audio")
     public ResponseEntity<ApiResponse<Map<String, String>>> generateAudio(@PathVariable Long partId) {
-        listeningService.generateAudio(partId);
+        listeningAudioService.generateAudio(partId);
         return ResponseEntity.accepted()
                 .body(ApiResponse.ok(
                         Map.of("status", "PENDING", "message", "Audio generation started"),

@@ -1,0 +1,78 @@
+# ============================================================
+# Test Profile Configuration
+# ============================================================
+# This profile is auto-activated for @DataJpaTest and
+# @SpringBootTest(profiles = "test").
+# Testcontainers will override datasource URL via @DynamicPropertySource.
+# ============================================================
+
+spring:
+  datasource:
+    # Placeholder — overridden by Testcontainers @DynamicPropertySource
+    url: jdbc:mysql://localhost:3306/ielts_smartprep_test
+    username: test
+    password: test
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  cache:
+    type: none
+
+# Disable Gemini API calls in tests — always mock
+app:
+  jwt:
+    secret: test-secret-key-for-testing-only-min-32-characters-long
+    expiration-ms: 86400000
+  gemini:
+    api-key: test-api-key
+    base-url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash
+    timeout-seconds: 5
+    max-retries: 1
+  tts:
+    enabled: false
+    edge-tts-url: http://localhost:8000
+  minio:
+    endpoint: http://localhost:9000
+    access-key: minioadmin
+    secret-key: minioadmin
+    bucket: test-bucket
+  rate-limit:
+    capacity: 1000
+    refill-tokens: 1000
+    refill-duration-minutes: 1
+
+# Disable actuator in tests
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+# Minimal Resilience4j for tests
+resilience4j:
+  circuitbreaker:
+    instances:
+      gemini:
+        registerHealthIndicator: false
+        slidingWindowSize: 10
+        failureRateThreshold: 60
+        waitDurationInOpenState: 10s
+        minimumNumberOfCalls: 5
+  retry:
+    instances:
+      gemini:
+        maxAttempts: 1
+        waitDuration: 100ms
