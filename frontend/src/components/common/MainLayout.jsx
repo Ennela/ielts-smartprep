@@ -8,6 +8,7 @@ const MENU_ITEMS = [
   { path: '/reading',   label: 'Reading',    icon: 'menu_book',  end: false },
   { path: '/writing',   label: 'Writing',    icon: 'edit_note',  end: false },
   { path: '/listening', label: 'Listening',  icon: 'headphones', end: false },
+  { path: '/vocabulary', label: 'Vocabulary', icon: 'school',     end: false },
 ];
 
 const ADMIN_MENU_ITEMS = [

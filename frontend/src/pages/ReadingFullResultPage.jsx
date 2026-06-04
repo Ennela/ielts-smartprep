@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import AiVocabularyButton from '../components/vocab/AiVocabularyButton';
 
 export default function ReadingFullResultPage() {
   const location = useLocation();
@@ -131,6 +132,9 @@ export default function ReadingFullResultPage() {
           </button>
         </div>
       </div>
+      {activeQuizResult?.quizId && (
+        <AiVocabularyButton skillType="READING" sourceId={activeQuizResult.quizId} />
+      )}
     </div>
   );
 }

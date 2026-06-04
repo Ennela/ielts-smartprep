@@ -190,30 +190,6 @@ export default function ListeningExamPage() {
           {submitting ? 'Grading...' : `Submit (${answeredCount}/${totalQuestions})`}
         </button>
       </div>
-
-      {/* ── FAB Buttons ── */}
-      <div style={{ position: 'fixed', bottom: 80, right: 24, display: 'flex', flexDirection: 'column', gap: 10, zIndex: 50 }}>
-        <button style={{
-          display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px',
-          background: 'var(--primary)', color: 'var(--on-primary)',
-          border: 'none', borderRadius: 'var(--radius-full)',
-          fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.875rem',
-          cursor: 'pointer', boxShadow: 'var(--shadow-lg)', transition: 'background var(--transition)',
-        }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>psychology</span>
-          AI Vocabulary
-        </button>
-        <button style={{
-          display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px',
-          background: 'var(--surface-container-lowest)', color: 'var(--primary)',
-          border: '1px solid var(--primary)', borderRadius: 'var(--radius-full)',
-          fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.875rem',
-          cursor: 'pointer', boxShadow: 'var(--shadow)', transition: 'background var(--transition)',
-        }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>analytics</span>
-          AI Analysis
-        </button>
-      </div>
     </div>
   );
 }

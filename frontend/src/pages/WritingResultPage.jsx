@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import writingApi from '../api/writingApi';
+import AiVocabularyButton from '../components/vocab/AiVocabularyButton';
 
 const CRITERIA_EXPLANATIONS = [
   {
@@ -242,6 +243,7 @@ export default function WritingResultPage() {
                     </div>
                 </div>
             </div>
+            <AiVocabularyButton skillType="WRITING" sourceId={submissionId} />
         </div>
     );
 }

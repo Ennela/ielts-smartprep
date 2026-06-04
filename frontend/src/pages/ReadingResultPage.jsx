@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useReading } from '../context/ReadingContext';
 import readingApi from '../api/readingApi';
+import AiVocabularyButton from '../components/vocab/AiVocabularyButton';
 
 export default function ReadingResultPage() {
   const { quizId } = useParams();
@@ -130,6 +131,7 @@ export default function ReadingResultPage() {
           </button>
         </div>
       </div>
+      <AiVocabularyButton skillType="READING" sourceId={result.quizId} />
     </div>
   );
 }

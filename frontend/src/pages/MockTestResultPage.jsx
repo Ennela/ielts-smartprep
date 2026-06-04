@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import mockTestApi from '../api/mockTestApi';
+import AiVocabularyButton from '../components/vocab/AiVocabularyButton';
 
 const CRITERIA_EXPLANATIONS = [
   {
@@ -478,6 +479,9 @@ export default function MockTestResultPage() {
         </div>
 
       </div>
+      {activeWritingSub?.submissionId && (
+        <AiVocabularyButton skillType="WRITING" sourceId={activeWritingSub.submissionId} />
+      )}
     </div>
   );
 }

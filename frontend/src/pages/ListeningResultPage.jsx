@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import listeningApi from '../api/listeningApi';
+import AiVocabularyButton from '../components/vocab/AiVocabularyButton';
 
 export default function ListeningResultPage() {
   const { testId } = useParams();
@@ -259,6 +260,7 @@ export default function ListeningResultPage() {
           </div>
         )}
       </div>
+      <AiVocabularyButton skillType="LISTENING" sourceId={result.testId} />
     </div>
   );
 }

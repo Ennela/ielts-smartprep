@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import AiVocabularyButton from '../components/vocab/AiVocabularyButton';
 
 const CRITERIA_EXPLANATIONS = [
   {
@@ -276,6 +277,9 @@ export default function WritingFullResultPage() {
           </button>
         </div>
       </div>
+      {activeTaskResult?.submissionId && (
+        <AiVocabularyButton skillType="WRITING" sourceId={activeTaskResult.submissionId} />
+      )}
     </div>
   );
 }
