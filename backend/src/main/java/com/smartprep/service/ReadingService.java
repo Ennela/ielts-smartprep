@@ -43,6 +43,8 @@ public class ReadingService {
     private final GeminiClient geminiClient;
     private final ReadingPromptBuilder promptBuilder;
     private final ObjectMapper objectMapper;
+    private final org.springframework.cache.CacheManager cacheManager;
+    private final AdaptiveService adaptiveService;
 
     // IELTS Academic Reading band score conversion: correct answers out of 13 -> band
     // Based on official IELTS scale, compressed from 40 to 13 questions
@@ -79,22 +81,59 @@ public class ReadingService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Topic topic = parseEnum(Topic.class, request.getTopic(), "Invalid topic");
-        Difficulty difficulty = parseEnum(Difficulty.class, request.getDifficulty(), "Invalid difficulty");
+        Difficulty difficulty;
+        String focusQuestionType = null;
+
+        if ("ADAPTIVE".equalsIgnoreCase(request.getDifficulty())) {
+            AdaptiveService.AdaptiveConfig adaptiveConfig = adaptiveService.suggestNextConfig(userId, SkillType.READING);
+            difficulty = Difficulty.valueOf(adaptiveConfig.nextDifficulty);
+            focusQuestionType = adaptiveConfig.focusQuestionType;
+            log.info("Adaptive Reading config: difficulty={}, focusQuestion={}", difficulty, focusQuestionType);
+        } else {
+            difficulty = parseEnum(Difficulty.class, request.getDifficulty(), "Invalid difficulty");
+        }
 
         // Build AI prompts
         String systemPrompt = promptBuilder.buildSystemPrompt(difficulty);
-        String userPrompt = promptBuilder.buildUserPrompt(topic, difficulty);
+        String userPrompt = promptBuilder.buildUserPrompt(topic, difficulty, focusQuestionType);
 
-        // Call Gemini API with automatic retry and parsing validation
-        ReadingQuiz quiz = geminiClient.generateAndParse(
-                systemPrompt,
-                userPrompt,
-                aiResponse -> {
-                    ReadingQuiz q = parseAiResponse(aiResponse, user, topic, difficulty);
-                    validateReadingQuiz(q);
-                    return q;
-                }
-        );
+        // Cache lookup/populating
+        String cacheKey = topic.name() + "-" + difficulty.name() + (focusQuestionType != null ? "-" + focusQuestionType : "");
+        org.springframework.cache.Cache cache = cacheManager.getCache("readingAiResponse");
+        String cachedResponse = null;
+        if (cache != null) {
+            cachedResponse = cache.get(cacheKey, String.class);
+        }
+
+        final String aiResponseText;
+        if (cachedResponse != null) {
+            aiResponseText = cachedResponse;
+            log.info("Cached reading quiz content found in Redis for key: {}", cacheKey);
+        } else {
+            aiResponseText = geminiClient.generate(systemPrompt, userPrompt);
+            if (cache != null && aiResponseText != null) {
+                cache.put(cacheKey, aiResponseText);
+            }
+        }
+
+        // Call parser and validate
+        ReadingQuiz quiz;
+        try {
+            quiz = parseAiResponse(aiResponseText, user, topic, difficulty);
+            validateReadingQuiz(quiz);
+        } catch (Exception e) {
+            // If parsing fails for cached value, evict cache and try generating once more
+            if (cache != null && cachedResponse != null) {
+                cache.evict(cacheKey);
+            }
+            log.warn("Parsing of AI response failed. Retrying fresh generation.", e);
+            String freshResponse = geminiClient.generate(systemPrompt, userPrompt);
+            quiz = parseAiResponse(freshResponse, user, topic, difficulty);
+            validateReadingQuiz(quiz);
+            if (cache != null && freshResponse != null) {
+                cache.put(cacheKey, freshResponse);
+            }
+        }
 
         // Save to database
         quiz = quizRepository.save(quiz);
@@ -277,6 +316,7 @@ public class ReadingService {
                 .user(user)
                 .skillType(SkillType.READING)
                 .score(overallBand)
+                .difficulty("FULL_TEST")
                 .build();
         // Attach user answers for cascade persist
         allUserAnswers.forEach(ua -> ua.setScoreHistory(history));
@@ -361,6 +401,7 @@ public class ReadingService {
                 .user(user)
                 .skillType(SkillType.READING)
                 .score(bandScore)
+                .difficulty(quiz.getDifficulty().name())
                 .build();
         // Build and attach user answers
         List<UserAnswer> userAnswerList = new ArrayList<>();

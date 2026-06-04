@@ -12,6 +12,7 @@ export default function MockTestSessionPage() {
     activeSession,
     answers,
     timeRemaining,
+    overallTimeRemaining,
     isOffline,
     isSyncing,
     loading,
@@ -210,9 +211,15 @@ export default function MockTestSessionPage() {
         </div>
 
         <div className="exam-topbar-right">
-          <div className={`exam-timer-pill ${timeRemaining < 300 ? 'warning' : ''}`}>
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>schedule</span>
-            {formatTime(timeRemaining)}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div className={`exam-timer-pill ${timeRemaining < 300 ? 'warning' : ''}`} title="Section Remaining Time">
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>hourglass_empty</span>
+              Section: {formatTime(timeRemaining)}
+            </div>
+            <div className="exam-timer-pill" style={{ background: 'var(--surface-container-highest)', color: 'var(--primary)' }} title="Overall Remaining Time">
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>schedule</span>
+              Total: {formatTime(overallTimeRemaining)}
+            </div>
           </div>
           {currentSection === 'WRITING' ? (
             <button 

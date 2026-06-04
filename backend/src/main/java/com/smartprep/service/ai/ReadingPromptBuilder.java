@@ -23,14 +23,25 @@ public class ReadingPromptBuilder {
      * Build the user prompt with the specific topic.
      */
     public String buildUserPrompt(Topic topic, Difficulty difficulty) {
+        return buildUserPrompt(topic, difficulty, null);
+    }
+
+    /**
+     * Build the user prompt with the specific topic and focus question type.
+     */
+    public String buildUserPrompt(Topic topic, Difficulty difficulty, String focusQuestionType) {
         String topicLabel = formatTopic(topic);
         String difficultyLabel = formatDifficulty(difficulty);
+        String focusInstruction = "";
+        if (focusQuestionType != null && !focusQuestionType.isBlank()) {
+            focusInstruction = String.format(" Please ensure that one of the question groups specifically focuses on the question type: %s, making it particularly detailed and well-crafted to test this skill.", focusQuestionType);
+        }
         return String.format(
                 "Generate an IELTS Academic Reading passage about the topic: \"%s\". "
-                + "Difficulty level: %s. "
+                + "Difficulty level: %s.%s "
                 + "Follow all the rules in the system prompt strictly. "
                 + "Return ONLY the JSON object, no extra text.",
-                topicLabel, difficultyLabel
+                topicLabel, difficultyLabel, focusInstruction
         );
     }
 

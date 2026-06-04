@@ -5,10 +5,13 @@ const mockTestApi = {
     axiosClient.get('/mock-tests'),
 
   startMockTest: (id) => 
-    axiosClient.post(`/mock-tests/${id}/start`),
+    axiosClient.post('/mock-tests', { mockTestId: id }),
 
   getCurrentSession: () => 
     axiosClient.get('/mock-tests/sessions/current'),
+
+  getSession: (sessionId) =>
+    axiosClient.get(`/mock-tests/${sessionId}`),
 
   saveProgress: (sessionId, currentSection, timeRemainingSeconds, progressJson) => 
     axiosClient.put(`/mock-tests/sessions/${sessionId}/progress`, {
@@ -18,14 +21,14 @@ const mockTestApi = {
     }),
 
   nextSection: (sessionId, currentSection, timeRemainingSeconds, progressJson) => 
-    axiosClient.post(`/mock-tests/sessions/${sessionId}/next-section`, {
+    axiosClient.post(`/mock-tests/${sessionId}/submit-section`, {
       currentSection,
       timeRemainingSeconds,
       progressJson
     }),
 
   submitExam: (sessionId, progressJson) => 
-    axiosClient.post(`/mock-tests/sessions/${sessionId}/submit`, {
+    axiosClient.post(`/mock-tests/${sessionId}/finish`, {
       progressJson
     }),
 

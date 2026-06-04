@@ -255,11 +255,32 @@ export function MockTestProvider({ children }) {
     setError(null);
   };
 
+  const getOverallTimeRemaining = () => {
+    if (!activeSession) return 0;
+    const currentSec = activeSession.currentSection;
+    const currentSecRemaining = timeRemaining;
+    
+    const readingDuration = 3600; // 60 mins
+    const writingDuration = 3600; // 60 mins
+
+    if (currentSec === 'LISTENING') {
+      return currentSecRemaining + readingDuration + writingDuration;
+    } else if (currentSec === 'READING') {
+      return currentSecRemaining + writingDuration;
+    } else if (currentSec === 'WRITING') {
+      return currentSecRemaining;
+    }
+    return 0;
+  };
+
+  const overallTimeRemaining = getOverallTimeRemaining();
+
   return (
     <MockTestContext.Provider value={{
       activeSession,
       answers,
       timeRemaining,
+      overallTimeRemaining,
       isOffline,
       isSyncing,
       loading,

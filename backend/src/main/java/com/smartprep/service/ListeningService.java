@@ -42,6 +42,8 @@ public class ListeningService {
     private final TtsService ttsService;
     private final StorageService storageService;
     private final AudioGenerationService audioGenerationService;
+    private final org.springframework.cache.CacheManager cacheManager;
+    private final AdaptiveService adaptiveService;
 
     private static final Pattern ANS_MARKER_PATTERN = Pattern.compile("\\[ANS_\\d+]|\\[/ANS_\\d+]");
 
@@ -224,11 +226,17 @@ public class ListeningService {
         test.setTestParts(testParts);
         test = testRepository.save(test);
 
+        String difficultyStr = "FULL_TEST";
+        if (parts.size() == 1) {
+            difficultyStr = "PART_" + parts.get(0).getPartNumber();
+        }
+
         // Save score history with user answers
         ScoreHistory history = ScoreHistory.builder()
                 .user(user)
                 .skillType(SkillType.LISTENING)
                 .score(bandScore)
+                .difficulty(difficultyStr)
                 .build();
         // Build user answers for review
         List<UserAnswer> userAnswerList = new ArrayList<>();
@@ -313,21 +321,72 @@ public class ListeningService {
     // ========== AI Generation ==========
 
     @Transactional
+    public ListeningPartResponse generatePart(Long userId, com.smartprep.dto.request.ListeningGenerateRequest request) {
+        int partNumber;
+        String focusQuestionType = null;
+        if (Boolean.TRUE.equals(request.getAdaptive())) {
+            AdaptiveService.AdaptiveConfig config = adaptiveService.suggestNextConfig(userId, SkillType.LISTENING);
+            partNumber = Integer.parseInt(config.nextDifficulty);
+            focusQuestionType = config.focusQuestionType;
+            log.info("Adaptive Listening config: partNumber={}, focusQuestion={}", partNumber, focusQuestionType);
+        } else {
+            if (request.getPartNumber() == null) {
+                throw new IllegalArgumentException("Part number is required when not in adaptive mode");
+            }
+            partNumber = request.getPartNumber();
+        }
+        return generatePartInternal(userId, partNumber, request.getTopic(), focusQuestionType);
+    }
+
+    @Transactional
     public ListeningPartResponse generatePart(Long userId, int partNumber, String topic) {
+        return generatePartInternal(userId, partNumber, topic, null);
+    }
+
+    private ListeningPartResponse generatePartInternal(Long userId, int partNumber, String topic, String focusQuestionType) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        String userPrompt = promptBuilder.buildGeneratePrompt(partNumber, topic);
+        String systemPrompt = "You are a professional IELTS Listening test designer with 15 years of experience.";
+        String userPrompt = promptBuilder.buildGeneratePrompt(partNumber, topic, focusQuestionType);
 
-        ListeningPart part = geminiClient.generateAndParse(
-                "You are a professional IELTS Listening test designer with 15 years of experience.",
-                userPrompt,
-                aiResponse -> {
-                    ListeningPart p = parseListeningPart(aiResponse, partNumber, topic);
-                    validateListeningPart(p);
-                    return p;
-                }
-        );
+        // Cache lookup/populating
+        String cacheKey = partNumber + "-" + (topic != null ? topic.toUpperCase() : "GENERAL") + (focusQuestionType != null ? "-" + focusQuestionType : "");
+        org.springframework.cache.Cache cache = cacheManager.getCache("listeningAiResponse");
+        String cachedResponse = null;
+        if (cache != null) {
+            cachedResponse = cache.get(cacheKey, String.class);
+        }
+
+        final String aiResponseText;
+        if (cachedResponse != null) {
+            aiResponseText = cachedResponse;
+            log.info("Cached listening part content found in Redis for key: {}", cacheKey);
+        } else {
+            aiResponseText = geminiClient.generate(systemPrompt, userPrompt);
+            if (cache != null && aiResponseText != null) {
+                cache.put(cacheKey, aiResponseText);
+            }
+        }
+
+        // Call parser and validate
+        ListeningPart part;
+        try {
+            part = parseListeningPart(aiResponseText, partNumber, topic);
+            validateListeningPart(part);
+        } catch (Exception e) {
+            // If parsing fails for cached value, evict cache and try generating once more
+            if (cache != null && cachedResponse != null) {
+                cache.evict(cacheKey);
+            }
+            log.warn("Parsing of AI response failed. Retrying fresh generation.", e);
+            String freshResponse = geminiClient.generate(systemPrompt, userPrompt);
+            part = parseListeningPart(freshResponse, partNumber, topic);
+            validateListeningPart(part);
+            if (cache != null && freshResponse != null) {
+                cache.put(cacheKey, freshResponse);
+            }
+        }
 
         ListeningPart saved = partRepository.save(part);
 

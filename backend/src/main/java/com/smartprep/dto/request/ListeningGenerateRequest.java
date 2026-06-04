@@ -13,11 +13,12 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ListeningGenerateRequest {
 
-    @NotNull(message = "Part number is required")
     @Min(value = 1, message = "Part number must be between 1 and 4")
     @Max(value = 4, message = "Part number must be between 1 and 4")
     private Integer partNumber;
 
     @Size(max = 100, message = "Topic must not exceed 100 characters")
     private String topic;
+
+    private Boolean adaptive;
 }

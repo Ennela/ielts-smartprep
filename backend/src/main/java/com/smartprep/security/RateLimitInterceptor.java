@@ -2,26 +2,27 @@ package com.smartprep.security;
 
 import com.smartprep.exception.RateLimitExceededException;
 import io.github.bucket4j.Bandwidth;
-import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Refill;
+import io.github.bucket4j.BucketConfiguration;
+import io.github.bucket4j.distributed.proxy.ProxyManager;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.time.Duration;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Rate limiter for AI-intensive endpoints.
- * Limits each user to 10 AI requests per minute using in-memory token buckets.
+ * Limits each user to 10 AI requests per minute using Redis-backed token buckets.
  */
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class RateLimitInterceptor implements HandlerInterceptor {
 
-    private final ConcurrentHashMap<String, Bucket> bucketCache = new ConcurrentHashMap<>();
+    private final ProxyManager<String> proxyManager;
 
     @org.springframework.beans.factory.annotation.Value("${app.rate-limit.capacity:10}")
     private int capacity;
@@ -40,25 +41,26 @@ public class RateLimitInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        Bucket bucket = bucketCache.computeIfAbsent(userId, this::createBucket);
+        String rateLimitKey = "rate-limit:" + userId;
 
-        if (bucket.tryConsume(1)) {
+        BucketConfiguration config = BucketConfiguration.builder()
+                .addLimit(Bandwidth.builder()
+                        .capacity(capacity)
+                        .refillIntervally(refillTokens, Duration.ofMinutes(refillDurationMinutes))
+                        .build())
+                .build();
+
+        boolean allowed = proxyManager.builder()
+                .build(rateLimitKey, () -> config)
+                .tryConsume(1);
+
+        if (allowed) {
             return true;
         }
 
         log.warn("Rate limit exceeded for user: {} on path: {}", userId, request.getRequestURI());
         throw new RateLimitExceededException(
                 "Too many AI requests. Please wait a moment before trying again. Limit: " + capacity + " requests per " + refillDurationMinutes + " minute(s).");
-    }
-
-    private Bucket createBucket(String userId) {
-        Bandwidth limit = Bandwidth.builder()
-                .capacity(capacity)
-                .refillIntervally(refillTokens, Duration.ofMinutes(refillDurationMinutes))
-                .build();
-        return Bucket.builder()
-                .addLimit(limit)
-                .build();
     }
 
     private String extractUserId(HttpServletRequest request) {

@@ -77,12 +77,18 @@ public class MockTestService {
         MockTest mockTest = mockTestRepository.findById(mockTestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Mock test not found with id: " + mockTestId));
 
+        int listeningDuration = mockTest.getSections().stream()
+                .filter(s -> s.getSectionType() == SkillType.LISTENING)
+                .map(MockTestSection::getDurationSeconds)
+                .findFirst()
+                .orElse(2400);
+
         MockTestSession newSession = MockTestSession.builder()
                 .user(user)
                 .mockTest(mockTest)
                 .status(SessionStatus.IN_PROGRESS)
                 .currentSection(SkillType.LISTENING)
-                .timeRemainingSeconds(2400) // 40 minutes for Listening
+                .timeRemainingSeconds(listeningDuration)
                 .progressJson("{}")
                 .build();
 
@@ -97,6 +103,21 @@ public class MockTestService {
         MockTestSession session = sessionRepository.findFirstByUserUserIdAndStatusOrderByStartedAtDesc(
                 userId, SessionStatus.IN_PROGRESS
         ).orElseThrow(() -> new ResourceNotFoundException("No active mock test session found"));
+
+        return mapToSessionResponse(session);
+    }
+
+    /**
+     * Get mock test session by ID
+     */
+    @Transactional(readOnly = true)
+    public MockTestSessionResponse getSessionById(Long userId, Long sessionId) {
+        MockTestSession session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found with id: " + sessionId));
+
+        if (!session.getUser().getUserId().equals(userId)) {
+            throw new SecurityException("Unauthorized access to this session");
+        }
 
         return mapToSessionResponse(session);
     }
@@ -147,11 +168,21 @@ public class MockTestService {
         // Transition section
         if (session.getCurrentSection() == SkillType.LISTENING) {
             session.setCurrentSection(SkillType.READING);
-            session.setTimeRemainingSeconds(3600); // 60 minutes for Reading
+            int readingDuration = session.getMockTest().getSections().stream()
+                    .filter(s -> s.getSectionType() == SkillType.READING)
+                    .map(MockTestSection::getDurationSeconds)
+                    .findFirst()
+                    .orElse(3600);
+            session.setTimeRemainingSeconds(readingDuration);
             session.setSectionStartedAt(LocalDateTime.now());
         } else if (session.getCurrentSection() == SkillType.READING) {
             session.setCurrentSection(SkillType.WRITING);
-            session.setTimeRemainingSeconds(3600); // 60 minutes for Writing
+            int writingDuration = session.getMockTest().getSections().stream()
+                    .filter(s -> s.getSectionType() == SkillType.WRITING)
+                    .map(MockTestSection::getDurationSeconds)
+                    .findFirst()
+                    .orElse(3600);
+            session.setTimeRemainingSeconds(writingDuration);
             session.setSectionStartedAt(LocalDateTime.now());
         } else {
             throw new IllegalStateException("Already at the final section (Writing). Call submit instead.");

@@ -23,6 +23,8 @@ services:
         condition: service_started
       edge-tts:
         condition: service_started
+      redis:
+        condition: service_started
     env_file:
       - .env
     environment:
@@ -37,6 +39,8 @@ services:
       MINIO_BUCKET: ${MINIO_BUCKET:-listening-audio}
       TTS_ENABLED: ${TTS_ENABLED:-true}
       EDGE_TTS_URL: http://edge-tts:8000
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
     networks:
       - app-network
 
@@ -78,6 +82,14 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
     volumes:
       - minio-data:/data
+    networks:
+      - app-network
+
+  redis:
+    image: redis:alpine
+    restart: always
+    ports:
+      - "6379:6379"
     networks:
       - app-network
 

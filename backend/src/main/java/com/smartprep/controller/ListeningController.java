@@ -103,7 +103,7 @@ public class ListeningController {
     public ResponseEntity<ApiResponse<ListeningPartResponse>> generatePart(
             @AuthenticationPrincipal User user,
             @Valid @RequestBody ListeningGenerateRequest request) {
-        ListeningPartResponse response = listeningService.generatePart(user.getUserId(), request.getPartNumber(), request.getTopic());
+        ListeningPartResponse response = listeningService.generatePart(user.getUserId(), request);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 

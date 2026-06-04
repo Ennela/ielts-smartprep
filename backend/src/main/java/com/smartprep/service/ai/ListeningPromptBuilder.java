@@ -13,14 +13,23 @@ public class ListeningPromptBuilder {
      * @return the generated prompt string
      */
     public String buildGeneratePrompt(int partNumber, String topic) {
+        return buildGeneratePrompt(partNumber, topic, null);
+    }
+
+    public String buildGeneratePrompt(int partNumber, String topic, String focusQuestionType) {
         StringBuilder sb = new StringBuilder();
         sb.append(String.format("""
                 You are a professional IELTS Listening test designer with 15 years of experience at Cambridge Assessment English. Create a complete, exam-quality IELTS Listening Part %d test that is indistinguishable from authentic Cambridge IELTS material.
+                """, partNumber));
+        if (focusQuestionType != null && !focusQuestionType.isBlank()) {
+            sb.append(String.format("\n── Focus question type: %s (ensure one of the sections/question groups is designed to test this skill specifically) ──\n", focusQuestionType));
+        }
+        sb.append(String.format("""
 
                 ═══════════════════════════════════════════
                 PART %d — SPECIFICATIONS
                 ═══════════════════════════════════════════
-                """, partNumber, partNumber));
+                """, partNumber));
 
         if (partNumber == 1) {
             sb.append("""

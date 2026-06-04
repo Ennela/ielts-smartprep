@@ -37,6 +37,8 @@ class ListeningServiceTest {
     @Mock private TtsService ttsService;
     @Mock private StorageService storageService;
     @Mock private AudioGenerationService audioGenerationService;
+    @Mock private org.springframework.cache.CacheManager cacheManager;
+    @Mock private AdaptiveService adaptiveService;
 
     @Spy private ObjectMapper objectMapper = new ObjectMapper();
 
@@ -77,13 +79,9 @@ class ListeningServiceTest {
                 """;
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(promptBuilder.buildGeneratePrompt(anyInt(), anyString())).thenReturn("mock prompt");
+        when(promptBuilder.buildGeneratePrompt(anyInt(), anyString(), any())).thenReturn("mock prompt");
         when(ttsService.isAvailable()).thenReturn(false); // TTS disabled for this test
-        when(geminiClient.generateAndParse(anyString(), anyString(), any(GeminiClient.CheckedFunction.class)))
-                .thenAnswer(invocation -> {
-                    GeminiClient.CheckedFunction<String, ListeningPart> parser = invocation.getArgument(2);
-                    return parser.apply(mockAiResponse);
-                });
+        when(geminiClient.generate(anyString(), anyString())).thenReturn(mockAiResponse);
         when(partRepository.save(any(ListeningPart.class))).thenAnswer(invocation -> {
             ListeningPart part = invocation.getArgument(0);
             part.setPartId(10L);

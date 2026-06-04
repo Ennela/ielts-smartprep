@@ -5,6 +5,8 @@ import com.smartprep.dto.request.WritingSubmitFullRequest;
 import com.smartprep.dto.response.*;
 import com.smartprep.model.entity.User;
 import com.smartprep.service.WritingService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +18,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/writing")
 @RequiredArgsConstructor
+@Tag(name = "Writing", description = "IELTS Writing practice and AI-grading API")
 public class WritingController {
 
     private final WritingService writingService;
@@ -25,6 +28,7 @@ public class WritingController {
      * GET /api/v1/writing/prompts?essayType=OPINION
      */
     @GetMapping("/prompts")
+    @Operation(summary = "Get all writing prompts", description = "Lists writing prompts, optionally filtered by essay type (e.g. OPINION, GRAPH)")
     public ResponseEntity<ApiResponse<List<WritingPromptResponse>>> getPrompts(
             @RequestParam(required = false) String essayType) {
         List<WritingPromptResponse> prompts = writingService.getPrompts(essayType);
@@ -36,6 +40,7 @@ public class WritingController {
      * GET /api/v1/writing/prompts/{promptId}
      */
     @GetMapping("/prompts/{promptId}")
+    @Operation(summary = "Get a specific writing prompt by ID")
     public ResponseEntity<ApiResponse<WritingPromptResponse>> getPromptById(
             @PathVariable Long promptId) {
         WritingPromptResponse prompt = writingService.getPromptById(promptId);
@@ -47,6 +52,7 @@ public class WritingController {
      * POST /api/v1/writing/grade
      */
     @PostMapping("/grade")
+    @Operation(summary = "Submit an essay for AI grading", description = "Grades a writing task essay using Gemini AI, returning band score and feedback")
     public ResponseEntity<ApiResponse<WritingGradeResponse>> gradeEssay(
             @AuthenticationPrincipal User user,
             @Valid @RequestBody WritingGradeRequest request) {
@@ -59,6 +65,7 @@ public class WritingController {
      * GET /api/v1/writing/history
      */
     @GetMapping("/history")
+    @Operation(summary = "Get writing submission history for current user")
     public ResponseEntity<ApiResponse<List<WritingHistoryResponse>>> getHistory(
             @AuthenticationPrincipal User user) {
         List<WritingHistoryResponse> history = writingService.getHistory(user.getUserId());
@@ -70,6 +77,7 @@ public class WritingController {
      * GET /api/v1/writing/submissions/{submissionId}
      */
     @GetMapping("/submissions/{submissionId}")
+    @Operation(summary = "Get detailed grading result of a specific submission")
     public ResponseEntity<ApiResponse<WritingGradeResponse>> getSubmission(
             @AuthenticationPrincipal User user,
             @PathVariable Long submissionId) {
@@ -82,6 +90,7 @@ public class WritingController {
      * GET /api/v1/writing/assemble
      */
     @GetMapping("/assemble")
+    @Operation(summary = "Assemble a full mock Writing test", description = "Selects one Task 1 and one Task 2 prompt at random")
     public ResponseEntity<ApiResponse<List<WritingPromptResponse>>> assemble() {
         List<WritingPromptResponse> prompts = writingService.assembleMockTest();
         return ResponseEntity.ok(ApiResponse.ok(prompts, "Full Writing mock test assembled successfully"));
@@ -92,6 +101,7 @@ public class WritingController {
      * POST /api/v1/writing/submit-full
      */
     @PostMapping("/submit-full")
+    @Operation(summary = "Submit a full mock Writing test", description = "Grades both Task 1 and Task 2 essays using Gemini AI")
     public ResponseEntity<ApiResponse<WritingFullResultResponse>> submitFull(
             @AuthenticationPrincipal User user,
             @Valid @RequestBody WritingSubmitFullRequest request) {

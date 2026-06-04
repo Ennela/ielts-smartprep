@@ -27,6 +27,9 @@ public class ScoreHistory {
     @Column(nullable = false, precision = 2, scale = 1)
     private BigDecimal score;
 
+    @Column(length = 30)
+    private String difficulty;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime recordedAt;
 

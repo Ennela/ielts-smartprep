@@ -59,6 +59,11 @@ public class MockTest {
     @Builder.Default
     private List<WritingPrompt> writingPrompts = new ArrayList<>();
 
+    @OneToMany(mappedBy = "mockTest", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sectionOrder ASC")
+    @Builder.Default
+    private List<MockTestSection> sections = new ArrayList<>();
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

@@ -37,6 +37,8 @@ class ReadingServiceTest {
     @Mock private ScoreHistoryRepository scoreHistoryRepository;
     @Mock private GeminiClient geminiClient;
     @Mock private ReadingPromptBuilder promptBuilder;
+    @Mock private org.springframework.cache.CacheManager cacheManager;
+    @Mock private AdaptiveService adaptiveService;
 
     @Spy private ObjectMapper objectMapper = new ObjectMapper();
 
@@ -86,12 +88,8 @@ class ReadingServiceTest {
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
         when(promptBuilder.buildSystemPrompt(any(Difficulty.class))).thenReturn("mock system prompt");
-        when(promptBuilder.buildUserPrompt(any(Topic.class), any(Difficulty.class))).thenReturn("mock user prompt");
-        when(geminiClient.generateAndParse(anyString(), anyString(), any(GeminiClient.CheckedFunction.class)))
-                .thenAnswer(invocation -> {
-                    GeminiClient.CheckedFunction<String, ReadingQuiz> parser = invocation.getArgument(2);
-                    return parser.apply(mockAiResponse);
-                });
+        when(promptBuilder.buildUserPrompt(any(Topic.class), any(Difficulty.class), any())).thenReturn("mock user prompt");
+        when(geminiClient.generate(anyString(), anyString())).thenReturn(mockAiResponse);
         when(quizRepository.save(any(ReadingQuiz.class))).thenAnswer(invocation -> {
             ReadingQuiz quiz = invocation.getArgument(0);
             quiz.setQuizId(10L);
