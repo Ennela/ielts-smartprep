@@ -41,6 +41,9 @@ services:
       EDGE_TTS_URL: http://edge-tts:8000
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
     networks:
       - app-network
 

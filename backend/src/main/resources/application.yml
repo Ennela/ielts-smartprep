@@ -24,11 +24,27 @@ spring:
       port: ${SPRING_REDIS_PORT:6379}
   cache:
     type: redis
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
 
 app:
   jwt:
     secret: ${JWT_SECRET:default-secret-key-change-in-production-min-32-characters}
-    expiration-ms: 86400000  # 24 hours
+    expiration-ms: 900000  # 15 minutes (access token)
+    refresh-expiration-ms: 604800000  # 7 days (refresh token)
   gemini:
     api-key: ${GEMINI_API_KEY:}
     base-url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash
@@ -47,6 +63,12 @@ app:
     capacity: 10
     refill-tokens: 10
     refill-duration-minutes: 1
+  security:
+    max-login-attempts: 5
+    lockout-duration-minutes: 15
+  mail:
+    from: ${MAIL_USERNAME:noreply@smartprep.com}
+  frontend-url: ${FRONTEND_URL:http://localhost:5173}
 
 management:
   endpoints:

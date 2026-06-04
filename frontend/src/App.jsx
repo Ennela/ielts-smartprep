@@ -36,6 +36,9 @@ import ReadingFullResultPage from './pages/ReadingFullResultPage';
 import WritingFullExamPage from './pages/WritingFullExamPage';
 import WritingFullResultPage from './pages/WritingFullResultPage';
 import HistoryReviewPage from './pages/HistoryReviewPage';
+import VocabularyPage from './pages/VocabularyPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 import './index.css';
 
@@ -47,6 +50,8 @@ export default function App() {
           {/* Public */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
           {/* Protected with MainLayout */}
           <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
@@ -80,6 +85,9 @@ export default function App() {
             <Route path="/listening" element={<ListeningPracticePage />} />
             <Route path="/listening/result/:testId" element={<ListeningResultPage />} />
             <Route path="/listening/history" element={<ListeningHistoryPage />} />
+
+            {/* Vocabulary Builder */}
+            <Route path="/vocabulary" element={<VocabularyPage />} />
 
             {/* History Review (across all skills) */}
             <Route path="/history/:historyId/review" element={<HistoryReviewPage />} />

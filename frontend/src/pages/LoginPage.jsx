@@ -80,7 +80,10 @@ export default function LoginPage() {
           <button type="submit" className="btn btn-primary reveal reveal-delay-3" disabled={loading} id="login-submit-btn">
             {loading ? <><span className="spinner"></span> Logging in...</> : 'Login'}
           </button>
-          <p className="auth-link reveal reveal-delay-4">
+          <div className="reveal reveal-delay-4" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+            <Link to="/forgot-password" style={{ fontSize: '14px', color: 'var(--primary)', textDecoration: 'none' }}>Forgot password?</Link>
+          </div>
+          <p className="auth-link reveal reveal-delay-5">
             Don't have an account? <Link to="/register">Register</Link>
           </p>
         </form>

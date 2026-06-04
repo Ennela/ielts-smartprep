@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import authService from '../api/authService';
-import axiosClient from '../api/axiosClient';
 
 const AuthContext = createContext(null);
 
@@ -15,6 +14,7 @@ export function AuthProvider({ children }) {
         .then((res) => setUser(res.data.data))
         .catch(() => {
           localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
         })
         .finally(() => setLoading(false));
@@ -27,6 +27,9 @@ export function AuthProvider({ children }) {
     const res = await authService.login(username, password);
     const data = res.data.data;
     localStorage.setItem('token', data.token);
+    if (data.refreshToken) {
+      localStorage.setItem('refreshToken', data.refreshToken);
+    }
     setUser(data);
     return data;
   };
@@ -35,12 +38,15 @@ export function AuthProvider({ children }) {
     const res = await authService.register(email, username, password);
     const data = res.data.data;
     localStorage.setItem('token', data.token);
+    if (data.refreshToken) {
+      localStorage.setItem('refreshToken', data.refreshToken);
+    }
     setUser(data);
     return data;
   };
 
-  const logout = () => {
-    authService.logout();
+  const logout = async () => {
+    await authService.logout();
     setUser(null);
   };
 
@@ -52,9 +58,13 @@ export function AuthProvider({ children }) {
   };
 
   const isAdmin = user?.role === 'ADMIN';
+  const emailVerified = user?.emailVerified ?? false;
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAuthenticated: !!user, isAdmin, login, register, logout, updateUser }}>
+    <AuthContext.Provider value={{
+      user, loading, isAuthenticated: !!user, isAdmin, emailVerified,
+      login, register, logout, updateUser
+    }}>
       {children}
     </AuthContext.Provider>
   );
