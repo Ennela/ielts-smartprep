@@ -1,0 +1,103 @@
+/* ===== DESIGN TOKENS — ACADEMIC PRECISION (MD3) ===== */
+:root {
+  /* MD3 Surfaces */
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #eef4ff;
+  --surface-container: #e5eeff;
+  --surface-container-high: #dfe9fa;
+  --surface-container-highest: #d9e3f4;
+  --surface-variant: #d9e3f4;
+  --surface-dim: #d1dbec;
+  --surface-bright: #f8f9ff;
+  /* MD3 Primary */
+  --primary: #003fb1;
+  --primary-container: #1a56db;
+  --on-primary: #ffffff;
+  --on-primary-container: #d4dcff;
+  --primary-fixed: #dbe1ff;
+  --primary-fixed-dim: #b5c4ff;
+  --surface-tint: #1353d8;
+  /* MD3 Secondary (Success Green) */
+  --secondary: #006c4a;
+  --secondary-container: #82f5c1;
+  --on-secondary: #ffffff;
+  --on-secondary-container: #00714e;
+  /* MD3 Tertiary (Alert Orange) */
+  --tertiary: #842c00;
+  --tertiary-container: #ac3c00;
+  --on-tertiary: #ffffff;
+  --on-tertiary-container: #ffd4c5;
+  /* MD3 Error */
+  --error: #ba1a1a;
+  --on-error: #ffffff;
+  --error-container: #ffdad6;
+  /* MD3 Neutral */
+  --background: #f8f9ff;
+  --on-background: #121c28;
+  --on-surface: #121c28;
+  --on-surface-variant: #434654;
+  --outline: #737686;
+  --outline-variant: #c3c5d7;
+  --inverse-surface: #27313e;
+  --inverse-on-surface: #eaf1ff;
+  --inverse-primary: #b5c4ff;
+
+  /* Legacy aliases — keep for backward compat */
+  --color-bg: #f8f9ff;
+  --color-bg-secondary: #eef4ff;
+  --color-surface: rgba(255,255,255,0.72);
+  --color-surface-solid: #ffffff;
+  --color-surface-hover: #eef4ff;
+  --color-surface-elevated: rgba(255,255,255,0.85);
+  --color-border: #c3c5d7;
+  --color-border-subtle: rgba(18,28,40,0.06);
+  --color-text: #121c28;
+  --color-text-secondary: #434654;
+  --color-text-muted: #737686;
+  --color-primary: #003fb1;
+  --color-primary-light: #1a56db;
+  --color-emerald: #006c4a;
+  --color-emerald-light: #82f5c1;
+  --color-amber: #842c00;
+  --color-amber-light: #ffd4c5;
+  --color-blue: #003fb1;
+  --color-error: #ba1a1a;
+  --color-success: #006c4a;
+  --color-warning: #842c00;
+  --color-accent-gradient: linear-gradient(135deg, #003fb1, #1a56db);
+  --color-emerald-gradient: linear-gradient(135deg, #006c4a, #82f5c1);
+  /* Primary color opacities for design refinement */
+  --color-primary-02: rgba(0, 63, 177, 0.02);
+  --color-primary-03: rgba(0, 63, 177, 0.03);
+  --color-primary-04: rgba(0, 63, 177, 0.04);
+  --color-primary-05: rgba(0, 63, 177, 0.05);
+  --color-primary-06: rgba(0, 63, 177, 0.06);
+  --color-primary-08: rgba(0, 63, 177, 0.08);
+  --color-primary-10: rgba(0, 63, 177, 0.1);
+  --color-primary-15: rgba(0, 63, 177, 0.15);
+  --color-primary-20: rgba(0, 63, 177, 0.2);
+  --color-primary-40: rgba(0, 63, 177, 0.4);
+  /* Aliases for listening module compat */
+  --clr-bg: var(--color-bg);
+  --clr-surface: var(--color-surface-solid);
+  --clr-border: var(--color-border);
+  --clr-text: var(--color-text);
+  --clr-text-muted: var(--color-text-muted);
+  --clr-primary: var(--color-primary);
+  --clr-success: var(--color-success);
+  --clr-warning: var(--color-warning);
+  --clr-error: var(--color-error);
+  --font-heading: 'Hanken Grotesk', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --shadow-sm: 0px 1px 2px rgba(18,28,40,0.03);
+  --shadow: 0px 4px 12px rgba(18,28,40,0.05);
+  --shadow-lg: 0px 8px 24px rgba(18,28,40,0.08);
+  --transition: 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --sidebar-width: 240px;
+}

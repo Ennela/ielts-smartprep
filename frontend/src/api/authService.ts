@@ -1,43 +1,45 @@
+import type { AxiosResponse } from 'axios';
 import axiosClient from './axiosClient';
+import type { ApiResponse, AuthResponse, User } from './types';
 
 const authService = {
-    register: (email, username, password) =>
+    register: (email: string, username: string, password: string): Promise<AxiosResponse<ApiResponse<AuthResponse>>> =>
         axiosClient.post('/auth/register', { email, username, password }),
 
-    login: (username, password) =>
+    login: (username: string, password: string): Promise<AxiosResponse<ApiResponse<AuthResponse>>> =>
         axiosClient.post('/auth/login', { username, password }),
 
-    getProfile: () =>
+    getProfile: (): Promise<AxiosResponse<ApiResponse<User>>> =>
         axiosClient.get('/auth/me'),
 
-    updateProfile: (data) =>
+    updateProfile: (data: Partial<User> & { password?: string }): Promise<AxiosResponse<ApiResponse<User>>> =>
         axiosClient.put('/auth/profile', data),
 
-    changePassword: (currentPassword, newPassword) =>
+    changePassword: (currentPassword: string, newPassword: string): Promise<AxiosResponse<ApiResponse<void>>> =>
         axiosClient.put('/auth/password', { currentPassword, newPassword }),
 
     // ── Token Management ──────────────────────────────────────────────────
 
-    refreshToken: (refreshToken) =>
+    refreshToken: (refreshToken: string): Promise<AxiosResponse<ApiResponse<{ token: string; refreshToken?: string }>>> =>
         axiosClient.post('/auth/refresh', { refreshToken }),
 
-    serverLogout: (refreshToken) =>
+    serverLogout: (refreshToken: string): Promise<AxiosResponse<ApiResponse<void>>> =>
         axiosClient.post('/auth/logout', { refreshToken }),
 
     // ── Password Recovery ─────────────────────────────────────────────────
 
-    forgotPassword: (email) =>
+    forgotPassword: (email: string): Promise<AxiosResponse<ApiResponse<void>>> =>
         axiosClient.post('/auth/forgot-password', { email }),
 
-    resetPassword: (token, newPassword) =>
+    resetPassword: (token: string, newPassword: string): Promise<AxiosResponse<ApiResponse<void>>> =>
         axiosClient.post('/auth/reset-password', { token, newPassword }),
 
     // ── Email Verification ────────────────────────────────────────────────
 
-    verifyEmail: (token) =>
+    verifyEmail: (token: string): Promise<AxiosResponse<ApiResponse<void>>> =>
         axiosClient.get('/auth/verify-email', { params: { token } }),
 
-    resendVerification: () =>
+    resendVerification: (): Promise<AxiosResponse<ApiResponse<void>>> =>
         axiosClient.post('/auth/resend-verification'),
 
     // ── Local Storage Helpers ─────────────────────────────────────────────
@@ -47,7 +49,7 @@ const authService = {
     // - CSP headers block inline/external script injection
     // - Refresh token rotation invalidates stolen tokens quickly
 
-    logout: async () => {
+    logout: async (): Promise<void> => {
         const refreshToken = localStorage.getItem('refreshToken');
         if (refreshToken) {
             try {

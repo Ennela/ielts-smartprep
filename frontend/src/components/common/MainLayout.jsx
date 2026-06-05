@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import styles from './MainLayout.module.css';
 
 const MENU_ITEMS = [
   { path: '/dashboard', label: 'Dashboard',  icon: 'dashboard',  end: true },
@@ -34,29 +35,29 @@ export default function MainLayout() {
   const displayName = user?.displayName || user?.username || '';
 
   return (
-    <div className="app-layout">
+    <div className={styles['app-layout']}>
       {sidebarOpen && (
-        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+        <div className={styles['sidebar-overlay']} onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* ── Sidebar ── */}
-      <aside className={`sidebar ${sidebarOpen ? 'sidebar-open' : ''}`}>
+      <aside className={`${styles.sidebar} ${sidebarOpen ? styles['sidebar-open'] : ''}`}>
 
         {/* Logo */}
-        <div className="sidebar-brand">
-          <span className="sidebar-logo-fallback">SP</span>
-          <span className="sidebar-brand-text">SmartPrep</span>
+        <div className={styles['sidebar-brand']}>
+          <span className={styles['sidebar-logo-fallback']}>SP</span>
+          <span className={styles['sidebar-brand-text']}>SmartPrep</span>
         </div>
 
         {/* User Profile Card */}
         <div
-          className="sidebar-user-card"
+          className={styles['sidebar-user-card']}
           onClick={() => { navigate('/profile'); setSidebarOpen(false); }}
         >
-          <div className="sidebar-avatar">{initials}</div>
-          <div className="sidebar-user-info">
-            <span className="sidebar-user-name">{displayName}</span>
-            <span className="sidebar-user-role">
+          <div className={styles['sidebar-avatar']}>{initials}</div>
+          <div className={styles['sidebar-user-info']}>
+            <span className={styles['sidebar-user-name']}>{displayName}</span>
+            <span className={styles['sidebar-user-role']}>
               {isAdmin ? 'Admin' : `Band Target: ${(() => {
                 if (!user) return '6.5';
                 const r = parseFloat(user.targetReadingScore) || 6.5;
@@ -74,40 +75,40 @@ export default function MainLayout() {
         </div>
 
         {/* Main Navigation */}
-        <nav className="sidebar-nav">
+        <nav className={styles['sidebar-nav']}>
           {MENU_ITEMS.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               end={item.end}
-              className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
+              className={({ isActive }) => `${styles['sidebar-item']} ${isActive ? styles.active : ''}`}
               onClick={() => setSidebarOpen(false)}
               id={`nav-${item.label.toLowerCase().replace(/\s/g, '-')}`}
             >
-              <span className="sidebar-icon">
+              <span className={styles['sidebar-icon']}>
                 <span className="material-symbols-outlined">{item.icon}</span>
               </span>
-              <span className="sidebar-label">{item.label}</span>
+              <span className={styles['sidebar-label']}>{item.label}</span>
             </NavLink>
           ))}
 
           {isAdmin && (
             <>
-              <div className="sidebar-divider" />
-              <span className="sidebar-section-label">Administration</span>
+              <div className={styles['sidebar-divider']} />
+              <span className={styles['sidebar-section-label']}>Administration</span>
               {ADMIN_MENU_ITEMS.map((item) => (
                 <NavLink
                   key={item.path}
                   to={item.path}
                   end={item.end}
-                  className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
+                  className={({ isActive }) => `${styles['sidebar-item']} ${isActive ? styles.active : ''}`}
                   onClick={() => setSidebarOpen(false)}
                   id={`nav-admin-${item.label.toLowerCase().replace(/\s/g, '-')}`}
                 >
-                  <span className="sidebar-icon">
+                  <span className={styles['sidebar-icon']}>
                     <span className="material-symbols-outlined">{item.icon}</span>
                   </span>
-                  <span className="sidebar-label">{item.label}</span>
+                  <span className={styles['sidebar-label']}>{item.label}</span>
                 </NavLink>
               ))}
             </>
@@ -115,16 +116,16 @@ export default function MainLayout() {
         </nav>
 
         {/* Footer: CTA + links */}
-        <div className="sidebar-footer">
-          <button className="sidebar-cta" onClick={() => navigate('/mock-tests')}>
+        <div className={styles['sidebar-footer']}>
+          <button className={styles['sidebar-cta']} onClick={() => navigate('/mock-tests')}>
             Start Mock Test
           </button>
-          <div className="sidebar-footer-links">
-            <button className="sidebar-footer-link" onClick={() => navigate('/profile')}>
+          <div className={styles['sidebar-footer-links']}>
+            <button className={styles['sidebar-footer-link']} onClick={() => navigate('/profile')}>
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>settings</span>
               <span>Settings</span>
             </button>
-            <button className="sidebar-footer-link sidebar-logout" onClick={handleLogout} id="sidebar-logout-btn">
+            <button className={`${styles['sidebar-footer-link']} ${styles['sidebar-logout']}`} onClick={handleLogout} id="sidebar-logout-btn">
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>logout</span>
               <span>Logout</span>
             </button>
@@ -133,37 +134,37 @@ export default function MainLayout() {
       </aside>
 
       {/* ── Main Area ── */}
-      <div className="main-area">
-        <header className="topbar">
+      <div className={styles['main-area']}>
+        <header className={styles.topbar}>
           <button
-            className="hamburger"
+            className={styles.hamburger}
             onClick={() => setSidebarOpen(!sidebarOpen)}
             id="hamburger-btn"
           >
             <span className="material-symbols-outlined">menu</span>
           </button>
 
-          <div className="topbar-brand">
-            <span className="topbar-brand-text" onClick={() => navigate('/dashboard')}>
+          <div className={styles['topbar-brand']}>
+            <span className={styles['topbar-brand-text']} onClick={() => navigate('/dashboard')}>
               SmartPrep
             </span>
           </div>
 
           {/* Desktop nav links */}
-          <nav className="topbar-nav" style={{ display: 'none' }}>
-            <a href="#" className="topbar-nav-link active">Practice</a>
-            <a href="#" className="topbar-nav-link">Exams</a>
-            <a href="#" className="topbar-nav-link">Resources</a>
+          <nav className={styles['topbar-nav']} style={{ display: 'none' }}>
+            <a href="#" className={`${styles['topbar-nav-link']} ${styles.active}`}>Practice</a>
+            <a href="#" className={styles['topbar-nav-link']}>Exams</a>
+            <a href="#" className={styles['topbar-nav-link']}>Resources</a>
           </nav>
 
-          <div className="topbar-right">
-            <button className="topbar-upgrade" style={{ display: 'none' }}>Upgrade Pro</button>
-            <button className="topbar-icon-btn">
+          <div className={styles['topbar-right']}>
+            <button className={styles['topbar-upgrade']} style={{ display: 'none' }}>Upgrade Pro</button>
+            <button className={styles['topbar-icon-btn']}>
               <span className="material-symbols-outlined">notifications</span>
             </button>
-            <span className="topbar-greeting">{displayName}</span>
+            <span className={styles['topbar-greeting']}>{displayName}</span>
             <div
-              className="topbar-avatar"
+              className={styles['topbar-avatar']}
               onClick={() => navigate('/profile')}
               id="topbar-profile-btn"
             >
@@ -172,7 +173,7 @@ export default function MainLayout() {
           </div>
         </header>
 
-        <main className="page-content">
+        <main className={styles['page-content']}>
           <Outlet />
         </main>
       </div>

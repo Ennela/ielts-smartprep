@@ -1,28 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import writingApi from '../api/writingApi';
 
 export default function WritingHistoryPage() {
     const navigate = useNavigate();
-    const [history, setHistory] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
 
-    useEffect(() => {
-        loadHistory();
-    }, []);
+    const { data: historyRes, isLoading, error } = useQuery({
+        queryKey: ['writingHistory'],
+        queryFn: () => writingApi.getHistory(),
+    });
 
-    const loadHistory = async () => {
-        setLoading(true);
-        try {
-            const res = await writingApi.getHistory();
-            setHistory(res.data.data || []);
-        } catch (err) {
-            setError('Failed to load history.');
-        } finally {
-            setLoading(false);
-        }
-    };
+    const history = historyRes?.data?.data?.items || historyRes?.data?.data || [];
 
     const formatDate = (dateStr) => {
         return new Date(dateStr).toLocaleDateString('en-US', {
@@ -65,9 +53,9 @@ export default function WritingHistoryPage() {
                 <h1>Writing History</h1>
                 <p className="subtitle">Review your previous essays and scores</p>
 
-                {error && <div className="error-msg">{error}</div>}
+                {error && <div className="error-msg">Failed to load history.</div>}
 
-                {loading ? (
+                {isLoading ? (
                     <div className="loading-screen" style={{ height: '300px' }}>
                         <span className="spinner" style={{ width: 24, height: 24 }}></span>
                         Loading history...

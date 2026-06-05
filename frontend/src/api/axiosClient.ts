@@ -1,4 +1,15 @@
 import axios from 'axios';
+import type { InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+
+interface FailedRequest {
+  resolve: (token: string) => void;
+  reject: (error: any) => void;
+}
+
+interface EnrichedError extends Error {
+  status?: number;
+  response?: AxiosResponse;
+}
 
 const axiosClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1',
@@ -6,9 +17,9 @@ const axiosClient = axios.create({
 });
 
 // ── Request interceptor: attach access token ────────────────────────────
-axiosClient.interceptors.request.use((config) => {
+axiosClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = localStorage.getItem('token');
-  if (token) {
+  if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -16,27 +27,28 @@ axiosClient.interceptors.request.use((config) => {
 
 // ── Response interceptor: auto-refresh on 401 ───────────────────────────
 let isRefreshing = false;
-let failedQueue = [];
+let failedQueue: FailedRequest[] = [];
 
-const processQueue = (error, token = null) => {
+const processQueue = (error: any, token: string | null = null) => {
   failedQueue.forEach(({ resolve, reject }) => {
     if (error) {
       reject(error);
     } else {
-      resolve(token);
+      resolve(token!);
     }
   });
   failedQueue = [];
 };
 
 axiosClient.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
+  (response: AxiosResponse) => response,
+  async (error: AxiosError<any>) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
     // Only attempt refresh for 401 errors, not on auth endpoints themselves
     if (
       error.response?.status === 401 &&
+      originalRequest &&
       !originalRequest._retry &&
       !originalRequest.url?.includes('/auth/login') &&
       !originalRequest.url?.includes('/auth/refresh') &&
@@ -44,11 +56,13 @@ axiosClient.interceptors.response.use(
     ) {
       if (isRefreshing) {
         // Another refresh is in-flight — queue this request
-        return new Promise((resolve, reject) => {
+        return new Promise<string>((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
           .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
             return axiosClient(originalRequest);
           })
           .catch((err) => Promise.reject(err));
@@ -77,10 +91,14 @@ axiosClient.interceptors.response.use(
           localStorage.setItem('refreshToken', newRefreshToken);
         }
 
-        axiosClient.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;
+        if (axiosClient.defaults.headers.common) {
+          axiosClient.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;
+        }
         processQueue(null, newAccessToken);
 
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        }
         return axiosClient(originalRequest);
       } catch (refreshError) {
         processQueue(refreshError, null);
@@ -97,7 +115,7 @@ axiosClient.interceptors.response.use(
       error.response?.data?.error ||
       error.message ||
       'An unexpected error occurred';
-    const enrichedError = new Error(message);
+    const enrichedError: EnrichedError = new Error(message);
     enrichedError.status = error.response?.status;
     enrichedError.response = error.response;
     return Promise.reject(enrichedError);
