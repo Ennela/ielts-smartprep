@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!-- ── Properties ─────────────────────────────────────────────────── -->
+    <property name="APP_NAME" value="ielts-smartprep"/>
+    <springProperty scope="context" name="SENTRY_DSN" source="sentry.dsn" defaultValue=""/>
+
+    <!-- ── Console: JSON in prod, human-readable in dev ────────────── -->
+    <springProfile name="!dev">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+                <customFields>{"app":"${APP_NAME}"}</customFields>
+                <fieldNames>
+                    <timestamp>timestamp</timestamp>
+                    <version>[ignore]</version>
+                </fieldNames>
+                <includeMdcKeyName>traceId</includeMdcKeyName>
+                <includeMdcKeyName>userId</includeMdcKeyName>
+            </encoder>
+        </appender>
+    </springProfile>
+
+    <springProfile name="dev">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>%d{HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%logger{36}) [traceId=%X{traceId}] - %msg%n</pattern>
+            </encoder>
+        </appender>
+    </springProfile>
+
+    <!-- ── Sentry: send ERROR+ events ──────────────────────────────── -->
+    <appender name="SENTRY" class="io.sentry.logback.SentryAppender">
+        <minimumEventLevel>ERROR</minimumEventLevel>
+        <minimumBreadcrumbLevel>WARN</minimumBreadcrumbLevel>
+    </appender>
+
+    <!-- ── Root logger ─────────────────────────────────────────────── -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="SENTRY"/>
+    </root>
+
+    <!-- Quieten noisy libraries -->
+    <logger name="org.hibernate.SQL" level="WARN"/>
+    <logger name="org.hibernate.type.descriptor.sql" level="WARN"/>
+    <logger name="org.springframework.security" level="WARN"/>
+    <logger name="io.lettuce.core" level="WARN"/>
+    <logger name="io.sentry" level="WARN"/>
+
+    <!-- App-level tuning -->
+    <logger name="com.smartprep" level="INFO"/>
+    <logger name="com.smartprep.security" level="DEBUG"/>
+</configuration>

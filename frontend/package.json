@@ -14,6 +14,7 @@
     "vite": "^8.0.12"
   },
   "dependencies": {
+    "@sentry/react": "^10.56.0",
     "axios": "^1.16.1",
     "react-router-dom": "^7.15.1",
     "recharts": "^3.8.1"

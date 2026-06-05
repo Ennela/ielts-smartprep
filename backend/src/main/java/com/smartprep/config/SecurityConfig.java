@@ -52,7 +52,7 @@ public class SecurityConfig {
                     "/api/v1/auth/verify-email"
                 ).permitAll()
                 .requestMatchers("/api/v1/listening/audio/**").permitAll()
-                .requestMatchers("/actuator/health").permitAll()
+                .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                 .anyRequest().authenticated()

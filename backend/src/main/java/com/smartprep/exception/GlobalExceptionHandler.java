@@ -1,12 +1,15 @@
 package com.smartprep.exception;
 
 import com.smartprep.dto.response.ApiResponse;
+import io.sentry.Sentry;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -24,12 +27,16 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AiServiceException.class)
     public ResponseEntity<ApiResponse<Void>> handleAiError(AiServiceException ex) {
+        log.error("AI service error", ex);
+        Sentry.captureException(ex);
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(ApiResponse.error("AI service unavailable: " + ex.getMessage(), "AI_SERVICE_ERROR"));
     }
 
     @ExceptionHandler(InvalidAiResponseException.class)
     public ResponseEntity<ApiResponse<Void>> handleInvalidAiResponse(InvalidAiResponseException ex) {
+        log.error("Invalid AI response", ex);
+        Sentry.captureException(ex);
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body(ApiResponse.error("AI returned invalid response: " + ex.getMessage(), "INVALID_AI_RESPONSE"));
     }
@@ -54,6 +61,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ServiceUnavailableException.class)
     public ResponseEntity<ApiResponse<Void>> handleServiceUnavailable(ServiceUnavailableException ex) {
+        log.error("Service unavailable", ex);
+        Sentry.captureException(ex);
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(ApiResponse.error(ex.getMessage(), "SERVICE_UNAVAILABLE"));
     }
@@ -76,7 +85,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception ex) {
-        ex.printStackTrace(); // Log error for debugging
+        log.error("Unhandled exception", ex);
+        Sentry.captureException(ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error("Internal server error", "INTERNAL_SERVER_ERROR"));
     }

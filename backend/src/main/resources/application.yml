@@ -70,11 +70,32 @@ app:
     from: ${MAIL_USERNAME:noreply@smartprep.com}
   frontend-url: ${FRONTEND_URL:http://localhost:5173}
 
+# --- Sentry ---
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENV:development}
+  traces-sample-rate: 0.2
+  send-default-pii: false
+  logging:
+    minimum-event-level: error
+    minimum-breadcrumb-level: warn
+
+# --- Actuator ---
 management:
   endpoints:
     web:
       exposure:
-        include: health
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
 
 # --- Swagger / OpenAPI ---
 springdoc:
