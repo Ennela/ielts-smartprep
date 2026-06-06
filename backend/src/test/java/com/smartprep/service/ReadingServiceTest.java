@@ -24,6 +24,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
 import java.util.Optional;
+import java.util.List;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -38,7 +40,8 @@ class ReadingServiceTest {
     @Mock private ScoreHistoryRepository scoreHistoryRepository;
     @Mock private GeminiClient geminiClient;
     @Mock private ReadingPromptBuilder promptBuilder;
-    @Mock private org.springframework.cache.CacheManager cacheManager;
+    @Mock private org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
+    @Mock private org.springframework.data.redis.core.ValueOperations<String, String> valueOps;
     @Mock private AdaptiveService adaptiveService;
     @Mock private ReadingQueryService readingQueryService;
 
@@ -50,6 +53,7 @@ class ReadingServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(redisTemplate.opsForValue()).thenReturn(valueOps);
         user = User.builder()
                 .userId(1L)
                 .username("teststudent")
@@ -152,5 +156,148 @@ class ReadingServiceTest {
         assertEquals(4, qDto.getOptions().size());
         assertEquals("A", qDto.getOptions().get(0).getLabel());
         assertEquals("Technology in education", qDto.getOptions().get(0).getContent());
+    }
+
+    @Test
+    @DisplayName("should use cached response on Redis cache hit")
+    void generateQuiz_cacheHit() {
+        String mockAiResponse = """
+                {
+                  "passage": "Cached passage",
+                  "questionGroups": [
+                    {
+                      "groupLabel": "Select the correct option.",
+                      "groupType": "MCQ",
+                      "questions": [
+                        {
+                          "questionText": "What is the primary topic?",
+                          "options": [
+                            { "label": "A", "content": "Nature" }
+                          ],
+                          "correctAnswer": "A"
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """;
+
+        ReadingGenerateRequest request = new ReadingGenerateRequest();
+        request.setTopic("ENVIRONMENT");
+        request.setDifficulty("PASSAGE_1");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(valueOps.get(anyString())).thenReturn(mockAiResponse);
+        when(quizRepository.save(any(ReadingQuiz.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(readingQueryService.mapToQuizResponse(any(ReadingQuiz.class))).thenAnswer(inv -> 
+                ReadingQuizResponse.builder()
+                        .topic("ENVIRONMENT")
+                        .difficulty("PASSAGE_1")
+                        .passageText(((ReadingQuiz) inv.getArgument(0)).getPassageText())
+                        .build()
+        );
+
+        ReadingQuizResponse response = readingGenerationService.generateQuiz(1L, request);
+
+        assertNotNull(response);
+        assertEquals("Cached passage", response.getPassageText());
+        verify(geminiClient, never()).generate(anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("should call Gemini and cache response on Redis cache miss")
+    void generateQuiz_cacheMiss() {
+        String mockAiResponse = """
+                {
+                  "passage": "Fresh passage",
+                  "questionGroups": [
+                    {
+                      "groupLabel": "Select the correct option.",
+                      "groupType": "MCQ",
+                      "questions": [
+                        {
+                          "questionText": "What is the primary topic?",
+                          "options": [
+                            { "label": "A", "content": "Nature" }
+                          ],
+                          "correctAnswer": "A"
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """;
+
+        ReadingGenerateRequest request = new ReadingGenerateRequest();
+        request.setTopic("ENVIRONMENT");
+        request.setDifficulty("PASSAGE_1");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(valueOps.get(anyString())).thenReturn(null);
+        when(promptBuilder.buildSystemPrompt(any())).thenReturn("system");
+        when(promptBuilder.buildUserPrompt(any(), any(), any())).thenReturn("user");
+        when(geminiClient.generate(anyString(), anyString())).thenReturn(mockAiResponse);
+        when(quizRepository.save(any(ReadingQuiz.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(readingQueryService.mapToQuizResponse(any(ReadingQuiz.class))).thenAnswer(inv -> 
+                ReadingQuizResponse.builder()
+                        .topic("ENVIRONMENT")
+                        .difficulty("PASSAGE_1")
+                        .passageText(((ReadingQuiz) inv.getArgument(0)).getPassageText())
+                        .build()
+        );
+
+        ReadingQuizResponse response = readingGenerationService.generateQuiz(1L, request);
+
+        assertNotNull(response);
+        assertEquals("Fresh passage", response.getPassageText());
+        verify(geminiClient, times(1)).generate(anyString(), anyString());
+        verify(valueOps).set(anyString(), eq(mockAiResponse), any(java.time.Duration.class));
+    }
+
+    @Test
+    @DisplayName("should fall back to pre-generated template when Gemini call fails")
+    void generateQuiz_fallback() {
+        ReadingGenerateRequest request = new ReadingGenerateRequest();
+        request.setTopic("ENVIRONMENT");
+        request.setDifficulty("PASSAGE_1");
+
+        ReadingQuiz templateQuiz = ReadingQuiz.builder()
+                .quizId(50L)
+                .topic(Topic.ENVIRONMENT)
+                .difficulty(Difficulty.PASSAGE_1)
+                .passageText("Fallback pre-generated passage")
+                .isTemplate(true)
+                .questions(new ArrayList<>())
+                .build();
+
+        ReadingQuestion q = ReadingQuestion.builder()
+                .questionText("Sample question")
+                .correctAnswer("A")
+                .questionType(QuestionType.MCQ)
+                .build();
+        q.setOptions(List.of(QuestionOption.builder().label("A").content("Opt A").isCorrect(true).build()));
+        templateQuiz.setQuestions(List.of(q));
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(valueOps.get(anyString())).thenReturn(null);
+        when(promptBuilder.buildSystemPrompt(any())).thenReturn("system");
+        when(promptBuilder.buildUserPrompt(any(), any(), any())).thenReturn("user");
+        when(geminiClient.generate(anyString(), anyString())).thenThrow(new com.smartprep.exception.AiServiceException("Service unavailable"));
+        
+        when(quizRepository.findQuizzesForAdmin(any(Topic.class), any(Difficulty.class), eq(null), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(templateQuiz)));
+        when(quizRepository.save(any(ReadingQuiz.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(readingQueryService.mapToQuizResponse(any(ReadingQuiz.class))).thenAnswer(inv -> 
+                ReadingQuizResponse.builder()
+                        .topic("ENVIRONMENT")
+                        .difficulty("PASSAGE_1")
+                        .passageText(((ReadingQuiz) inv.getArgument(0)).getPassageText())
+                        .build()
+        );
+
+        ReadingQuizResponse response = readingGenerationService.generateQuiz(1L, request);
+
+        assertNotNull(response);
+        assertEquals("Fallback pre-generated passage", response.getPassageText());
     }
 }

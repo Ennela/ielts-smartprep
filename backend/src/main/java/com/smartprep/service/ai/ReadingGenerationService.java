@@ -35,12 +35,14 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ReadingGenerationService {
 
+    public static final String PROMPT_VERSION = "v1.0";
+
     private final ReadingQuizRepository quizRepository;
     private final UserRepository userRepository;
     private final GeminiClient geminiClient;
     private final ReadingPromptBuilder promptBuilder;
     private final ObjectMapper objectMapper;
-    private final org.springframework.cache.CacheManager cacheManager;
+    private final org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
     private final AdaptiveService adaptiveService;
     private final ReadingQueryService readingQueryService;
 
@@ -72,21 +74,38 @@ public class ReadingGenerationService {
         String userPrompt = promptBuilder.buildUserPrompt(topic, difficulty, focusQuestionType);
 
         // Cache lookup/populating
-        String cacheKey = topic.name() + "-" + difficulty.name() + (focusQuestionType != null ? "-" + focusQuestionType : "");
-        org.springframework.cache.Cache cache = cacheManager.getCache("readingAiResponse");
+        String skillType = "READING";
+        String questionTypesKey = focusQuestionType != null ? focusQuestionType : "ALL";
+        String cacheKey = String.format("%s:%s:%s:%s:%s", skillType, topic.name(), difficulty.name(), questionTypesKey, PROMPT_VERSION);
+
         String cachedResponse = null;
-        if (cache != null) {
-            cachedResponse = cache.get(cacheKey, String.class);
+        if (redisTemplate != null) {
+            try {
+                cachedResponse = redisTemplate.opsForValue().get(cacheKey);
+            } catch (Exception e) {
+                log.warn("Failed to retrieve cache from Redis: {}", e.getMessage());
+            }
         }
 
-        final String aiResponseText;
+        String aiResponseText = null;
+        boolean fromCache = false;
+
         if (cachedResponse != null) {
             aiResponseText = cachedResponse;
+            fromCache = true;
             log.info("Cached reading quiz content found in Redis for key: {}", cacheKey);
         } else {
-            aiResponseText = geminiClient.generate(systemPrompt, userPrompt);
-            if (cache != null && aiResponseText != null) {
-                cache.put(cacheKey, aiResponseText);
+            try {
+                aiResponseText = geminiClient.generate(systemPrompt, userPrompt);
+                if (redisTemplate != null && aiResponseText != null) {
+                    try {
+                        redisTemplate.opsForValue().set(cacheKey, aiResponseText, java.time.Duration.ofHours(24));
+                    } catch (Exception e) {
+                        log.warn("Failed to write to Redis cache: {}", e.getMessage());
+                    }
+                }
+            } catch (Exception ex) {
+                return handleFallback(user, topic, difficulty, ex);
             }
         }
 
@@ -95,20 +114,103 @@ public class ReadingGenerationService {
             quiz = parseAiResponse(aiResponseText, user, topic, difficulty);
             validateReadingQuiz(quiz);
         } catch (Exception e) {
-            if (cache != null && cachedResponse != null) {
-                cache.evict(cacheKey);
-            }
             log.warn("Parsing of AI response failed. Retrying fresh generation.", e);
-            String freshResponse = geminiClient.generate(systemPrompt, userPrompt);
-            quiz = parseAiResponse(freshResponse, user, topic, difficulty);
-            validateReadingQuiz(quiz);
-            if (cache != null && freshResponse != null) {
-                cache.put(cacheKey, freshResponse);
+            if (fromCache && redisTemplate != null) {
+                try {
+                    redisTemplate.delete(cacheKey);
+                } catch (Exception dEx) {
+                    log.warn("Failed to delete Redis cache key: {}", dEx.getMessage());
+                }
+            }
+            try {
+                String freshResponse = geminiClient.generate(systemPrompt, userPrompt);
+                quiz = parseAiResponse(freshResponse, user, topic, difficulty);
+                validateReadingQuiz(quiz);
+                if (redisTemplate != null && freshResponse != null) {
+                    try {
+                        redisTemplate.opsForValue().set(cacheKey, freshResponse, java.time.Duration.ofHours(24));
+                    } catch (Exception wEx) {
+                        log.warn("Failed to write to Redis cache: {}", wEx.getMessage());
+                    }
+                }
+            } catch (Exception ex) {
+                return handleFallback(user, topic, difficulty, ex);
             }
         }
 
         quiz = quizRepository.save(quiz);
         return readingQueryService.mapToQuizResponse(quiz);
+    }
+
+    private ReadingQuizResponse handleFallback(User user, Topic topic, Difficulty difficulty, Exception originalException) {
+        log.warn("Gemini generation failed or quota exceeded. Falling back to pre-generated content for topic: {} and difficulty: {}", topic, difficulty);
+
+        List<ReadingQuiz> templates = quizRepository.findQuizzesForAdmin(topic, difficulty, null, org.springframework.data.domain.PageRequest.of(0, 10)).getContent();
+
+        if (templates.isEmpty()) {
+            templates = quizRepository.findQuizzesForAdmin(null, difficulty, null, org.springframework.data.domain.PageRequest.of(0, 10)).getContent();
+        }
+
+        if (templates.isEmpty()) {
+            templates = quizRepository.findAll(org.springframework.data.domain.PageRequest.of(0, 10)).getContent();
+        }
+
+        if (templates.isEmpty()) {
+            log.error("No fallback quizzes found in the database. Failing request.");
+            if (originalException instanceof RuntimeException) {
+                throw (RuntimeException) originalException;
+            }
+            throw new RuntimeException("AI Content generation failed and no fallback content was available in the system.", originalException);
+        }
+
+        ReadingQuiz selected = templates.get(new java.util.Random().nextInt(templates.size()));
+        log.info("Selected fallback ReadingQuiz ID: {} for user: {}", selected.getQuizId(), user.getUserId());
+
+        ReadingQuiz fallbackQuiz = ReadingQuiz.builder()
+                .user(user)
+                .topic(selected.getTopic())
+                .difficulty(selected.getDifficulty())
+                .passageText(selected.getPassageText())
+                .timeLimitSeconds(selected.getTimeLimitSeconds() != null ? selected.getTimeLimitSeconds() : TIME_LIMITS.get(selected.getDifficulty()))
+                .totalQuestions(selected.getTotalQuestions())
+                .isTemplate(false)
+                .build();
+
+        List<ReadingQuestion> clonedQuestions = new ArrayList<>();
+        for (ReadingQuestion q : selected.getQuestions()) {
+            ReadingQuestion clonedQ = ReadingQuestion.builder()
+                    .quiz(fallbackQuiz)
+                    .questionType(q.getQuestionType())
+                    .questionText(q.getQuestionText())
+                    .correctAnswer(q.getCorrectAnswer())
+                    .explanation(q.getExplanation())
+                    .orderIndex(q.getOrderIndex())
+                    .groupLabel(q.getGroupLabel())
+                    .groupId(q.getGroupId())
+                    .groupContext(q.getGroupContext())
+                    .wordLimit(q.getWordLimit())
+                    .optionsJson(q.getOptionsJson())
+                    .build();
+
+            if (q.getOptions() != null) {
+                List<QuestionOption> clonedOptions = new ArrayList<>();
+                for (QuestionOption opt : q.getOptions()) {
+                    clonedOptions.add(QuestionOption.builder()
+                            .readingQuestion(clonedQ)
+                            .label(opt.getLabel())
+                            .content(opt.getContent())
+                            .isCorrect(opt.getIsCorrect())
+                            .orderIndex(opt.getOrderIndex())
+                            .build());
+                }
+                clonedQ.setOptions(clonedOptions);
+            }
+            clonedQuestions.add(clonedQ);
+        }
+        fallbackQuiz.setQuestions(clonedQuestions);
+
+        ReadingQuiz saved = quizRepository.save(fallbackQuiz);
+        return readingQueryService.mapToQuizResponse(saved);
     }
 
     // =========================================================================
