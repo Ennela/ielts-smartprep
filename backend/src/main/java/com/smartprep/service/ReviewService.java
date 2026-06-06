@@ -126,6 +126,9 @@ public class ReviewService {
                 .isCorrect(answer.getIsCorrect())
                 .explanation(answer.getExplanation())
                 .optionsJson(answer.getOptionsJson())
+                .evidenceText(answer.getEvidenceText())
+                .evidenceOffset(answer.getEvidenceOffset())
+                .evidenceLength(answer.getEvidenceLength())
                 .build();
     }
 }

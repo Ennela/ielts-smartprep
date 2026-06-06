@@ -79,6 +79,7 @@ public class ReadingPromptBuilder {
             - MUST label paragraphs: A, B, C, D, E... (each paragraph starts with its letter label followed by a period and a space).
               Example: "A. The first paragraph text...\\n\\nB. The second paragraph text..."
             - 5-6 paragraphs.
+            - EVIDENCE MARKER INSTRUCTION: In the generated `passage` string, you MUST wrap the exact sentence or phrase that provides the evidence for each question's answer in `[ANS_X]...[/ANS_X]` tags, where X is the sequential question number (from 1 to 13). Every question from 1 to 13 MUST have its evidence segment wrapped in `[ANS_X]...[/ANS_X]` in the passage.
 
             QUESTION REQUIREMENTS:
             - Generate exactly 13 questions total.
@@ -166,6 +167,7 @@ public class ReadingPromptBuilder {
             - Content: analytical and argumentative. Multiple viewpoints or cause-effect relationships.
             - MUST label paragraphs: A, B, C, D, E, F... (each paragraph starts with its letter label).
             - 6-7 paragraphs.
+            - EVIDENCE MARKER INSTRUCTION: In the generated `passage` string, you MUST wrap the exact sentence or phrase that provides the evidence for each question's answer in `[ANS_X]...[/ANS_X]` tags, where X is the sequential question number (from 1 to 13). Every question from 1 to 13 MUST have its evidence segment wrapped in `[ANS_X]...[/ANS_X]` in the passage.
 
             QUESTION REQUIREMENTS:
             - Generate exactly 13 questions total.
@@ -285,6 +287,7 @@ public class ReadingPromptBuilder {
             - Content: critically analytical. Nuanced arguments, counterarguments, evidence-based reasoning.
             - MUST label paragraphs: A, B, C, D, E, F, G... (each paragraph starts with its letter label).
             - 7-8 paragraphs.
+            - EVIDENCE MARKER INSTRUCTION: In the generated `passage` string, you MUST wrap the exact sentence or phrase that provides the evidence for each question's answer in `[ANS_X]...[/ANS_X]` tags, where X is the sequential question number (from 1 to 13). Every question from 1 to 13 MUST have its evidence segment wrapped in `[ANS_X]...[/ANS_X]` in the passage.
 
             QUESTION REQUIREMENTS:
             - Generate exactly 13 questions total.

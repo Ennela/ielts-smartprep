@@ -140,6 +140,9 @@ public class ReadingQueryService {
                         .groupLabel(q.getGroupLabel())
                         .groupId(q.getGroupId())
                         .groupContext(q.getGroupContext())
+                        .evidenceText(q.getEvidenceText())
+                        .evidenceOffset(q.getEvidenceOffset())
+                        .evidenceLength(q.getEvidenceLength())
                         .build())
                 .collect(Collectors.toList());
 

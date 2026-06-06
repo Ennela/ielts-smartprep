@@ -58,22 +58,49 @@ public class ReadingGenerationService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         Topic topic = ReadingQueryService.parseEnum(Topic.class, request.getTopic(), "Invalid topic");
-        Difficulty difficulty;
-        String focusQuestionType = null;
+        int passageCount = request.getPassageCount() != null ? request.getPassageCount() : 1;
 
-        if ("ADAPTIVE".equalsIgnoreCase(request.getDifficulty())) {
-            AdaptiveService.AdaptiveConfig adaptiveConfig = adaptiveService.suggestNextConfig(userId, SkillType.READING);
-            difficulty = Difficulty.valueOf(adaptiveConfig.nextDifficulty);
-            focusQuestionType = adaptiveConfig.focusQuestionType;
-            log.info("Adaptive Reading config: difficulty={}, focusQuestion={}", difficulty, focusQuestionType);
+        if (passageCount == 3) {
+            List<ReadingQuiz> quizzes = new ArrayList<>();
+            quizzes.add(generateSingleQuizEntity(user, topic, Difficulty.PASSAGE_1, null));
+            quizzes.add(generateSingleQuizEntity(user, topic, Difficulty.PASSAGE_2, null));
+            quizzes.add(generateSingleQuizEntity(user, topic, Difficulty.PASSAGE_3, null));
+
+            List<Long> quizIds = quizzes.stream()
+                    .map(ReadingQuiz::getQuizId)
+                    .filter(java.util.Objects::nonNull)
+                    .collect(Collectors.toList());
+            ReadingQuizResponse response = readingQueryService.mapToQuizResponse(quizzes.get(0));
+            response.setQuizIds(quizIds);
+            return response;
         } else {
-            difficulty = ReadingQueryService.parseEnum(Difficulty.class, request.getDifficulty(), "Invalid difficulty");
-        }
+            Difficulty difficulty;
+            String focusQuestionType = null;
 
+            if ("ADAPTIVE".equalsIgnoreCase(request.getDifficulty())) {
+                AdaptiveService.AdaptiveConfig adaptiveConfig = adaptiveService.suggestNextConfig(userId, SkillType.READING);
+                difficulty = Difficulty.valueOf(adaptiveConfig.nextDifficulty);
+                focusQuestionType = adaptiveConfig.focusQuestionType;
+                log.info("Adaptive Reading config: difficulty={}, focusQuestion={}", difficulty, focusQuestionType);
+            } else {
+                difficulty = ReadingQueryService.parseEnum(Difficulty.class, request.getDifficulty(), "Invalid difficulty");
+            }
+
+            ReadingQuiz quiz = generateSingleQuizEntity(user, topic, difficulty, focusQuestionType);
+            ReadingQuizResponse response = readingQueryService.mapToQuizResponse(quiz);
+            List<Long> quizIds = new ArrayList<>();
+            if (quiz.getQuizId() != null) {
+                quizIds.add(quiz.getQuizId());
+            }
+            response.setQuizIds(quizIds);
+            return response;
+        }
+    }
+
+    private ReadingQuiz generateSingleQuizEntity(User user, Topic topic, Difficulty difficulty, String focusQuestionType) {
         String systemPrompt = promptBuilder.buildSystemPrompt(difficulty);
         String userPrompt = promptBuilder.buildUserPrompt(topic, difficulty, focusQuestionType);
 
-        // Cache lookup/populating
         String skillType = "READING";
         String questionTypesKey = focusQuestionType != null ? focusQuestionType : "ALL";
         String cacheKey = String.format("%s:%s:%s:%s:%s", skillType, topic.name(), difficulty.name(), questionTypesKey, PROMPT_VERSION);
@@ -105,7 +132,7 @@ public class ReadingGenerationService {
                     }
                 }
             } catch (Exception ex) {
-                return handleFallback(user, topic, difficulty, ex);
+                return handleFallbackQuiz(user, topic, difficulty, ex);
             }
         }
 
@@ -134,15 +161,14 @@ public class ReadingGenerationService {
                     }
                 }
             } catch (Exception ex) {
-                return handleFallback(user, topic, difficulty, ex);
+                return handleFallbackQuiz(user, topic, difficulty, ex);
             }
         }
 
-        quiz = quizRepository.save(quiz);
-        return readingQueryService.mapToQuizResponse(quiz);
+        return quizRepository.save(quiz);
     }
 
-    private ReadingQuizResponse handleFallback(User user, Topic topic, Difficulty difficulty, Exception originalException) {
+    private ReadingQuiz handleFallbackQuiz(User user, Topic topic, Difficulty difficulty, Exception originalException) {
         log.warn("Gemini generation failed or quota exceeded. Falling back to pre-generated content for topic: {} and difficulty: {}", topic, difficulty);
 
         List<ReadingQuiz> templates = quizRepository.findQuizzesForAdmin(topic, difficulty, null, org.springframework.data.domain.PageRequest.of(0, 10)).getContent();
@@ -174,6 +200,7 @@ public class ReadingGenerationService {
                 .timeLimitSeconds(selected.getTimeLimitSeconds() != null ? selected.getTimeLimitSeconds() : TIME_LIMITS.get(selected.getDifficulty()))
                 .totalQuestions(selected.getTotalQuestions())
                 .isTemplate(false)
+                .parentTemplateId(selected.getQuizId())
                 .build();
 
         List<ReadingQuestion> clonedQuestions = new ArrayList<>();
@@ -190,6 +217,9 @@ public class ReadingGenerationService {
                     .groupContext(q.getGroupContext())
                     .wordLimit(q.getWordLimit())
                     .optionsJson(q.getOptionsJson())
+                    .evidenceText(q.getEvidenceText())
+                    .evidenceOffset(q.getEvidenceOffset())
+                    .evidenceLength(q.getEvidenceLength())
                     .build();
 
             if (q.getOptions() != null) {
@@ -209,8 +239,7 @@ public class ReadingGenerationService {
         }
         fallbackQuiz.setQuestions(clonedQuestions);
 
-        ReadingQuiz saved = quizRepository.save(fallbackQuiz);
-        return readingQueryService.mapToQuizResponse(saved);
+        return quizRepository.save(fallbackQuiz);
     }
 
     // =========================================================================
@@ -225,6 +254,8 @@ public class ReadingGenerationService {
                 throw new InvalidAiResponseException("AI response missing 'passage' field");
             }
 
+            PassageEvidenceParser.CleanedPassageResult parsedPassage = PassageEvidenceParser.parse(passage);
+
             JsonNode groupsNode = root.path("questionGroups");
             if (!groupsNode.isArray() || groupsNode.isEmpty()) {
                 return parseLegacyFormat(root, user, topic, difficulty, passage);
@@ -232,7 +263,7 @@ public class ReadingGenerationService {
 
             ReadingQuiz quiz = ReadingQuiz.builder()
                     .user(user).topic(topic).difficulty(difficulty)
-                    .passageText(passage).timeLimitSeconds(TIME_LIMITS.get(difficulty))
+                    .passageText(parsedPassage.cleanedPassage).timeLimitSeconds(TIME_LIMITS.get(difficulty))
                     .build();
 
             List<ReadingQuestion> questions = new ArrayList<>();
@@ -258,16 +289,39 @@ public class ReadingGenerationService {
                 if (!questionsNode.isArray()) continue;
 
                 for (JsonNode qNode : questionsNode) {
+                    int currentQNum = orderIndex++;
                     String rawCorrectAnswer = qNode.path("correctAnswer").asText("").trim();
                     String normalizedAnswer = normalizeCorrectAnswer(rawCorrectAnswer, qType);
+
+                    // Extract evidence text and position
+                    String evidenceText = null;
+                    Integer evidenceOffset = null;
+                    Integer evidenceLength = null;
+                    for (PassageEvidenceParser.EvidenceInfo ev : parsedPassage.evidences) {
+                        if (ev.questionNo == currentQNum) {
+                            evidenceText = ev.text;
+                            evidenceOffset = ev.offset;
+                            evidenceLength = ev.length;
+                            break;
+                        }
+                    }
+
+                    // Strip any tags from explanations
+                    String rawExplanation = qNode.path("explanation").asText("");
+                    String cleanedExplanation = rawExplanation
+                            .replaceAll("\\[ANS_\\d+\\]", "")
+                            .replaceAll("\\[/ANS_\\d+\\]", "");
 
                     ReadingQuestion question = ReadingQuestion.builder()
                             .quiz(quiz).questionType(qType)
                             .questionText(qNode.path("questionText").asText(""))
                             .correctAnswer(normalizedAnswer)
-                            .explanation(qNode.path("explanation").asText(""))
-                            .orderIndex(orderIndex++).groupLabel(groupLabel)
+                            .explanation(cleanedExplanation)
+                            .orderIndex(currentQNum).groupLabel(groupLabel)
                             .groupId(groupIdCounter).groupContext(groupContext).wordLimit(wordLimit)
+                            .evidenceText(evidenceText)
+                            .evidenceOffset(evidenceOffset)
+                            .evidenceLength(evidenceLength)
                             .build();
 
                     List<QuestionOption> options = new ArrayList<>();
@@ -320,9 +374,11 @@ public class ReadingGenerationService {
             throw new InvalidAiResponseException("AI response missing both 'questionGroups' and 'questions'");
         }
 
+        PassageEvidenceParser.CleanedPassageResult parsedPassage = PassageEvidenceParser.parse(passage);
+
         ReadingQuiz quiz = ReadingQuiz.builder()
                 .user(user).topic(topic).difficulty(difficulty)
-                .passageText(passage).timeLimitSeconds(TIME_LIMITS.get(difficulty))
+                .passageText(parsedPassage.cleanedPassage).timeLimitSeconds(TIME_LIMITS.get(difficulty))
                 .totalQuestions(questionsNode.size())
                 .build();
 
@@ -333,12 +389,33 @@ public class ReadingGenerationService {
             QuestionType qType = parseQuestionType(qNode.path("type").asText());
             String normalizedCorrectAnswer = normalizeCorrectAnswer(rawCorrectAnswer, qType);
 
+            int currentQNum = i + 1;
+            String evidenceText = null;
+            Integer evidenceOffset = null;
+            Integer evidenceLength = null;
+            for (PassageEvidenceParser.EvidenceInfo ev : parsedPassage.evidences) {
+                if (ev.questionNo == currentQNum) {
+                    evidenceText = ev.text;
+                    evidenceOffset = ev.offset;
+                    evidenceLength = ev.length;
+                    break;
+                }
+            }
+
+            String rawExplanation = qNode.path("explanation").asText("");
+            String cleanedExplanation = rawExplanation
+                    .replaceAll("\\[ANS_\\d+\\]", "")
+                    .replaceAll("\\[/ANS_\\d+\\]", "");
+
             ReadingQuestion question = ReadingQuestion.builder()
                     .quiz(quiz).questionType(qType)
                     .questionText(qNode.path("questionText").asText())
                     .correctAnswer(normalizedCorrectAnswer)
-                    .explanation(qNode.path("explanation").asText())
-                    .orderIndex(i + 1).build();
+                    .explanation(cleanedExplanation)
+                    .evidenceText(evidenceText)
+                    .evidenceOffset(evidenceOffset)
+                    .evidenceLength(evidenceLength)
+                    .orderIndex(currentQNum).build();
 
             List<QuestionOption> options = new ArrayList<>();
             JsonNode optionsNode = qNode.path("options");
@@ -448,5 +525,62 @@ public class ReadingGenerationService {
     private String stripOptionPrefix(String optionText) {
         if (optionText == null) return null;
         return optionText.replaceFirst("^\\s*[A-Da-d]\\s*[.):]+\\s*", "").trim();
+    }
+
+    // =========================================================================
+    // Evidence Tag Parser Utility
+    // =========================================================================
+    public static class PassageEvidenceParser {
+        public static class CleanedPassageResult {
+            public String cleanedPassage;
+            public List<EvidenceInfo> evidences = new java.util.ArrayList<>();
+        }
+
+        public static class EvidenceInfo {
+            public int questionNo;
+            public String text;
+            public int offset;
+            public int length;
+        }
+
+        public static CleanedPassageResult parse(String rawPassage) {
+            CleanedPassageResult result = new CleanedPassageResult();
+            StringBuilder sb = new StringBuilder();
+            
+            java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\[ANS_(\\d+)\\](.*?)\\[/ANS_\\1\\]", java.util.regex.Pattern.DOTALL | java.util.regex.Pattern.CASE_INSENSITIVE);
+            java.util.regex.Matcher matcher = pattern.matcher(rawPassage);
+            
+            int lastEnd = 0;
+            while (matcher.find()) {
+                int start = matcher.start();
+                int end = matcher.end();
+                int qNum = Integer.parseInt(matcher.group(1));
+                String evidenceText = matcher.group(2);
+                
+                sb.append(rawPassage, lastEnd, start);
+                int cleanOffset = sb.length();
+                sb.append(evidenceText);
+                int cleanLength = evidenceText.length();
+                
+                EvidenceInfo info = new EvidenceInfo();
+                info.questionNo = qNum;
+                info.text = evidenceText;
+                info.offset = cleanOffset;
+                info.length = cleanLength;
+                result.evidences.add(info);
+                
+                lastEnd = end;
+            }
+            sb.append(rawPassage, lastEnd, rawPassage.length());
+            
+            result.cleanedPassage = sb.toString();
+            
+            // Clean any remaining tags just in case
+            result.cleanedPassage = result.cleanedPassage
+                    .replaceAll("\\[ANS_\\d+\\]", "")
+                    .replaceAll("\\[/ANS_\\d+\\]", "");
+                    
+            return result;
+        }
     }
 }

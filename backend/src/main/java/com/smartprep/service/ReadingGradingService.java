@@ -172,6 +172,10 @@ public class ReadingGradingService {
                 .questionType(question.getQuestionType().name())
                 .userAnswer(userAnswerText).correctAnswer(question.getCorrectAnswer())
                 .isCorrect(correct).explanation(question.getExplanation())
-                .optionsJson(optionsSnapshot).build();
+                .optionsJson(optionsSnapshot)
+                .evidenceText(question.getEvidenceText())
+                .evidenceOffset(question.getEvidenceOffset())
+                .evidenceLength(question.getEvidenceLength())
+                .build();
     }
 }
