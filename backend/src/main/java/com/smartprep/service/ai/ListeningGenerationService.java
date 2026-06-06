@@ -32,12 +32,14 @@ import java.util.Map;
 @Slf4j
 public class ListeningGenerationService {
 
+    public static final String PROMPT_VERSION = "v1.0";
+
     private final ListeningPartRepository partRepository;
     private final UserRepository userRepository;
     private final GeminiClient geminiClient;
     private final ListeningPromptBuilder promptBuilder;
     private final ObjectMapper objectMapper;
-    private final org.springframework.cache.CacheManager cacheManager;
+    private final org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
     private final AdaptiveService adaptiveService;
     private final TtsService ttsService;
     private final AudioGenerationService audioGenerationService;
@@ -75,22 +77,39 @@ public class ListeningGenerationService {
         String systemPrompt = "You are a professional IELTS Listening test designer with 15 years of experience.";
         String userPrompt = promptBuilder.buildGeneratePrompt(partNumber, topic, focusQuestionType);
 
-        String cacheKey = partNumber + "-" + (topic != null ? topic.toUpperCase() : "GENERAL")
-                + (focusQuestionType != null ? "-" + focusQuestionType : "");
-        org.springframework.cache.Cache cache = cacheManager.getCache("listeningAiResponse");
+        String skillType = "LISTENING";
+        String questionTypesKey = focusQuestionType != null ? focusQuestionType : "ALL";
+        String topicKey = topic != null ? topic.toUpperCase() : "GENERAL";
+        String cacheKey = String.format("%s:%s:PART_%d:%s:%s", skillType, topicKey, partNumber, questionTypesKey, PROMPT_VERSION);
+
         String cachedResponse = null;
-        if (cache != null) {
-            cachedResponse = cache.get(cacheKey, String.class);
+        if (redisTemplate != null) {
+            try {
+                cachedResponse = redisTemplate.opsForValue().get(cacheKey);
+            } catch (Exception e) {
+                log.warn("Failed to retrieve cache from Redis: {}", e.getMessage());
+            }
         }
 
-        final String aiResponseText;
+        String aiResponseText = null;
+        boolean fromCache = false;
+
         if (cachedResponse != null) {
             aiResponseText = cachedResponse;
+            fromCache = true;
             log.info("Cached listening part content found in Redis for key: {}", cacheKey);
         } else {
-            aiResponseText = geminiClient.generate(systemPrompt, userPrompt);
-            if (cache != null && aiResponseText != null) {
-                cache.put(cacheKey, aiResponseText);
+            try {
+                aiResponseText = geminiClient.generate(systemPrompt, userPrompt);
+                if (redisTemplate != null && aiResponseText != null) {
+                    try {
+                        redisTemplate.opsForValue().set(cacheKey, aiResponseText, java.time.Duration.ofHours(24));
+                    } catch (Exception e) {
+                        log.warn("Failed to write to Redis cache: {}", e.getMessage());
+                    }
+                }
+            } catch (Exception ex) {
+                return handleFallback(partNumber, topic, ex);
             }
         }
 
@@ -99,12 +118,28 @@ public class ListeningGenerationService {
             part = parseListeningPart(aiResponseText, partNumber, topic);
             validateListeningPart(part);
         } catch (Exception e) {
-            if (cache != null && cachedResponse != null) cache.evict(cacheKey);
             log.warn("Parsing of AI response failed. Retrying fresh generation.", e);
-            String freshResponse = geminiClient.generate(systemPrompt, userPrompt);
-            part = parseListeningPart(freshResponse, partNumber, topic);
-            validateListeningPart(part);
-            if (cache != null && freshResponse != null) cache.put(cacheKey, freshResponse);
+            if (fromCache && redisTemplate != null) {
+                try {
+                    redisTemplate.delete(cacheKey);
+                } catch (Exception dEx) {
+                    log.warn("Failed to delete Redis cache key: {}", dEx.getMessage());
+                }
+            }
+            try {
+                String freshResponse = geminiClient.generate(systemPrompt, userPrompt);
+                part = parseListeningPart(freshResponse, partNumber, topic);
+                validateListeningPart(part);
+                if (redisTemplate != null && freshResponse != null) {
+                    try {
+                        redisTemplate.opsForValue().set(cacheKey, freshResponse, java.time.Duration.ofHours(24));
+                    } catch (Exception wEx) {
+                        log.warn("Failed to write to Redis cache: {}", wEx.getMessage());
+                    }
+                }
+            } catch (Exception ex) {
+                return handleFallback(partNumber, topic, ex);
+            }
         }
 
         ListeningPart saved = partRepository.save(part);
@@ -114,6 +149,40 @@ public class ListeningGenerationService {
             log.info("TTS unavailable, part {} will use silent fallback", saved.getPartId());
         }
         return listeningQueryService.toPartResponse(saved);
+    }
+
+    private ListeningPartResponse handleFallback(int partNumber, String topic, Exception originalException) {
+        log.warn("Gemini generation failed or quota exceeded. Falling back to pre-generated ListeningPart for partNumber: {} and topic: {}", partNumber, topic);
+
+        List<ListeningPart> existingParts = partRepository.findByPartNumberOrderByPartIdAsc(partNumber);
+
+        if (existingParts.isEmpty()) {
+            existingParts = partRepository.findAllByOrderByPartNumberAscPartIdAsc();
+        }
+
+        if (existingParts.isEmpty()) {
+            log.error("No fallback listening parts found in the database. Failing request.");
+            if (originalException instanceof RuntimeException) {
+                throw (RuntimeException) originalException;
+            }
+            throw new RuntimeException("AI Content generation failed and no fallback content was available in the system.", originalException);
+        }
+
+        ListeningPart selected = null;
+        if (topic != null && !topic.isBlank()) {
+            String cleanTopic = topic.toLowerCase();
+            selected = existingParts.stream()
+                    .filter(p -> p.getTopic() != null && p.getTopic().toLowerCase().contains(cleanTopic))
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        if (selected == null) {
+            selected = existingParts.get(new java.util.Random().nextInt(existingParts.size()));
+        }
+
+        log.info("Selected fallback ListeningPart ID: {}", selected.getPartId());
+        return listeningQueryService.toPartResponse(selected);
     }
 
     // ========== AI Post-Analysis ==========

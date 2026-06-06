@@ -20,6 +20,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
 import java.util.Optional;
+import java.util.List;
+import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -37,7 +39,8 @@ class ListeningServiceTest {
     @Mock private ListeningPromptBuilder promptBuilder;
     @Mock private TtsService ttsService;
     @Mock private AudioGenerationService audioGenerationService;
-    @Mock private org.springframework.cache.CacheManager cacheManager;
+    @Mock private org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
+    @Mock private org.springframework.data.redis.core.ValueOperations<String, String> valueOps;
     @Mock private AdaptiveService adaptiveService;
     @Mock private ListeningQueryService listeningQueryService;
 
@@ -52,6 +55,7 @@ class ListeningServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(redisTemplate.opsForValue()).thenReturn(valueOps);
         user = User.builder()
                 .userId(1L)
                 .username("teststudent")
@@ -217,5 +221,123 @@ class ListeningServiceTest {
         listeningAudioService.generateAudioAsync(1L);
 
         verify(audioGenerationService).generateAudioAsync(1L);
+    }
+
+    @Test
+    @DisplayName("should use cached response on Redis cache hit for Listening")
+    void generatePart_cacheHit() {
+        String mockAiResponse = """
+                {
+                  "title": "Cached part title",
+                  "topic": "cached gym membership",
+                  "script": "Dialogue script here",
+                  "questions": [
+                    {
+                      "questionNumber": 1,
+                      "questionType": "MULTIPLE_CHOICE",
+                      "questionText": "What Gym membership is chosen?",
+                      "options": [
+                        { "label": "A", "content": "Gold membership" }
+                      ],
+                      "correctAnswer": "A"
+                    }
+                  ]
+                }
+                """;
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(valueOps.get(anyString())).thenReturn(mockAiResponse);
+        when(ttsService.isAvailable()).thenReturn(false);
+        when(partRepository.save(any(ListeningPart.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(listeningQueryService.toPartResponse(any(ListeningPart.class))).thenAnswer(inv -> {
+            ListeningPart part = inv.getArgument(0);
+            return ListeningPartResponse.builder()
+                    .title(part.getTitle())
+                    .topic(part.getTopic())
+                    .build();
+        });
+
+        ListeningPartResponse response = listeningGenerationService.generatePart(1L, 1, "gym membership");
+
+        assertNotNull(response);
+        assertEquals("Cached part title", response.getTitle());
+        verify(geminiClient, never()).generate(anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("should call Gemini and cache response on Redis cache miss for Listening")
+    void generatePart_cacheMiss() {
+        String mockAiResponse = """
+                {
+                  "title": "Fresh part title",
+                  "topic": "fresh gym membership",
+                  "script": "Dialogue script here",
+                  "questions": [
+                    {
+                      "questionNumber": 1,
+                      "questionType": "MULTIPLE_CHOICE",
+                      "questionText": "What Gym membership is chosen?",
+                      "options": [
+                        { "label": "A", "content": "Gold membership" }
+                      ],
+                      "correctAnswer": "A"
+                    }
+                  ]
+                }
+                """;
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(valueOps.get(anyString())).thenReturn(null);
+        when(promptBuilder.buildGeneratePrompt(anyInt(), anyString(), any())).thenReturn("mock prompt");
+        when(ttsService.isAvailable()).thenReturn(false);
+        when(geminiClient.generate(anyString(), anyString())).thenReturn(mockAiResponse);
+        when(partRepository.save(any(ListeningPart.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(listeningQueryService.toPartResponse(any(ListeningPart.class))).thenAnswer(inv -> {
+            ListeningPart part = inv.getArgument(0);
+            return ListeningPartResponse.builder()
+                    .title(part.getTitle())
+                    .topic(part.getTopic())
+                    .build();
+        });
+
+        ListeningPartResponse response = listeningGenerationService.generatePart(1L, 1, "gym membership");
+
+        assertNotNull(response);
+        assertEquals("Fresh part title", response.getTitle());
+        verify(geminiClient, times(1)).generate(anyString(), anyString());
+        verify(valueOps).set(anyString(), eq(mockAiResponse), any(java.time.Duration.class));
+    }
+
+    @Test
+    @DisplayName("should fall back to pre-generated listening part when Gemini call fails")
+    void generatePart_fallback() {
+        ListeningPart templatePart = ListeningPart.builder()
+                .partId(10L)
+                .partNumber(1)
+                .title("Fallback pre-generated part")
+                .topic("gym membership")
+                .transcriptText("Dialogue script fallback")
+                .questions(new ArrayList<>())
+                .build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(valueOps.get(anyString())).thenReturn(null);
+        when(promptBuilder.buildGeneratePrompt(anyInt(), anyString(), any())).thenReturn("mock prompt");
+        when(geminiClient.generate(anyString(), anyString())).thenThrow(new com.smartprep.exception.AiServiceException("Service unavailable"));
+        
+        when(partRepository.findByPartNumberOrderByPartIdAsc(1))
+                .thenReturn(List.of(templatePart));
+        when(listeningQueryService.toPartResponse(any(ListeningPart.class))).thenAnswer(inv -> {
+            ListeningPart part = inv.getArgument(0);
+            return ListeningPartResponse.builder()
+                    .title(part.getTitle())
+                    .topic(part.getTopic())
+                    .build();
+        });
+
+        ListeningPartResponse response = listeningGenerationService.generatePart(1L, 1, "gym membership");
+
+        assertNotNull(response);
+        assertEquals("Fallback pre-generated part", response.getTitle());
     }
 }
