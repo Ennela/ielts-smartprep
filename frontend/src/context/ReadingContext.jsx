@@ -18,21 +18,41 @@ function readingReducer(state, action) {
       return { ...state, loading: action.payload, error: null };
     case 'SET_ERROR':
       return { ...state, loading: false, error: action.payload };
-    case 'SET_QUIZ':
+    case 'SET_QUIZ': {
+      const quizId = action.payload.quizId;
+      let draftAnswers = {};
+      try {
+        const savedDraft = localStorage.getItem(`reading_quiz_draft_${quizId}`);
+        if (savedDraft) {
+          draftAnswers = JSON.parse(savedDraft);
+        }
+      } catch (e) {
+        console.error("Failed to load draft", e);
+      }
       return {
         ...state,
         quiz: action.payload,
-        answers: {},
+        answers: draftAnswers,
         timeRemaining: action.payload.timeLimitSeconds || 600,
         isSubmitted: action.payload.submitted || false,
         loading: false,
         error: null,
       };
-    case 'SET_ANSWER':
+    }
+    case 'SET_ANSWER': {
+      const newAnswers = { ...state.answers, [action.payload.questionId]: action.payload.answer };
+      if (state.quiz && state.quiz.quizId) {
+        try {
+          localStorage.setItem(`reading_quiz_draft_${state.quiz.quizId}`, JSON.stringify(newAnswers));
+        } catch (e) {
+          console.error("Failed to save draft", e);
+        }
+      }
       return {
         ...state,
-        answers: { ...state.answers, [action.payload.questionId]: action.payload.answer },
+        answers: newAnswers,
       };
+    }
     case 'TICK_TIMER':
       return {
         ...state,
@@ -41,6 +61,13 @@ function readingReducer(state, action) {
     case 'SUBMIT':
       return { ...state, isSubmitted: true, loading: true };
     case 'SET_RESULT':
+      if (state.quiz && state.quiz.quizId) {
+        try {
+          localStorage.removeItem(`reading_quiz_draft_${state.quiz.quizId}`);
+        } catch (e) {
+          console.error("Failed to delete draft", e);
+        }
+      }
       return { ...state, result: action.payload, isSubmitted: true, loading: false };
     case 'RESET':
       return { ...initialState };

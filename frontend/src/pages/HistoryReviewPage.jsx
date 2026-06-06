@@ -307,6 +307,13 @@ function AnswerCard({ answer, onExplain, isExplaining }) {
         </div>
       )}
 
+      {/* Evidence */}
+      {answer.evidenceText && (
+        <div className="rac-evidence" style={{ marginTop: '0.75rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+          <strong>Evidence in Passage:</strong> <span style={{ fontStyle: 'italic', backgroundColor: 'var(--surface-container-highest)', padding: '2px 6px', borderRadius: '4px', borderLeft: '3px solid var(--primary-color)' }}>"{answer.evidenceText}"</span>
+        </div>
+      )}
+
       {/* Explanation */}
       {answer.explanation ? (
         <div className="rac-explanation">

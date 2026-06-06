@@ -37,6 +37,7 @@ export default function ReadingConfigPage() {
   // AI Generate states
   const [topic, setTopic] = useState('ENVIRONMENT');
   const [difficulty, setDifficulty] = useState('PASSAGE_1');
+  const [passageCount, setPassageCount] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -88,9 +89,13 @@ export default function ReadingConfigPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await readingApi.generateQuiz(topic, difficulty);
-      const quizId = res.data.data.quizId;
-      navigate(`/reading/exam/${quizId}`);
+      const res = await readingApi.generateQuiz(topic, difficulty, passageCount);
+      const data = res.data.data;
+      if (data.quizIds && data.quizIds.length > 1) {
+        navigate(`/reading/full-exam?quizIds=${data.quizIds.join(',')}`);
+      } else {
+        navigate(`/reading/exam/${data.quizId}`);
+      }
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to generate quiz. Please try again.');
     } finally {
@@ -223,6 +228,37 @@ export default function ReadingConfigPage() {
                     <p className="diff-desc">{d.desc}</p>
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Exam Mode Selection */}
+            <div className="config-section">
+              <h2>Select Exam Mode</h2>
+              <div className="difficulty-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                <button
+                  type="button"
+                  className={`difficulty-card ${passageCount === 1 ? 'active' : ''}`}
+                  onClick={() => setPassageCount(1)}
+                  id="mode-single"
+                >
+                  <div className="diff-top">
+                    <span className="diff-label">Single Passage</span>
+                    <span className="diff-time">1 Passage</span>
+                  </div>
+                  <p className="diff-desc">Practice with 1 passage (13-14 questions) on your chosen difficulty level.</p>
+                </button>
+                <button
+                  type="button"
+                  className={`difficulty-card ${passageCount === 3 ? 'active' : ''}`}
+                  onClick={() => setPassageCount(3)}
+                  id="mode-full"
+                >
+                  <div className="diff-top">
+                    <span className="diff-label">Full Mock Test</span>
+                    <span className="diff-time">3 Passages</span>
+                  </div>
+                  <p className="diff-desc">Simulate a full IELTS exam with 3 passages (40 questions, 60 minutes timer).</p>
+                </button>
               </div>
             </div>
 

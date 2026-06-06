@@ -32,6 +32,15 @@ export default function ReadingFullExamPage() {
         const responses = await Promise.all(quizIds.map(id => readingApi.getQuiz(id)));
         const data = responses.map(r => r.data.data);
         setQuizzes(data);
+        const quizIdsKey = quizIds.join(',');
+        try {
+          const savedDraft = localStorage.getItem(`reading_full_draft_${quizIdsKey}`);
+          if (savedDraft) {
+            setAnswers(JSON.parse(savedDraft));
+          }
+        } catch (e) {
+          console.error("Failed to load full draft", e);
+        }
       } catch (err) {
         setError('Failed to load full test passages.');
       } finally {
@@ -61,7 +70,17 @@ export default function ReadingFullExamPage() {
   }, [loading, submitting, error, quizzes]);
 
   const handleSetAnswer = useCallback((questionId, answer) => {
-    setAnswers(prev => ({ ...prev, [questionId]: answer }));
+    setAnswers(prev => {
+      const newAnswers = { ...prev, [questionId]: answer };
+      const query = new URLSearchParams(window.location.search);
+      const quizIdsKey = query.get('quizIds') || '';
+      try {
+        localStorage.setItem(`reading_full_draft_${quizIdsKey}`, JSON.stringify(newAnswers));
+      } catch (e) {
+        console.error("Failed to save draft", e);
+      }
+      return newAnswers;
+    });
   }, []);
 
   const handleSubmit = async () => {
@@ -72,6 +91,12 @@ export default function ReadingFullExamPage() {
     try {
       const quizIds = quizzes.map(q => q.quizId);
       const res = await readingApi.submitFullQuiz(quizIds, answers);
+      const quizIdsKey = quizIds.join(',');
+      try {
+        localStorage.removeItem(`reading_full_draft_${quizIdsKey}`);
+      } catch (e) {
+        console.error("Failed to delete draft", e);
+      }
       navigate('/reading/full-result', { state: { result: res.data.data }, replace: true });
     } catch (err) {
       setError(err.response?.data?.message || 'Submission failed');

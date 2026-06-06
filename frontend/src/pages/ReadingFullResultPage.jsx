@@ -1,5 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import analyticsApi from '../api/analyticsApi';
 import AiVocabularyButton from '../components/vocab/AiVocabularyButton';
 
 export default function ReadingFullResultPage() {
@@ -8,6 +9,15 @@ export default function ReadingFullResultPage() {
   const result = location.state?.result;
 
   const [activeTab, setActiveTab] = useState(0); // active passage tab (0, 1, or 2)
+  const [weakness, setWeakness] = useState(null);
+
+  useEffect(() => {
+    if (result) {
+      analyticsApi.getWeakness('READING')
+        .then(res => setWeakness(res.data?.data))
+        .catch(() => {});
+    }
+  }, [result]);
 
   if (!result) {
     return (
@@ -70,6 +80,40 @@ export default function ReadingFullResultPage() {
           </div>
         </div>
 
+        {/* AI Weakness & Recommendation Card */}
+        {weakness && weakness.weakestType && (
+          <div className="ai-weakness-card" style={{
+            background: 'linear-gradient(135deg, var(--surface-container-low) 0%, var(--surface-container-high) 100%)',
+            border: '1px solid var(--outline-variant)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '1.5rem',
+            margin: '1.5rem 0',
+            boxShadow: 'var(--shadow-sm)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', marginBottom: '12px' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 24, color: 'var(--primary)' }}>tips_and_updates</span>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--on-surface)' }}>AI Weakness Analysis</h3>
+            </div>
+            <p style={{ margin: '0 0 12px 0', fontSize: '0.92rem', color: 'var(--on-surface-variant)' }}>
+              Based on your overall reading history, your weakest question type is <strong style={{ color: 'var(--primary)' }}>{weakness.weakestType}</strong> (Accuracy: <strong style={{ color: 'var(--error)' }}>{weakness.weakestAccuracy?.toFixed(1)}%</strong>).
+            </p>
+            {weakness.recommendation && (
+              <div style={{
+                background: 'var(--surface-container-lowest)',
+                borderLeft: '4px solid var(--primary)',
+                padding: '12px 16px',
+                borderRadius: '0 var(--radius-md) var(--radius-md) 0',
+                fontSize: '0.9rem',
+                lineHeight: '1.5',
+                color: 'var(--on-surface-variant)',
+                fontStyle: 'italic'
+              }}>
+                "{weakness.recommendation}"
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Tab selection to view specific passage feedback */}
         <div className="passage-tab-selector" style={{ display: 'flex', gap: '0.5rem', margin: '2rem 0 1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}>
           {result.quizResults.map((qr, idx) => (
@@ -100,18 +144,7 @@ export default function ReadingFullResultPage() {
             <div className="passage-container-column" style={{ background: 'var(--surface-container-low)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', maxHeight: '600px', overflowY: 'auto' }}>
               <h3>Passage Content</h3>
               <div className="result-passage">
-                {activeQuizResult.passageText?.split('\n').filter(p => p.trim()).map((para, idx) => {
-                  const labelMatch = para.match(/^([A-Z])\.\s+(.*)/s);
-                  if (labelMatch) {
-                    return (
-                      <div key={idx} className="passage-paragraph labeled-paragraph" style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
-                        <span className="paragraph-label" style={{ fontWeight: 700, color: 'var(--primary-color)' }}>{labelMatch[1]}</span>
-                        <p style={{ margin: 0 }}>{labelMatch[2]}</p>
-                      </div>
-                    );
-                  }
-                  return <p key={idx} style={{ marginBottom: '1rem' }}>{para}</p>;
-                })}
+                {renderHighlightedPassage(activeQuizResult.passageText, activeQuizResult.questions)}
               </div>
             </div>
 
@@ -283,6 +316,13 @@ function ResultQuestionItem({ q, idx }) {
         </div>
       )}
 
+      {/* Evidence */}
+      {q.evidenceText && (
+        <div className="rq-evidence" style={{ marginTop: '0.75rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+          <strong>Evidence in Passage:</strong> <span style={{ fontStyle: 'italic', backgroundColor: 'var(--surface-container-highest)', padding: '2px 6px', borderRadius: '4px', borderLeft: '3px solid var(--primary-color)' }}>"{q.evidenceText}"</span>
+        </div>
+      )}
+
       {/* Explanation */}
       {q.explanation && (
         <div className="rq-explanation" style={{ marginTop: '1rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)', fontSize: '0.875rem', whiteSpace: 'pre-line' }}>
@@ -409,4 +449,152 @@ function renderExplanationText(text) {
   }
 
   return parts;
+}
+
+function renderHighlightedPassage(passageText, questions) {
+  if (!passageText) return null;
+  if (!questions || questions.length === 0) {
+    return passageText.split('\n').filter(p => p.trim()).map((para, idx) => <p key={idx}>{para}</p>);
+  }
+
+  const highlights = questions
+    .filter(q => q.evidenceOffset !== null && q.evidenceLength > 0)
+    .map(q => ({
+      start: q.evidenceOffset,
+      end: q.evidenceOffset + q.evidenceLength,
+      text: q.evidenceText,
+      qNum: q.orderIndex,
+      correct: q.correct
+    }))
+    .sort((a, b) => a.start - b.start);
+
+  const parts = [];
+  let lastIndex = 0;
+
+  for (const hl of highlights) {
+    if (hl.start < lastIndex || hl.start >= passageText.length || hl.end > passageText.length) {
+      continue;
+    }
+
+    if (hl.start > lastIndex) {
+      parts.push(passageText.substring(lastIndex, hl.start));
+    }
+
+    parts.push({
+      type: 'highlight',
+      text: passageText.substring(hl.start, hl.end),
+      qNum: hl.qNum,
+      correct: hl.correct,
+      key: `hl-${hl.qNum}-${hl.start}`
+    });
+
+    lastIndex = hl.end;
+  }
+
+  if (lastIndex < passageText.length) {
+    parts.push(passageText.substring(lastIndex));
+  }
+
+  const paragraphs = [];
+  let currentParagraph = [];
+
+  for (const part of parts) {
+    if (typeof part === 'string') {
+      const splitText = part.split('\n');
+      for (let i = 0; i < splitText.length; i++) {
+        if (i > 0) {
+          paragraphs.push(currentParagraph);
+          currentParagraph = [];
+        }
+        if (splitText[i]) {
+          currentParagraph.push(splitText[i]);
+        }
+      }
+    } else {
+      if (part.text.includes('\n')) {
+        const splitText = part.text.split('\n');
+        for (let i = 0; i < splitText.length; i++) {
+          if (i > 0) {
+            paragraphs.push(currentParagraph);
+            currentParagraph = [];
+          }
+          if (splitText[i]) {
+            currentParagraph.push({
+              ...part,
+              text: splitText[i]
+            });
+          }
+        }
+      } else {
+        currentParagraph.push(part);
+      }
+    }
+  }
+  if (currentParagraph.length > 0) {
+    paragraphs.push(currentParagraph);
+  }
+
+  return paragraphs.map((paraContent, idx) => {
+    let isLabeled = false;
+    let label = '';
+    
+    if (paraContent.length > 0 && typeof paraContent[0] === 'string') {
+      const labelMatch = paraContent[0].match(/^([A-Z])\.\s+(.*)/s);
+      if (labelMatch) {
+        isLabeled = true;
+        label = labelMatch[1];
+        paraContent[0] = labelMatch[2];
+      }
+    }
+
+    const contentElements = paraContent.map((item, itemIdx) => {
+      if (typeof item === 'string') {
+        return <span key={itemIdx}>{item}</span>;
+      }
+      return (
+        <span
+          key={item.key || itemIdx}
+          className={`passage-evidence-highlight ${item.correct ? 'correct' : 'incorrect'}`}
+          style={{
+            backgroundColor: item.correct ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+            borderBottom: item.correct ? '2px solid var(--success)' : '2px solid var(--error)',
+            padding: '0.1rem 0.2rem',
+            borderRadius: '2px',
+            fontWeight: '550',
+            display: 'inline',
+            cursor: 'help'
+          }}
+          title={`Evidence for Question ${item.qNum}`}
+        >
+          {item.text}
+          <sub
+            style={{
+              fontSize: '0.7rem',
+              color: item.correct ? 'var(--success)' : 'var(--error)',
+              marginLeft: '2px',
+              fontWeight: 'bold',
+              verticalAlign: 'sub'
+            }}
+          >
+            Q{item.qNum}
+          </sub>
+        </span>
+      );
+    });
+
+    if (isLabeled) {
+      return (
+        <div key={idx} className="passage-paragraph labeled-paragraph" style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+          <span className="paragraph-label" style={{ fontWeight: 700, color: 'var(--primary-color)' }}>{label}</span>
+          <p style={{ margin: 0 }}>{contentElements}</p>
+        </div>
+      );
+    }
+
+    return (
+      <p key={idx} className="passage-paragraph" style={{ marginBottom: '1rem' }}>
+        {contentElements}
+      </p>
+    );
+  });
 }

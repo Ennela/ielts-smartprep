@@ -10,8 +10,8 @@ interface GetTemplatesParams {
 }
 
 const readingApi = {
-    generateQuiz: (topic: string, difficulty: string): Promise<AxiosResponse<ApiResponse<Quiz>>> =>
-        axiosClient.post('/reading/generate', { topic, difficulty }),
+    generateQuiz: (topic: string, difficulty: string, passageCount?: number): Promise<AxiosResponse<ApiResponse<Quiz>>> =>
+        axiosClient.post('/reading/generate', { topic, difficulty, passageCount }),
 
     getQuiz: (quizId: number | string): Promise<AxiosResponse<ApiResponse<Quiz>>> =>
         axiosClient.get(`/reading/${quizId}`),
