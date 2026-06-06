@@ -63,6 +63,7 @@ app:
     capacity: 10
     refill-tokens: 10
     refill-duration-minutes: 1
+    daily-capacity: 50
   security:
     max-login-attempts: 5
     lockout-duration-minutes: 15
