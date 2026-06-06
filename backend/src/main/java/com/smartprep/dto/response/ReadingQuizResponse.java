@@ -22,6 +22,7 @@ public class ReadingQuizResponse {
     private boolean submitted;
     private LocalDateTime createdAt;
     private List<QuestionDto> questions;
+    private List<Long> quizIds;
 
     @Data
     @Builder

@@ -44,5 +44,9 @@ public class ReadingResultResponse {
         private String groupLabel;
         private Integer groupId;
         private String groupContext;
+
+        private String evidenceText;
+        private Integer evidenceOffset;
+        private Integer evidenceLength;
     }
 }

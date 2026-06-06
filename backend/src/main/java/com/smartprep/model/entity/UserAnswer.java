@@ -38,4 +38,11 @@ public class UserAnswer {
 
     @Column(columnDefinition = "TEXT")
     private String optionsJson;
+
+    @Column(columnDefinition = "TEXT")
+    private String evidenceText;
+
+    private Integer evidenceOffset;
+
+    private Integer evidenceLength;
 }

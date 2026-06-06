@@ -14,4 +14,7 @@ public class UserAnswerResponse {
     private Boolean isCorrect;
     private String explanation;
     private String optionsJson;
+    private String evidenceText;
+    private Integer evidenceOffset;
+    private Integer evidenceLength;
 }

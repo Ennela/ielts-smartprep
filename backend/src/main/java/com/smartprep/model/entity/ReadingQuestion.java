@@ -61,4 +61,11 @@ public class ReadingQuestion {
     /** Shared context for the group, e.g. summary text with blanks */
     @Column(columnDefinition = "TEXT")
     private String groupContext;
+
+    @Column(columnDefinition = "TEXT")
+    private String evidenceText;
+
+    private Integer evidenceOffset;
+
+    private Integer evidenceLength;
 }

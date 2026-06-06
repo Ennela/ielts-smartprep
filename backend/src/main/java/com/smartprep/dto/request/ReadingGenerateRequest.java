@@ -20,4 +20,12 @@ public class ReadingGenerateRequest {
     @NotBlank(message = "Difficulty is required")
     @Size(max = 20, message = "Difficulty must not exceed 20 characters")
     private String difficulty;
+
+    private Integer passageCount;
+
+    public ReadingGenerateRequest(String topic, String difficulty) {
+        this.topic = topic;
+        this.difficulty = difficulty;
+        this.passageCount = 1;
+    }
 }
