@@ -43,7 +43,8 @@ class GeminiClientTest {
                 .retryExceptions(ResourceAccessException.class, AiServiceException.class)
                 .build();
         io.github.resilience4j.retry.RetryRegistry registry = io.github.resilience4j.retry.RetryRegistry.of(config);
-        geminiClient = new GeminiClient(restTemplate, new ObjectMapper(), registry);
+        org.springframework.data.redis.core.StringRedisTemplate redisTemplate = mock(org.springframework.data.redis.core.StringRedisTemplate.class);
+        geminiClient = new GeminiClient(restTemplate, new ObjectMapper(), registry, redisTemplate);
         ReflectionTestUtils.setField(geminiClient, "apiKey", "test-api-key");
         ReflectionTestUtils.setField(geminiClient, "baseUrl", "https://api.example.com/model");
         ReflectionTestUtils.setField(geminiClient, "maxRetries", 2);

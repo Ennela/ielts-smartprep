@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+import org.springframework.data.redis.core.StringRedisTemplate;
 import java.util.List;
 import java.util.Map;
 
@@ -31,6 +32,7 @@ public class GeminiClient {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private final Retry retry;
+    private final StringRedisTemplate redisTemplate;
 
     @Value("${app.gemini.api-key:}")
     private String apiKey;
@@ -43,10 +45,12 @@ public class GeminiClient {
 
     public GeminiClient(@Qualifier("geminiRestTemplate") RestTemplate restTemplate,
                          ObjectMapper objectMapper,
-                         RetryRegistry retryRegistry) {
+                         RetryRegistry retryRegistry,
+                         StringRedisTemplate redisTemplate) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
         this.retry = retryRegistry.retry("gemini");
+        this.redisTemplate = redisTemplate;
     }
 
     /**
@@ -89,7 +93,9 @@ public class GeminiClient {
         try {
             ResponseEntity<String> response = restTemplate.exchange(
                     url, HttpMethod.POST, entity, String.class);
-            return extractTextFromResponse(response.getBody());
+            String responseBody = response.getBody();
+            logAndTrackUsage(responseBody);
+            return extractTextFromResponse(responseBody);
         } catch (ResourceAccessException ex) {
             log.warn("Gemini API timeout/network access error: {}", ex.getMessage());
             throw new AiServiceException("Gemini API timeout or connection failure", ex);
@@ -99,6 +105,39 @@ public class GeminiClient {
                 throw ex;
             }
             throw new AiServiceException("Gemini API error: " + ex.getMessage(), ex);
+        }
+    }
+
+    private void logAndTrackUsage(String responseBody) {
+        if (responseBody == null || responseBody.isBlank()) {
+            return;
+        }
+        try {
+            JsonNode root = objectMapper.readTree(responseBody);
+            JsonNode usage = root.path("usageMetadata");
+            int promptTokens = usage.path("promptTokenCount").asInt(0);
+            int candidatesTokens = usage.path("candidatesTokenCount").asInt(0);
+            int totalTokens = usage.path("totalTokenCount").asInt(0);
+
+            // Log using SLF4J
+            log.info("Gemini API Call: Prompt Tokens = {}, Candidates Tokens = {}, Total Tokens = {}",
+                    promptTokens, candidatesTokens, totalTokens);
+
+            // Track globally in Redis
+            if (redisTemplate != null) {
+                redisTemplate.opsForValue().increment("metrics:gemini:calls");
+                if (promptTokens > 0) {
+                    redisTemplate.opsForValue().increment("metrics:gemini:prompt-tokens", promptTokens);
+                }
+                if (candidatesTokens > 0) {
+                    redisTemplate.opsForValue().increment("metrics:gemini:candidates-tokens", candidatesTokens);
+                }
+                if (totalTokens > 0) {
+                    redisTemplate.opsForValue().increment("metrics:gemini:total-tokens", totalTokens);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to log/track Gemini token usage: {}", e.getMessage());
         }
     }
 
