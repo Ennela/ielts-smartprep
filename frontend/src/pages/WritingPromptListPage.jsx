@@ -90,7 +90,7 @@ export default function WritingPromptListPage() {
         try {
             const res = await writingApi.getPrompts();
             setPrompts(res.data.data || []);
-        } catch (err) {
+        } catch (_err) {
             setError('Failed to load prompts.');
         } finally {
             setLoading(false);

@@ -36,7 +36,7 @@ export default function ReadingFullExamPage() {
       .then(res => {
         sessionStorage.removeItem(SESSION_KEY);
         const quizIdsKey = quizIds.join(',');
-        try { localStorage.removeItem(`reading_full_draft_${quizIdsKey}`); } catch (e) {}
+        try { localStorage.removeItem(`reading_full_draft_${quizIdsKey}`); } catch (_e) { /* ignore */ }
         navigate('/reading/full-result', { state: { result: res.data.data }, replace: true });
       })
       .catch(() => {
@@ -47,7 +47,7 @@ export default function ReadingFullExamPage() {
   }, [quizzes, answers, attemptId, navigate]);
 
   // Server-authoritative timer
-  const { timeLeft, isWarning, isCritical, formattedTime, stopTimer } = useExamTimer({
+  const { timeLeft: _timeLeft, isWarning, isCritical, formattedTime, stopTimer } = useExamTimer({
     deadline,
     onTimeUp: handleAutoSubmit,
     enabled: !loading && !submitting && !error && quizzes.length > 0,
@@ -76,7 +76,7 @@ export default function ReadingFullExamPage() {
         try {
           const savedDraft = localStorage.getItem(`reading_full_draft_${quizIdsKey}`);
           if (savedDraft) setAnswers(JSON.parse(savedDraft));
-        } catch (e) { console.error("Failed to load full draft", e); }
+        } catch (_e) { console.error("Failed to load full draft"); }
 
         // Start or resume server-authoritative attempt
         const storedAttemptId = sessionStorage.getItem(SESSION_KEY);
@@ -91,7 +91,7 @@ export default function ReadingFullExamPage() {
               // Attempt already completed, start fresh
               attempt = null;
             }
-          } catch (e) {
+          } catch (_e) {
             // Attempt not found or expired, start fresh
             attempt = null;
           }
@@ -108,7 +108,7 @@ export default function ReadingFullExamPage() {
         setAttemptId(attempt.attemptId);
         setDeadline(attempt.deadline);
         sessionStorage.setItem(SESSION_KEY, String(attempt.attemptId));
-      } catch (err) {
+      } catch (_err) {
         setError('Failed to load full test passages.');
       } finally {
         setLoading(false);
@@ -125,7 +125,7 @@ export default function ReadingFullExamPage() {
       const quizIdsKey = query.get('quizIds') || '';
       try {
         localStorage.setItem(`reading_full_draft_${quizIdsKey}`, JSON.stringify(newAnswers));
-      } catch (e) { console.error("Failed to save draft", e); }
+      } catch (_e) { console.error("Failed to save draft"); }
       return newAnswers;
     });
   }, []);
@@ -141,7 +141,7 @@ export default function ReadingFullExamPage() {
       const res = await readingApi.submitFullQuiz(quizIds, answers, attemptId, false);
       sessionStorage.removeItem(SESSION_KEY);
       const quizIdsKey = quizIds.join(',');
-      try { localStorage.removeItem(`reading_full_draft_${quizIdsKey}`); } catch (e) {}
+      try { localStorage.removeItem(`reading_full_draft_${quizIdsKey}`); } catch (_e) { /* ignore */ }
       navigate('/reading/full-result', { state: { result: res.data.data }, replace: true });
     } catch (err) {
       setError(err.response?.data?.message || 'Submission failed');

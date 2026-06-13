@@ -79,7 +79,7 @@ export default function WritingFullExamPage() {
   }, [attemptId, task1, task2, navigate]);
 
   // Server-authoritative timer
-  const { timeLeft, isWarning, isCritical, formattedTime, stopTimer, formatTime } = useExamTimer({
+  const { timeLeft: _timeLeft, isWarning, isCritical, formattedTime, stopTimer, formatTime: _formatTime } = useExamTimer({
     deadline,
     onTimeUp: handleAutoSubmit,
     enabled: !loading && !submitting && !error && !!deadline,
@@ -111,7 +111,7 @@ export default function WritingFullExamPage() {
           const d2 = localStorage.getItem(`writing_draft_${t2Id}`);
           if (d1) setTask1Text(d1);
           if (d2) setTask2Text(d2);
-        } catch (e) {}
+        } catch (_e) { /* ignore */ }
 
         // Start or resume attempt
         const storedAttemptId = sessionStorage.getItem(SESSION_KEY);
@@ -122,7 +122,7 @@ export default function WritingFullExamPage() {
             const res = await attemptApi.getAttempt(storedAttemptId);
             attempt = res.data.data;
             if (attempt.status !== 'IN_PROGRESS') attempt = null;
-          } catch (e) { attempt = null; }
+          } catch (_e) { attempt = null; }
         }
 
         if (!attempt) {
@@ -138,7 +138,7 @@ export default function WritingFullExamPage() {
         if (attempt.suggestedTask1Duration) setSuggestedTask1(attempt.suggestedTask1Duration);
         if (attempt.suggestedTask2Duration) setSuggestedTask2(attempt.suggestedTask2Duration);
         sessionStorage.setItem(SESSION_KEY, String(attempt.attemptId));
-      } catch (err) {
+      } catch (_err) {
         setError('Failed to load writing test.');
       } finally {
         setLoading(false);
@@ -151,13 +151,13 @@ export default function WritingFullExamPage() {
   // Save drafts
   useEffect(() => {
     if (task1?.promptId) {
-      try { localStorage.setItem(`writing_draft_${task1.promptId}`, task1Text); } catch (e) {}
+      try { localStorage.setItem(`writing_draft_${task1.promptId}`, task1Text); } catch (_e) { /* ignore */ }
     }
   }, [task1Text, task1?.promptId]);
 
   useEffect(() => {
     if (task2?.promptId) {
-      try { localStorage.setItem(`writing_draft_${task2.promptId}`, task2Text); } catch (e) {}
+      try { localStorage.setItem(`writing_draft_${task2.promptId}`, task2Text); } catch (_e) { /* ignore */ }
     }
   }, [task2Text, task2?.promptId]);
 
@@ -184,7 +184,7 @@ export default function WritingFullExamPage() {
       try {
         localStorage.removeItem(`writing_draft_${task1?.promptId}`);
         localStorage.removeItem(`writing_draft_${task2?.promptId}`);
-      } catch (e) {}
+      } catch (_e) { /* ignore */ }
       navigate('/writing/full-result', { state: { result: res.data.data }, replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || 'Submission failed';

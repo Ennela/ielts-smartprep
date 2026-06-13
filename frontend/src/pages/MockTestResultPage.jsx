@@ -183,7 +183,7 @@ export default function MockTestResultPage() {
   if (activeWritingSub?.errorListJson) {
     try {
       errorsList = JSON.parse(activeWritingSub.errorListJson);
-    } catch (e) {
+    } catch (_e) {
       errorsList = [];
     }
   }
@@ -193,7 +193,7 @@ export default function MockTestResultPage() {
   if (activeWritingSub?.improvementNotesJson) {
     try {
       improvementNotes = JSON.parse(activeWritingSub.improvementNotesJson);
-    } catch (e) {
+    } catch (_e) {
       improvementNotes = [];
     }
   }

@@ -7,7 +7,7 @@ import MockTestQuestionPanel from '../components/mocktest/MockTestQuestionPanel'
 
 export default function MockTestSessionPage() {
   const navigate = useNavigate();
-  const { sessionId } = useParams();
+  const { _sessionId } = useParams();
   const {
     activeSession,
     answers,
@@ -21,7 +21,6 @@ export default function MockTestSessionPage() {
     setAnswer,
     advanceSection,
     submitExam,
-    syncNow
   } = useMockTest();
 
   // Selected sub-tabs within sections
@@ -147,7 +146,7 @@ export default function MockTestSessionPage() {
       if (submission) {
         navigate(`/mock-tests/result/${submission.submissionId}`);
       }
-    } catch (err) {
+    } catch (_err) {
       alert('Failed to submit exam. Please verify connection and retry.');
     } finally {
       setSubmitting(false);

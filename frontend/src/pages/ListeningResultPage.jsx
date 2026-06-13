@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import listeningApi from '../api/listeningApi';
 import AiVocabularyButton from '../components/vocab/AiVocabularyButton';
 
 export default function ListeningResultPage() {
   const { testId } = useParams();
   const location = useLocation();
-  const navigate = useNavigate();
-  const [result, setResult] = useState(location.state || null);
+
+  const [result] = useState(location.state || null);
   const [activeTab, setActiveTab] = useState('answers');
   const [vocabData, setVocabData] = useState(null);
   const [vocabLoading, setVocabLoading] = useState(false);

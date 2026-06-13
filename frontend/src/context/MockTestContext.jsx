@@ -51,7 +51,7 @@ export function MockTestProvider({ children }) {
       const sessionData = res.data.data;
       initializeSession(sessionData);
       return sessionData;
-    } catch (err) {
+    } catch (_err) {
       // It's normal to have no active session
       setLoading(false);
       return null;
@@ -67,7 +67,7 @@ export function MockTestProvider({ children }) {
     if (sessionData.progressJson) {
       try {
         serverAnswers = JSON.parse(sessionData.progressJson);
-      } catch (e) {
+      } catch (_e) {
         serverAnswers = {};
       }
     }
@@ -81,14 +81,14 @@ export function MockTestProvider({ children }) {
         // If backup is newer than lastSyncedAt in sessionData (or if we had changes offline)
         const serverSyncedTime = new Date(sessionData.lastSyncedAt || sessionData.startedAt).getTime();
         if (localBackup.timestamp > serverSyncedTime) {
-          logInfo('Restoring from newer local storage backup.');
+          // Restoring from newer local storage backup
           serverAnswers = { ...serverAnswers, ...localBackup.answers };
           // If local backup has a different time remaining, we can align it (bound by server limit check)
           if (localBackup.timeRemaining < sessionData.timeRemainingSeconds) {
             setTimeRemaining(localBackup.timeRemaining);
           }
         }
-      } catch (e) {
+      } catch (_e) {
         // ignore malformed backup
       }
     }
@@ -97,10 +97,7 @@ export function MockTestProvider({ children }) {
     setLoading(false);
   };
 
-  // Log helpers
-  const logInfo = (msg) => {
-    console.log(`[MockTestContext] ${msg}`);
-  };
+
 
   // Update answer in memory and local storage
   const setAnswer = useCallback((questionId, value) => {
@@ -155,7 +152,7 @@ export function MockTestProvider({ children }) {
 
   // Handle time expiration
   const handleTimeExpired = async () => {
-    logInfo('Time expired for current section.');
+    // Time expired for current section
     if (!sessionRef.current) return;
 
     if (sessionRef.current.currentSection === 'LISTENING' || sessionRef.current.currentSection === 'READING') {

@@ -43,20 +43,16 @@ export default function useWritingTaskTimer({
     prevTaskRef.current = activeTask;
   }, [activeTask, enabled]);
 
-  // Periodic update (every second) for live display
+  // Periodic update (every second) for live display — forces re-render so getLiveTimeSpent recalculates
   useEffect(() => {
     if (!enabled) return;
 
     const interval = setInterval(() => {
-      const now = Date.now();
-      const elapsed = Math.floor((now - taskStartRef.current) / 1000);
-
+      // Force a state update to trigger re-render for live time display
       if (activeTask === 1) {
-        setTask1TimeSpent(prev => {
-          // Only update the "live" portion
-          const base = prev;
-          return base; // Base stays the same, we calculate live below
-        });
+        setTask1TimeSpent(prev => prev);
+      } else {
+        setTask2TimeSpent(prev => prev);
       }
     }, 1000);
 

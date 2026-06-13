@@ -54,7 +54,7 @@ export default function WritingEditorPage() {
   // Attempt / timer state
   const [attemptId, setAttemptId] = useState(null);
   const [deadline, setDeadline] = useState(null);
-  const [suggestedTime, setSuggestedTime] = useState(null); // seconds
+  const [, setSuggestedTime] = useState(null); // seconds
   const submittingRef = useRef(false);
   const essayTextRef = useRef(essayText);
   useEffect(() => { essayTextRef.current = essayText; }, [essayText]);
@@ -87,7 +87,7 @@ export default function WritingEditorPage() {
             const res = await attemptApi.getAttempt(storedAttemptId);
             attempt = res.data.data;
             if (attempt.status !== 'IN_PROGRESS') attempt = null;
-          } catch (e) {
+          } catch (_e) {
             attempt = null;
           }
         }
@@ -162,7 +162,7 @@ export default function WritingEditorPage() {
   }, [attemptId, promptId, isTask1, navigate]);
 
   // ── Server-authoritative countdown timer ──
-  const { timeLeft, isWarning, isCritical, formattedTime, stopTimer } = useExamTimer({
+  const { timeLeft: _timeLeft, isWarning, isCritical, formattedTime, stopTimer } = useExamTimer({
     deadline,
     onTimeUp: handleAutoSubmit,
     enabled: !loading && !grading && !!deadline,

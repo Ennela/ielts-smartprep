@@ -86,7 +86,7 @@ export default function VisualDataRenderer({ visualDataJson, essayType }) {
                     </ResponsiveContainer>
                 );
 
-            case 'TABLE':
+            case 'TABLE': {
                 const tableData = data.data || [];
                 if (tableData.length === 0) return null;
                 const headers = Object.keys(tableData[0]);
@@ -112,6 +112,7 @@ export default function VisualDataRenderer({ visualDataJson, essayType }) {
                         </table>
                     </div>
                 );
+            }
 
             case 'MAP':
                 return (

@@ -54,7 +54,7 @@ const authService = {
         if (refreshToken) {
             try {
                 await axiosClient.post('/auth/logout', { refreshToken });
-            } catch (e) {
+            } catch (_e) {
                 // Ignore errors during logout — token may already be expired
             }
         }

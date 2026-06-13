@@ -35,7 +35,7 @@ export default function VocabularyPage() {
   // Review Session State
   const [reviewIndex, setReviewIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
-  const [reviewCount, setReviewCount] = useState(0);
+  const [, setReviewCount] = useState(0);
 
   useEffect(() => {
     loadVocabulary();

@@ -10,12 +10,6 @@ const TOPICS = [
   { value: 'ENVIRONMENT', label: 'Environment / Nature' },
 ];
 
-const STATUS_LABELS = {
-  READY: 'Ready',
-  PENDING: 'Pending',
-  FAILED: 'Failed',
-};
-
 export default function AdminListeningListPage() {
   const navigate = useNavigate();
   const [partsData, setPartsData] = useState(null);

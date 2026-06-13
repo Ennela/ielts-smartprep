@@ -58,7 +58,7 @@ export default function ListeningExamPage() {
   }, [attemptId, mode, partIds, navigate]);
 
   // Server-authoritative timer (only for mock-test mode)
-  const { timeLeft, isWarning, isCritical, formattedTime, stopTimer } = useExamTimer({
+  const { timeLeft: _timeLeft, isWarning, isCritical, formattedTime, stopTimer } = useExamTimer({
     deadline,
     onTimeUp: handleAutoSubmit,
     enabled: isMockTest && !loading && !polling && !submitting && parts.length > 0,
@@ -150,7 +150,7 @@ export default function ListeningExamPage() {
             const res = await attemptApi.getAttempt(storedAttemptId);
             attempt = res.data.data;
             if (attempt.status !== 'IN_PROGRESS') attempt = null;
-          } catch (e) { attempt = null; }
+          } catch (_e) { attempt = null; }
         }
 
         if (!attempt) {

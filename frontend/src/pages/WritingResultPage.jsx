@@ -40,7 +40,7 @@ export default function WritingResultPage() {
         try {
             const res = await writingApi.getSubmission(submissionId);
             setResult(res.data.data);
-        } catch (err) {
+        } catch (_err) {
             setError('Failed to load result.');
         } finally {
             setLoading(false);

@@ -129,7 +129,7 @@ describe('useExamTimer', () => {
     const onTimeUp = vi.fn();
     const deadline = new Date(now + 1_000).toISOString();
 
-    const { result } = renderHook(() =>
+    const { result: _result } = renderHook(() =>
       useExamTimer({ deadline, onTimeUp, enabled: false })
     );
 
