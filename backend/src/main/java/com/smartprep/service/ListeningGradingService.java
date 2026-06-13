@@ -36,6 +36,7 @@ public class ListeningGradingService {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
     private final ListeningQueryService listeningQueryService;
+    private final ExamAttemptService examAttemptService;
 
     // IELTS Listening band score map (out of 40 questions)
     private static final Map<Integer, BigDecimal> BAND_SCORE_MAP = new LinkedHashMap<>();
@@ -125,9 +126,23 @@ public class ListeningGradingService {
 
         String difficultyStr = parts.size() == 1 ? "PART_" + parts.get(0).getPartNumber() : "FULL_TEST";
 
+        // Complete exam attempt if provided
+        ExamAttempt completedAttempt = null;
+        boolean autoSubmitted = request.getAutoSubmitted() != null && request.getAutoSubmitted();
+        if (request.getAttemptId() != null) {
+            completedAttempt = examAttemptService.completeAttemptInternal(
+                    request.getAttemptId(), userId, autoSubmitted, null, null);
+        }
+
+        Integer timeSpentSeconds = completedAttempt != null ? completedAttempt.getTimeSpentSeconds() : null;
+
         // Save score history with user answers
         ScoreHistory history = ScoreHistory.builder()
-                .user(user).skillType(SkillType.LISTENING).score(bandScore).difficulty(difficultyStr).build();
+                .user(user).skillType(SkillType.LISTENING).score(bandScore)
+                .difficulty(difficultyStr)
+                .timeSpentSeconds(timeSpentSeconds)
+                .autoSubmitted(autoSubmitted)
+                .build();
         List<UserAnswer> userAnswerList = new ArrayList<>();
         int questionNo = 0;
         for (ListeningPart part : parts) {
@@ -156,7 +171,10 @@ public class ListeningGradingService {
         return ListeningTestResponse.builder()
                 .testId(test.getTestId()).testMode(mode.name()).score(bandScore)
                 .totalQuestions(totalQuestions).correctAnswers(correctCount)
-                .submittedAt(test.getSubmittedAt()).parts(partResults).build();
+                .submittedAt(test.getSubmittedAt()).parts(partResults)
+                .timeSpentSeconds(timeSpentSeconds)
+                .autoSubmitted(autoSubmitted)
+                .build();
     }
 
     // =========================================================================

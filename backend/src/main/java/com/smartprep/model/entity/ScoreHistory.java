@@ -30,8 +30,25 @@ public class ScoreHistory {
     @Column(length = 30)
     private String difficulty;
 
+    @Column(nullable = false, length = 30)
+    @Builder.Default
+    private String moduleType = "ACADEMIC";
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime recordedAt;
+
+    /** Total time spent in seconds (all skills) */
+    private Integer timeSpentSeconds;
+
+    /** Writing: time spent on Task 1 in seconds */
+    private Integer timeSpentTask1;
+
+    /** Writing: time spent on Task 2 in seconds */
+    private Integer timeSpentTask2;
+
+    /** True if auto-submitted when time expired */
+    @Builder.Default
+    private Boolean autoSubmitted = false;
 
     @OneToMany(mappedBy = "scoreHistory", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("questionNo ASC")

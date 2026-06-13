@@ -11,6 +11,10 @@ import com.smartprep.service.vocab.VocabAiService;
 import com.smartprep.service.vocab.VocabularyService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -33,9 +37,19 @@ public class VocabularyController {
     }
 
     @GetMapping("/due")
-    public ResponseEntity<ApiResponse<List<VocabResponse>>> getDueVocabulary(
+    public ResponseEntity<ApiResponse<Page<VocabResponse>>> getDueVocabulary(
+            @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("dueDate").ascending());
+        Page<VocabResponse> response = vocabularyService.getDueVocabularies(user.getUserId(), pageable);
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getVocabStats(
             @AuthenticationPrincipal User user) {
-        List<VocabResponse> response = vocabularyService.getDueVocabularies(user.getUserId());
+        Map<String, Object> response = vocabularyService.getVocabStats(user.getUserId());
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
@@ -57,9 +71,10 @@ public class VocabularyController {
 
     @PostMapping("/ai-suggest")
     public ResponseEntity<ApiResponse<List<VocabAiService.SuggestedVocab>>> aiSuggestVocabulary(
+            @AuthenticationPrincipal User user,
             @Valid @RequestBody VocabAiSuggestRequest request) {
         List<VocabAiService.SuggestedVocab> response = vocabularyService.suggestVocabulary(
-                request.getSkillType(), request.getSourceId());
+                user.getUserId(), request.getSkillType(), request.getSourceId());
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 

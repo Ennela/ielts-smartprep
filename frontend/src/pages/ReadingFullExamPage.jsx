@@ -1,22 +1,59 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import readingApi from '../api/readingApi';
+import attemptApi from '../api/attemptApi';
 import { ReadingContext } from '../context/ReadingContext';
 import PassageViewer from '../components/reading/PassageViewer';
 import QuestionPanel from '../components/reading/QuestionPanel';
+import useExamTimer from '../hooks/useExamTimer';
+
+const SESSION_KEY = 'reading_full_attemptId';
 
 export default function ReadingFullExamPage() {
   const navigate = useNavigate();
   const [quizzes, setQuizzes] = useState([]);
   const [activeIdx, setActiveIdx] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [timeLeft, setTimeLeft] = useState(3600); // 60 minutes
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const timerRef = useRef(null);
+  // Server-authoritative attempt state
+  const [attemptId, setAttemptId] = useState(null);
+  const [deadline, setDeadline] = useState(null);
+  const submittingRef = useRef(false);
 
+  // Auto-submit handler
+  const handleAutoSubmit = useCallback(() => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+
+    const quizIds = quizzes.map(q => q.quizId);
+    const storedAttemptId = attemptId || sessionStorage.getItem(SESSION_KEY);
+
+    readingApi.submitFullQuiz(quizIds, answers, storedAttemptId, true)
+      .then(res => {
+        sessionStorage.removeItem(SESSION_KEY);
+        const quizIdsKey = quizIds.join(',');
+        try { localStorage.removeItem(`reading_full_draft_${quizIdsKey}`); } catch (e) {}
+        navigate('/reading/full-result', { state: { result: res.data.data }, replace: true });
+      })
+      .catch(() => {
+        setError('Auto-submit failed. Please try submitting manually.');
+        setSubmitting(false);
+        submittingRef.current = false;
+      });
+  }, [quizzes, answers, attemptId, navigate]);
+
+  // Server-authoritative timer
+  const { timeLeft, isWarning, isCritical, formattedTime, stopTimer } = useExamTimer({
+    deadline,
+    onTimeUp: handleAutoSubmit,
+    enabled: !loading && !submitting && !error && quizzes.length > 0,
+  });
+
+  // Fetch quizzes and start/resume attempt
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
     const quizIds = query.get('quizIds')?.split(',').map(Number) || [];
@@ -27,20 +64,50 @@ export default function ReadingFullExamPage() {
       return;
     }
 
-    const fetchQuizzes = async () => {
+    const init = async () => {
       try {
+        // Fetch quiz data
         const responses = await Promise.all(quizIds.map(id => readingApi.getQuiz(id)));
         const data = responses.map(r => r.data.data);
         setQuizzes(data);
+
+        // Restore draft answers
         const quizIdsKey = quizIds.join(',');
         try {
           const savedDraft = localStorage.getItem(`reading_full_draft_${quizIdsKey}`);
-          if (savedDraft) {
-            setAnswers(JSON.parse(savedDraft));
+          if (savedDraft) setAnswers(JSON.parse(savedDraft));
+        } catch (e) { console.error("Failed to load full draft", e); }
+
+        // Start or resume server-authoritative attempt
+        const storedAttemptId = sessionStorage.getItem(SESSION_KEY);
+        let attempt;
+
+        if (storedAttemptId) {
+          // Try to resume existing attempt
+          try {
+            const res = await attemptApi.getAttempt(storedAttemptId);
+            attempt = res.data.data;
+            if (attempt.status !== 'IN_PROGRESS') {
+              // Attempt already completed, start fresh
+              attempt = null;
+            }
+          } catch (e) {
+            // Attempt not found or expired, start fresh
+            attempt = null;
           }
-        } catch (e) {
-          console.error("Failed to load full draft", e);
         }
+
+        if (!attempt) {
+          const res = await attemptApi.startAttempt({
+            skillType: 'READING',
+            examReferenceIds: JSON.stringify(quizIds),
+          });
+          attempt = res.data.data;
+        }
+
+        setAttemptId(attempt.attemptId);
+        setDeadline(attempt.deadline);
+        sessionStorage.setItem(SESSION_KEY, String(attempt.attemptId));
       } catch (err) {
         setError('Failed to load full test passages.');
       } finally {
@@ -48,26 +115,8 @@ export default function ReadingFullExamPage() {
       }
     };
 
-    fetchQuizzes();
+    init();
   }, []);
-
-  // Tick countdown timer
-  useEffect(() => {
-    if (loading || submitting || error || quizzes.length === 0) return;
-
-    timerRef.current = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current);
-          handleAutoSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timerRef.current);
-  }, [loading, submitting, error, quizzes]);
 
   const handleSetAnswer = useCallback((questionId, answer) => {
     setAnswers(prev => {
@@ -76,42 +125,29 @@ export default function ReadingFullExamPage() {
       const quizIdsKey = query.get('quizIds') || '';
       try {
         localStorage.setItem(`reading_full_draft_${quizIdsKey}`, JSON.stringify(newAnswers));
-      } catch (e) {
-        console.error("Failed to save draft", e);
-      }
+      } catch (e) { console.error("Failed to save draft", e); }
       return newAnswers;
     });
   }, []);
 
   const handleSubmit = async () => {
-    if (submitting) return;
+    if (submitting || submittingRef.current) return;
+    submittingRef.current = true;
     setSubmitting(true);
-    clearInterval(timerRef.current);
+    stopTimer();
 
     try {
       const quizIds = quizzes.map(q => q.quizId);
-      const res = await readingApi.submitFullQuiz(quizIds, answers);
+      const res = await readingApi.submitFullQuiz(quizIds, answers, attemptId, false);
+      sessionStorage.removeItem(SESSION_KEY);
       const quizIdsKey = quizIds.join(',');
-      try {
-        localStorage.removeItem(`reading_full_draft_${quizIdsKey}`);
-      } catch (e) {
-        console.error("Failed to delete draft", e);
-      }
+      try { localStorage.removeItem(`reading_full_draft_${quizIdsKey}`); } catch (e) {}
       navigate('/reading/full-result', { state: { result: res.data.data }, replace: true });
     } catch (err) {
       setError(err.response?.data?.message || 'Submission failed');
       setSubmitting(false);
+      submittingRef.current = false;
     }
-  };
-
-  const handleAutoSubmit = () => {
-    handleSubmit();
-  };
-
-  const formatTime = (seconds) => {
-    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
-    const s = (seconds % 60).toString().padStart(2, '0');
-    return `${m}:${s}`;
   };
 
   if (loading) return <div className="loading-screen"><span className="spinner" style={{ width: 24, height: 24 }} />Loading mock test...</div>;
@@ -134,6 +170,10 @@ export default function ReadingFullExamPage() {
   const activeQuiz = quizzes[activeIdx];
   const totalQuestions = quizzes.reduce((sum, q) => sum + (q.questions?.length || 0), 0);
   const answeredCount = Object.keys(answers).length;
+
+  // Timer color logic
+  const timerColor = isCritical ? 'var(--error)' : isWarning ? 'var(--error)' : 'var(--on-surface)';
+  const timerBg = isCritical ? 'rgba(186,26,26,0.12)' : 'var(--surface-container-high)';
 
   return (
     <div className="reading-exam-page" id="reading-exam-page" style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -163,12 +203,14 @@ export default function ReadingFullExamPage() {
         <div className="exam-topbar-right">
           <div className="exam-timer" style={{
             display: 'flex', alignItems: 'center', gap: 8,
-            padding: '6px 12px', background: 'var(--surface-container-high)',
-            borderRadius: 'var(--radius-md)', color: timeLeft < 300 ? 'var(--error)' : 'var(--on-surface)',
-            fontWeight: 700, fontSize: '1.1rem'
+            padding: '6px 12px', background: timerBg,
+            borderRadius: 'var(--radius-md)', color: timerColor,
+            fontWeight: 700, fontSize: '1.1rem',
+            border: isCritical ? '1px solid var(--error)' : 'none',
+            animation: isCritical ? 'pulse 1s ease-in-out infinite' : 'none',
           }}>
             <span className="material-symbols-outlined" style={{ fontSize: 20 }}>timer</span>
-            {formatTime(timeLeft)}
+            {formattedTime}
           </div>
           <button
             className="btn btn-primary btn-submit-exam"

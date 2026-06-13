@@ -114,6 +114,19 @@ public class ListeningController {
     }
 
     /**
+     * Generate a full Listening Mock Test (4 parts) using AI.
+     * POST /api/v1/listening/generate-mock
+     */
+    @PostMapping("/generate-mock")
+    public ResponseEntity<ApiResponse<List<ListeningPartResponse>>> generateMock(
+            @AuthenticationPrincipal User user,
+            @RequestBody(required = false) ListeningGenerateRequest request) {
+        String topic = request != null ? request.getTopic() : null;
+        List<ListeningPartResponse> response = listeningGenerationService.generateFullTest(user.getUserId(), topic);
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    /**
      * Manually trigger audio generation for a listening part.
      * POST /api/v1/listening/{partId}/generate-audio
      */
@@ -127,20 +140,74 @@ public class ListeningController {
     }
 
     /**
-     * Serve listening audio files.
-     * First tries MinIO (real TTS audio), then falls back to silent MP3.
+     * Serve listening audio files with Range Request support for seeking.
+     * First tries MinIO (real TTS audio), then classpath, then silent fallback.
      * GET /api/v1/listening/audio/{fileName}
      */
     @GetMapping(value = "/audio/{fileName}")
-    public ResponseEntity<org.springframework.core.io.Resource> getAudioFile(@PathVariable String fileName) {
-        // Try MinIO first (real TTS audio)
-        try {
-            byte[] audioBytes = storageService.downloadAudio(fileName);
-            org.springframework.core.io.ByteArrayResource resource =
-                new org.springframework.core.io.ByteArrayResource(audioBytes);
+    public ResponseEntity<org.springframework.core.io.Resource> getAudioFile(
+            @PathVariable String fileName,
+            @RequestHeader(value = "Range", required = false) String rangeHeader) {
+
+        byte[] audioBytes = resolveAudioBytes(fileName);
+
+        long totalLength = audioBytes.length;
+        org.springframework.http.MediaType contentType =
+                org.springframework.http.MediaType.parseMediaType("audio/mpeg");
+
+        // If no Range header, return full content with Accept-Ranges hint
+        if (rangeHeader == null || rangeHeader.isBlank()) {
             return ResponseEntity.ok()
-                    .contentType(org.springframework.http.MediaType.parseMediaType("audio/mpeg"))
-                    .body(resource);
+                    .contentType(contentType)
+                    .contentLength(totalLength)
+                    .header("Accept-Ranges", "bytes")
+                    .body(new org.springframework.core.io.ByteArrayResource(audioBytes));
+        }
+
+        // Parse Range header: "bytes=start-end" or "bytes=start-"
+        try {
+            String rangeSpec = rangeHeader.replace("bytes=", "").trim();
+            String[] parts = rangeSpec.split("-", 2);
+            long start = Long.parseLong(parts[0]);
+            long end = (parts.length > 1 && !parts[1].isBlank())
+                    ? Long.parseLong(parts[1])
+                    : totalLength - 1;
+
+            // Clamp to valid range
+            end = Math.min(end, totalLength - 1);
+            if (start > end || start >= totalLength) {
+                return ResponseEntity.status(org.springframework.http.HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE)
+                        .header("Content-Range", "bytes */" + totalLength)
+                        .build();
+            }
+
+            int rangeLength = (int) (end - start + 1);
+            byte[] sliced = new byte[rangeLength];
+            System.arraycopy(audioBytes, (int) start, sliced, 0, rangeLength);
+
+            return ResponseEntity.status(org.springframework.http.HttpStatus.PARTIAL_CONTENT)
+                    .contentType(contentType)
+                    .contentLength(rangeLength)
+                    .header("Accept-Ranges", "bytes")
+                    .header("Content-Range", "bytes " + start + "-" + end + "/" + totalLength)
+                    .body(new org.springframework.core.io.ByteArrayResource(sliced));
+        } catch (NumberFormatException e) {
+            log.warn("Invalid Range header '{}' for audio '{}'", rangeHeader, fileName);
+            return ResponseEntity.ok()
+                    .contentType(contentType)
+                    .contentLength(totalLength)
+                    .header("Accept-Ranges", "bytes")
+                    .body(new org.springframework.core.io.ByteArrayResource(audioBytes));
+        }
+    }
+
+    /**
+     * Resolve audio bytes from MinIO, classpath, or silent fallback.
+     */
+    private byte[] resolveAudioBytes(String fileName) {
+        // Try MinIO first
+        try {
+            return storageService.downloadAudio(fileName);
         } catch (Exception e) {
             log.debug("Audio not found in MinIO for '{}', trying classpath", fileName);
         }
@@ -150,22 +217,15 @@ public class ListeningController {
             org.springframework.core.io.ClassPathResource resource =
                 new org.springframework.core.io.ClassPathResource("static/api/v1/listening/audio/" + fileName);
             if (resource.exists()) {
-                return ResponseEntity.ok()
-                        .contentType(org.springframework.http.MediaType.parseMediaType("audio/mpeg"))
-                        .body(resource);
+                return resource.getInputStream().readAllBytes();
             }
         } catch (Exception e) {
-            // Fall through to silence fallback
+            // Fall through
         }
 
-        // Fallback to 1-second silent MP3 (only when TTS fails)
+        // Fallback to 1-second silent MP3
         log.debug("Falling back to silent MP3 for '{}'", fileName);
         String base64Mp3 = "SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAAwAAAbAAqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV////////////////////////////////////////////AAAAAExhdmM1OC4xMwAAAAAAAAAAAAAAACQDkAAAAAAAAAGw9wrNaQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/+MYxAAAAANIAAAAAExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV/+MYxDsAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV/+MYxHYAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
-        byte[] audioBytes = java.util.Base64.getDecoder().decode(base64Mp3);
-        org.springframework.core.io.ByteArrayResource byteArrayResource =
-            new org.springframework.core.io.ByteArrayResource(audioBytes);
-        return ResponseEntity.ok()
-                .contentType(org.springframework.http.MediaType.parseMediaType("audio/mpeg"))
-                .body(byteArrayResource);
+        return java.util.Base64.getDecoder().decode(base64Mp3);
     }
 }

@@ -23,6 +23,8 @@ public class ReadingGenerateRequest {
 
     private Integer passageCount;
 
+    private String moduleType = "ACADEMIC";
+
     public ReadingGenerateRequest(String topic, String difficulty) {
         this.topic = topic;
         this.difficulty = difficulty;

@@ -34,6 +34,33 @@ export default function WritingPromptListPage() {
     const [error, setError] = useState('');
     const [assembling, setAssembling] = useState(false);
 
+    const [isGenModalOpen, setIsGenModalOpen] = useState(false);
+    const [genTopic, setGenTopic] = useState('');
+    const [genDifficulty, setGenDifficulty] = useState('MEDIUM');
+    const [genModuleType, setGenModuleType] = useState('ACADEMIC');
+    const [generating, setGenerating] = useState(false);
+    const [genError, setGenError] = useState('');
+
+    const handleGenerateMockTest = async () => {
+        setGenerating(true);
+        setGenError('');
+        try {
+            const res = await writingApi.generateMockTest({
+                topic: genTopic || null,
+                difficulty: genDifficulty,
+                moduleType: genModuleType
+            });
+            const prompt1Id = res.data.data[0].promptId;
+            const prompt2Id = res.data.data[1].promptId;
+            setIsGenModalOpen(false);
+            navigate(`/writing/full-exam?task1Id=${prompt1Id}&task2Id=${prompt2Id}`);
+        } catch (err) {
+            setGenError(err.response?.data?.message || 'Failed to generate AI Writing test. Please try again.');
+        } finally {
+            setGenerating(false);
+        }
+    };
+
     const handleStartFullTest = async () => {
         setAssembling(true);
         setError('');
@@ -134,6 +161,15 @@ export default function WritingPromptListPage() {
                     <div style={{ display: 'flex', gap: '0.75rem' }}>
                         <button
                             className="btn btn-primary"
+                            onClick={() => setIsGenModalOpen(true)}
+                            id="gen-ai-mock-test-btn"
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                        >
+                            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>auto_awesome</span>
+                            AI Mock Test
+                        </button>
+                        <button
+                            className="btn btn-outline"
                             onClick={handleStartFullTest}
                             disabled={assembling}
                             id="start-writing-full-test"
@@ -145,6 +181,114 @@ export default function WritingPromptListPage() {
                         </button>
                     </div>
                 </div>
+
+                {/* AI Mock Test Generator Modal */}
+                {isGenModalOpen && (
+                    <div style={{
+                        position: 'fixed', inset: 0, background: 'rgba(18, 28, 40, 0.45)',
+                        backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', zIndex: 999, padding: '16px'
+                    }}>
+                        <div style={{
+                            background: 'var(--surface-container-lowest)',
+                            border: '1px solid var(--outline-variant)',
+                            borderRadius: 'var(--radius-xl)', width: '100%', maxWidth: '480px',
+                            boxShadow: 'var(--shadow-lg)', padding: '24px', display: 'flex',
+                            flexDirection: 'column', gap: '20px'
+                        }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <span className="material-symbols-outlined" style={{ color: 'var(--primary)', fontSize: 24 }}>auto_awesome</span>
+                                    <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>AI Mock Test Generator</h3>
+                                </div>
+                                <button
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--outline)' }}
+                                    onClick={() => setIsGenModalOpen(false)}
+                                    disabled={generating}
+                                >
+                                    <span className="material-symbols-outlined">close</span>
+                                </button>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Module Type</label>
+                                    <select
+                                        value={genModuleType}
+                                        onChange={(e) => setGenModuleType(e.target.value)}
+                                        style={{
+                                            padding: '10px 14px', borderRadius: 'var(--radius-md)',
+                                            border: '1px solid var(--outline-variant)', background: 'var(--surface-container-low)',
+                                            color: 'var(--on-surface)', outline: 'none'
+                                        }}
+                                    >
+                                        <option value="ACADEMIC">Academic (Reports & Essays)</option>
+                                        <option value="GENERAL_TRAINING">General Training (Letters & Essays)</option>
+                                    </select>
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Topic</label>
+                                    <select
+                                        value={genTopic}
+                                        onChange={(e) => setGenTopic(e.target.value)}
+                                        style={{
+                                            padding: '10px 14px', borderRadius: 'var(--radius-md)',
+                                            border: '1px solid var(--outline-variant)', background: 'var(--surface-container-low)',
+                                            color: 'var(--on-surface)', outline: 'none'
+                                        }}
+                                    >
+                                        <option value="">Random / All Topics</option>
+                                        <option value="EDUCATION">Education</option>
+                                        <option value="TECHNOLOGY">Technology</option>
+                                        <option value="HEALTH">Health</option>
+                                        <option value="ENVIRONMENT">Environment</option>
+                                        <option value="HISTORY">History</option>
+                                    </select>
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <label style={{ fontSize: '0.85rem', fontWeight: 600 }}>Difficulty</label>
+                                    <select
+                                        value={genDifficulty}
+                                        onChange={(e) => setGenDifficulty(e.target.value)}
+                                        style={{
+                                            padding: '10px 14px', borderRadius: 'var(--radius-md)',
+                                            border: '1px solid var(--outline-variant)', background: 'var(--surface-container-low)',
+                                            color: 'var(--on-surface)', outline: 'none'
+                                        }}
+                                    >
+                                        <option value="EASY">Easy</option>
+                                        <option value="MEDIUM">Medium</option>
+                                        <option value="HARD">Hard</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {genError && <div style={{ color: 'var(--error)', fontSize: '0.85rem', fontWeight: 600 }}>{genError}</div>}
+
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
+                                <button
+                                    className="btn btn-outline"
+                                    onClick={() => setIsGenModalOpen(false)}
+                                    disabled={generating}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    className="btn btn-primary"
+                                    onClick={handleGenerateMockTest}
+                                    disabled={generating}
+                                    id="submit-generate-mock-btn"
+                                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                                >
+                                    {generating && <span className="spinner" style={{ width: 16, height: 16 }} />}
+                                    {generating ? 'Generating...' : 'Generate & Start'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Task Tabs */}
                 <div className="task-tabs">

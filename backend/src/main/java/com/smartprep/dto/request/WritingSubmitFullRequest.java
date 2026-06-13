@@ -21,4 +21,16 @@ public class WritingSubmitFullRequest {
 
     @NotNull(message = "Task 2 essay text is required")
     private String task2EssayText;
+
+    /** Optional: links to ExamAttempt for timer tracking */
+    private Long attemptId;
+
+    /** True if auto-submitted when time expired */
+    private Boolean autoSubmitted;
+
+    /** Seconds spent on Task 1 (tracked by FE) */
+    private Integer timeSpentTask1;
+
+    /** Seconds spent on Task 2 (tracked by FE) */
+    private Integer timeSpentTask2;
 }

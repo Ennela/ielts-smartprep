@@ -19,4 +19,6 @@ public class ReadingFullResultResponse {
     private int totalQuestions;
     private LocalDateTime submittedAt;
     private List<ReadingResultResponse> quizResults;
+    private Integer timeSpentSeconds;
+    private Boolean autoSubmitted;
 }

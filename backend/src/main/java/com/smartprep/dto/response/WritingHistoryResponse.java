@@ -21,4 +21,6 @@ public class WritingHistoryResponse {
     private BigDecimal overallBand;
     private Integer wordCount;
     private LocalDateTime submittedAt;
+    private Integer timeSpentSeconds;
+    private Boolean autoSubmitted;
 }

@@ -59,13 +59,10 @@ public class ReadingGenerationService {
 
         Topic topic = ReadingQueryService.parseEnum(Topic.class, request.getTopic(), "Invalid topic");
         int passageCount = request.getPassageCount() != null ? request.getPassageCount() : 1;
+        String moduleType = request.getModuleType() != null ? request.getModuleType() : "ACADEMIC";
 
         if (passageCount == 3) {
-            List<ReadingQuiz> quizzes = new ArrayList<>();
-            quizzes.add(generateSingleQuizEntity(user, topic, Difficulty.PASSAGE_1, null));
-            quizzes.add(generateSingleQuizEntity(user, topic, Difficulty.PASSAGE_2, null));
-            quizzes.add(generateSingleQuizEntity(user, topic, Difficulty.PASSAGE_3, null));
-
+            List<ReadingQuiz> quizzes = generateFullQuizEntities(user, topic, moduleType);
             List<Long> quizIds = quizzes.stream()
                     .map(ReadingQuiz::getQuizId)
                     .filter(java.util.Objects::nonNull)
@@ -86,7 +83,7 @@ public class ReadingGenerationService {
                 difficulty = ReadingQueryService.parseEnum(Difficulty.class, request.getDifficulty(), "Invalid difficulty");
             }
 
-            ReadingQuiz quiz = generateSingleQuizEntity(user, topic, difficulty, focusQuestionType);
+            ReadingQuiz quiz = generateSingleQuizEntity(user, topic, difficulty, focusQuestionType, moduleType);
             ReadingQuizResponse response = readingQueryService.mapToQuizResponse(quiz);
             List<Long> quizIds = new ArrayList<>();
             if (quiz.getQuizId() != null) {
@@ -97,7 +94,7 @@ public class ReadingGenerationService {
         }
     }
 
-    private ReadingQuiz generateSingleQuizEntity(User user, Topic topic, Difficulty difficulty, String focusQuestionType) {
+    private ReadingQuiz generateSingleQuizEntity(User user, Topic topic, Difficulty difficulty, String focusQuestionType, String moduleType) {
         String systemPrompt = promptBuilder.buildSystemPrompt(difficulty);
         String userPrompt = promptBuilder.buildUserPrompt(topic, difficulty, focusQuestionType);
 
@@ -132,13 +129,13 @@ public class ReadingGenerationService {
                     }
                 }
             } catch (Exception ex) {
-                return handleFallbackQuiz(user, topic, difficulty, ex);
+                return handleFallbackQuiz(user, topic, difficulty, moduleType, ex);
             }
         }
 
         ReadingQuiz quiz;
         try {
-            quiz = parseAiResponse(aiResponseText, user, topic, difficulty);
+            quiz = parseAiResponse(aiResponseText, user, topic, difficulty, moduleType);
             validateReadingQuiz(quiz);
         } catch (Exception e) {
             log.warn("Parsing of AI response failed. Retrying fresh generation.", e);
@@ -151,7 +148,7 @@ public class ReadingGenerationService {
             }
             try {
                 String freshResponse = geminiClient.generate(systemPrompt, userPrompt);
-                quiz = parseAiResponse(freshResponse, user, topic, difficulty);
+                quiz = parseAiResponse(freshResponse, user, topic, difficulty, moduleType);
                 validateReadingQuiz(quiz);
                 if (redisTemplate != null && freshResponse != null) {
                     try {
@@ -161,14 +158,14 @@ public class ReadingGenerationService {
                     }
                 }
             } catch (Exception ex) {
-                return handleFallbackQuiz(user, topic, difficulty, ex);
+                return handleFallbackQuiz(user, topic, difficulty, moduleType, ex);
             }
         }
 
         return quizRepository.save(quiz);
     }
 
-    private ReadingQuiz handleFallbackQuiz(User user, Topic topic, Difficulty difficulty, Exception originalException) {
+    private ReadingQuiz handleFallbackQuiz(User user, Topic topic, Difficulty difficulty, String moduleType, Exception originalException) {
         log.warn("Gemini generation failed or quota exceeded. Falling back to pre-generated content for topic: {} and difficulty: {}", topic, difficulty);
 
         List<ReadingQuiz> templates = quizRepository.findQuizzesForAdmin(topic, difficulty, null, org.springframework.data.domain.PageRequest.of(0, 10)).getContent();
@@ -196,6 +193,7 @@ public class ReadingGenerationService {
                 .user(user)
                 .topic(selected.getTopic())
                 .difficulty(selected.getDifficulty())
+                .moduleType(moduleType)
                 .passageText(selected.getPassageText())
                 .timeLimitSeconds(selected.getTimeLimitSeconds() != null ? selected.getTimeLimitSeconds() : TIME_LIMITS.get(selected.getDifficulty()))
                 .totalQuestions(selected.getTotalQuestions())
@@ -242,11 +240,273 @@ public class ReadingGenerationService {
         return quizRepository.save(fallbackQuiz);
     }
 
+    private List<ReadingQuiz> generateFullQuizEntities(User user, Topic topic, String moduleType) {
+        String systemPrompt = promptBuilder.buildSystemPromptFull(moduleType);
+        String userPrompt = promptBuilder.buildUserPromptFull(topic, moduleType);
+
+        String cacheKey = String.format("READING_FULL:%s:%s:%s", topic.name(), moduleType, PROMPT_VERSION);
+        String cachedResponse = null;
+        if (redisTemplate != null) {
+            try {
+                cachedResponse = redisTemplate.opsForValue().get(cacheKey);
+            } catch (Exception e) {
+                log.warn("Failed to retrieve full cache from Redis: {}", e.getMessage());
+            }
+        }
+
+        String aiResponseText = null;
+        boolean fromCache = false;
+
+        if (cachedResponse != null) {
+            aiResponseText = cachedResponse;
+            fromCache = true;
+            log.info("Cached full reading quiz found in Redis for key: {}", cacheKey);
+        } else {
+            try {
+                aiResponseText = geminiClient.generate(systemPrompt, userPrompt);
+                if (redisTemplate != null && aiResponseText != null) {
+                    try {
+                        redisTemplate.opsForValue().set(cacheKey, aiResponseText, java.time.Duration.ofHours(24));
+                    } catch (Exception e) {
+                        log.warn("Failed to write full to Redis cache: {}", e.getMessage());
+                    }
+                }
+            } catch (Exception ex) {
+                return handleFullFallback(user, topic, moduleType, ex);
+            }
+        }
+
+        List<ReadingQuiz> quizzes;
+        try {
+            quizzes = parseFullQuizResponse(aiResponseText, user, topic, moduleType);
+            validateFullQuizzes(quizzes);
+        } catch (Exception e) {
+            log.warn("Parsing of AI full response failed. Retrying fresh generation.", e);
+            if (fromCache && redisTemplate != null) {
+                try {
+                    redisTemplate.delete(cacheKey);
+                } catch (Exception dEx) {
+                    log.warn("Failed to delete Redis cache key: {}", dEx.getMessage());
+                }
+            }
+            try {
+                String freshResponse = geminiClient.generate(systemPrompt, userPrompt);
+                quizzes = parseFullQuizResponse(freshResponse, user, topic, moduleType);
+                validateFullQuizzes(quizzes);
+                if (redisTemplate != null && freshResponse != null) {
+                    try {
+                        redisTemplate.opsForValue().set(cacheKey, freshResponse, java.time.Duration.ofHours(24));
+                    } catch (Exception wEx) {
+                        log.warn("Failed to write to Redis cache: {}", wEx.getMessage());
+                    }
+                }
+            } catch (Exception ex) {
+                return handleFullFallback(user, topic, moduleType, ex);
+            }
+        }
+
+        List<ReadingQuiz> savedQuizzes = new ArrayList<>();
+        for (ReadingQuiz q : quizzes) {
+            savedQuizzes.add(quizRepository.save(q));
+        }
+        return savedQuizzes;
+    }
+
+    private List<ReadingQuiz> parseFullQuizResponse(String aiResponse, User user, Topic topic, String moduleType) {
+        try {
+            JsonNode root = objectMapper.readTree(aiResponse);
+            JsonNode passagesNode = root.path("passages");
+            if (!passagesNode.isArray() || passagesNode.isEmpty()) {
+                throw new InvalidAiResponseException("AI response missing 'passages' array");
+            }
+
+            List<ReadingQuiz> quizzes = new ArrayList<>();
+            int globalOrderIndex = 1;
+            int globalGroupIdCounter = 1;
+
+            for (JsonNode passNode : passagesNode) {
+                int passageIndex = passNode.path("passageIndex").asInt(1);
+                String difficultyStr = passNode.path("difficulty").asText("PASSAGE_1");
+                Difficulty difficulty = parseDifficulty(difficultyStr, passageIndex);
+                
+                String passageText = passNode.path("passageText").asText();
+                if (passageText == null || passageText.isBlank()) {
+                    throw new InvalidAiResponseException("Passage text cannot be empty for passage index " + passageIndex);
+                }
+
+                PassageEvidenceParser.CleanedPassageResult parsedPassage = PassageEvidenceParser.parse(passageText);
+
+                ReadingQuiz quiz = ReadingQuiz.builder()
+                        .user(user)
+                        .topic(topic)
+                        .difficulty(difficulty)
+                        .moduleType(moduleType)
+                        .passageText(parsedPassage.cleanedPassage)
+                        .timeLimitSeconds(TIME_LIMITS.get(difficulty))
+                        .build();
+
+                List<ReadingQuestion> questions = new ArrayList<>();
+                JsonNode groupsNode = passNode.path("questionGroups");
+                if (groupsNode.isArray()) {
+                    for (JsonNode groupNode : groupsNode) {
+                        String groupLabel = groupNode.path("groupLabel").asText("");
+                        String groupType = groupNode.path("groupType").asText("MCQ");
+                        String groupContext = groupNode.has("groupContext") && !groupNode.path("groupContext").isNull()
+                                ? groupNode.path("groupContext").asText() : null;
+                        Integer wordLimit = groupNode.has("wordLimit") && !groupNode.path("wordLimit").isNull()
+                                ? groupNode.path("wordLimit").asInt() : null;
+
+                        String groupOptionsJson = null;
+                        JsonNode groupOptionsNode = groupNode.path("options");
+                        if (groupOptionsNode.isArray() && !groupOptionsNode.isEmpty()) {
+                            groupOptionsJson = groupOptionsNode.toString();
+                        }
+
+                        QuestionType qType = parseQuestionType(groupType);
+                        JsonNode questionsNode = groupNode.path("questions");
+                        if (!questionsNode.isArray()) continue;
+
+                        for (JsonNode qNode : questionsNode) {
+                            int currentQNum = globalOrderIndex++;
+                            String rawCorrectAnswer = qNode.path("correctAnswer").asText("").trim();
+                            String normalizedAnswer = normalizeCorrectAnswer(rawCorrectAnswer, qType);
+
+                            String evidenceText = null;
+                            Integer evidenceOffset = null;
+                            Integer evidenceLength = null;
+                            for (PassageEvidenceParser.EvidenceInfo ev : parsedPassage.evidences) {
+                                if (ev.questionNo == currentQNum) {
+                                    evidenceText = ev.text;
+                                    evidenceOffset = ev.offset;
+                                    evidenceLength = ev.length;
+                                    break;
+                                }
+                            }
+
+                            String rawExplanation = qNode.path("explanation").asText("");
+                            String cleanedExplanation = rawExplanation
+                                    .replaceAll("\\[ANS_\\d+\\]", "")
+                                    .replaceAll("\\[/ANS_\\d+\\]", "");
+
+                            ReadingQuestion question = ReadingQuestion.builder()
+                                    .quiz(quiz)
+                                    .questionType(qType)
+                                    .questionText(qNode.path("questionText").asText(""))
+                                    .correctAnswer(normalizedAnswer)
+                                    .explanation(cleanedExplanation)
+                                    .orderIndex(currentQNum)
+                                    .groupLabel(groupLabel)
+                                    .groupId(globalGroupIdCounter)
+                                    .groupContext(groupContext)
+                                    .wordLimit(wordLimit)
+                                    .evidenceText(evidenceText)
+                                    .evidenceOffset(evidenceOffset)
+                                    .evidenceLength(evidenceLength)
+                                    .build();
+
+                            List<QuestionOption> options = new ArrayList<>();
+                            JsonNode qOptionsNode = qNode.path("options");
+                            if (qOptionsNode.isArray() && !qOptionsNode.isEmpty()) {
+                                if (qType == QuestionType.MCQ) {
+                                    int optIndex = 1;
+                                    for (JsonNode optNode : qOptionsNode) {
+                                        String label, content;
+                                        if (optNode.isObject()) {
+                                            label = optNode.path("label").asText();
+                                            content = optNode.path("content").asText();
+                                        } else {
+                                            String optText = optNode.asText();
+                                            label = optText.length() > 0 ? optText.substring(0, 1).toUpperCase() : "";
+                                            content = stripOptionPrefix(optText);
+                                        }
+                                        options.add(QuestionOption.builder()
+                                                .readingQuestion(question)
+                                                .label(label)
+                                                .content(content)
+                                                .isCorrect(normalizedAnswer.equalsIgnoreCase(label))
+                                                .orderIndex(optIndex++)
+                                                .build());
+                                    }
+                                } else {
+                                    question.setOptionsJson(qOptionsNode.toString());
+                                }
+                            } else if (groupOptionsJson != null) {
+                                question.setOptionsJson(groupOptionsJson);
+                            }
+
+                            question.setOptions(options);
+                            questions.add(question);
+                        }
+                        globalGroupIdCounter++;
+                    }
+                }
+                quiz.setTotalQuestions(questions.size());
+                quiz.setQuestions(questions);
+                quizzes.add(quiz);
+            }
+            return quizzes;
+        } catch (InvalidAiResponseException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("Failed to parse AI full response: {}", aiResponse, ex);
+            throw new InvalidAiResponseException("Failed to parse full AI response into quiz format", ex);
+        }
+    }
+
+    private Difficulty parseDifficulty(String diffStr, int passageIndex) {
+        try {
+            return Difficulty.valueOf(diffStr.toUpperCase().trim());
+        } catch (Exception e) {
+            return switch (passageIndex) {
+                case 2 -> Difficulty.PASSAGE_2;
+                case 3 -> Difficulty.PASSAGE_3;
+                default -> Difficulty.PASSAGE_1;
+            };
+        }
+    }
+
+    private void validateFullQuizzes(List<ReadingQuiz> quizzes) {
+        if (quizzes == null || quizzes.size() != 3) {
+            throw new InvalidAiResponseException("AI mock test must contain exactly 3 passages");
+        }
+        int totalQuestions = 0;
+        for (ReadingQuiz quiz : quizzes) {
+            validateReadingQuiz(quiz);
+            totalQuestions += quiz.getQuestions().size();
+        }
+        if (totalQuestions < 30 || totalQuestions > 50) {
+            throw new InvalidAiResponseException("AI mock test total questions count is invalid: " + totalQuestions);
+        }
+    }
+
+    private List<ReadingQuiz> handleFullFallback(User user, Topic topic, String moduleType, Exception originalException) {
+        log.warn("Full Gemini test generation failed. Falling back to single-passage templates.");
+        try {
+            ReadingQuiz q1 = generateSingleQuizEntity(user, topic, Difficulty.PASSAGE_1, null, moduleType);
+            ReadingQuiz q2 = generateSingleQuizEntity(user, topic, Difficulty.PASSAGE_2, null, moduleType);
+            ReadingQuiz q3 = generateSingleQuizEntity(user, topic, Difficulty.PASSAGE_3, null, moduleType);
+
+            int globalIndex = 1;
+            List<ReadingQuiz> list = List.of(q1, q2, q3);
+            for (ReadingQuiz q : list) {
+                q.setModuleType(moduleType);
+                for (ReadingQuestion question : q.getQuestions()) {
+                    question.setOrderIndex(globalIndex++);
+                }
+                quizRepository.save(q);
+            }
+            return list;
+        } catch (Exception ex) {
+            log.error("Failed to generate fallback for full quiz", ex);
+            throw new RuntimeException("AI Content generation failed and fallback failed.", originalException);
+        }
+    }
+
     // =========================================================================
     // AI Response Parsing
     // =========================================================================
 
-    private ReadingQuiz parseAiResponse(String aiResponse, User user, Topic topic, Difficulty difficulty) {
+    private ReadingQuiz parseAiResponse(String aiResponse, User user, Topic topic, Difficulty difficulty, String moduleType) {
         try {
             JsonNode root = objectMapper.readTree(aiResponse);
             String passage = root.path("passage").asText();
@@ -258,11 +518,12 @@ public class ReadingGenerationService {
 
             JsonNode groupsNode = root.path("questionGroups");
             if (!groupsNode.isArray() || groupsNode.isEmpty()) {
-                return parseLegacyFormat(root, user, topic, difficulty, passage);
+                return parseLegacyFormat(root, user, topic, difficulty, passage, moduleType);
             }
 
             ReadingQuiz quiz = ReadingQuiz.builder()
                     .user(user).topic(topic).difficulty(difficulty)
+                    .moduleType(moduleType)
                     .passageText(parsedPassage.cleanedPassage).timeLimitSeconds(TIME_LIMITS.get(difficulty))
                     .build();
 
@@ -368,7 +629,7 @@ public class ReadingGenerationService {
         }
     }
 
-    private ReadingQuiz parseLegacyFormat(JsonNode root, User user, Topic topic, Difficulty difficulty, String passage) {
+    private ReadingQuiz parseLegacyFormat(JsonNode root, User user, Topic topic, Difficulty difficulty, String passage, String moduleType) {
         JsonNode questionsNode = root.path("questions");
         if (!questionsNode.isArray() || questionsNode.isEmpty()) {
             throw new InvalidAiResponseException("AI response missing both 'questionGroups' and 'questions'");
@@ -378,6 +639,7 @@ public class ReadingGenerationService {
 
         ReadingQuiz quiz = ReadingQuiz.builder()
                 .user(user).topic(topic).difficulty(difficulty)
+                .moduleType(moduleType)
                 .passageText(parsedPassage.cleanedPassage).timeLimitSeconds(TIME_LIMITS.get(difficulty))
                 .totalQuestions(questionsNode.size())
                 .build();
@@ -479,6 +741,8 @@ public class ReadingGenerationService {
             if (upper.contains("INFORMATION")) return QuestionType.MATCHING_INFORMATION;
             if (upper.contains("FEATURE")) return QuestionType.MATCHING_FEATURES;
             if (upper.contains("SENTENCE") && upper.contains("ENDING")) return QuestionType.MATCHING_SENTENCE_ENDINGS;
+            if (upper.contains("DIAGRAM") || upper.contains("LABEL")) return QuestionType.DIAGRAM_LABEL_COMPLETION;
+            if (upper.contains("SHORT") || upper.contains("ANSWER")) return QuestionType.SHORT_ANSWER;
             log.warn("Unknown question type '{}', defaulting to MCQ", type);
             return QuestionType.MCQ;
         }
@@ -518,7 +782,7 @@ public class ReadingGenerationService {
                 yield trimmed;
             }
             case MATCHING_HEADINGS -> raw.trim().toLowerCase();
-            case SENTENCE_COMPLETION, SUMMARY_COMPLETION, FILL_BLANK -> raw.trim();
+            case SENTENCE_COMPLETION, SUMMARY_COMPLETION, FILL_BLANK, DIAGRAM_LABEL_COMPLETION, SHORT_ANSWER -> raw.trim();
         };
     }
 

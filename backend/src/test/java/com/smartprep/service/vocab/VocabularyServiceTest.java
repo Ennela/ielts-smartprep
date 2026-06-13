@@ -1,5 +1,6 @@
 package com.smartprep.service.vocab;
 
+import com.smartprep.dto.request.VocabBulkSaveRequest;
 import com.smartprep.dto.request.VocabCreateRequest;
 import com.smartprep.dto.response.VocabResponse;
 import com.smartprep.exception.ResourceNotFoundException;
@@ -8,6 +9,7 @@ import com.smartprep.model.entity.Vocabulary;
 import com.smartprep.model.enums.SkillType;
 import com.smartprep.repository.UserRepository;
 import com.smartprep.repository.VocabularyRepository;
+import com.smartprep.repository.MockTestSubmissionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -40,6 +42,9 @@ class VocabularyServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private MockTestSubmissionRepository mockTestSubmissionRepository;
 
     @Mock
     private Sm2Service sm2Service;
@@ -292,6 +297,108 @@ class VocabularyServiceTest {
 
         List<VocabResponse> result = vocabularyService.getAllVocabularies(1L);
         assertThat(result).hasSize(2);
+    }
+
+    // ===================================================================
+    //  suggestVocabulary
+    // ===================================================================
+
+    @Nested
+    @DisplayName("suggestVocabulary")
+    class SuggestVocabulary {
+
+        @Test
+        @DisplayName("should suggest and filter out existing words and AI duplicates")
+        void suggestAndFilter() {
+            Vocabulary existingVocab = Vocabulary.builder().word("ubiquitous").build();
+            when(vocabularyRepository.findByUserUserIdOrderByCreatedAtDesc(1L))
+                    .thenReturn(List.of(existingVocab));
+
+            VocabSourceResolver mockResolver = mock(VocabSourceResolver.class);
+            when(mockResolver.getSkillType()).thenReturn(SkillType.READING);
+            when(mockResolver.resolveSourceText(100L)).thenReturn("Test passage text with some words");
+            
+            when(resolvers.stream()).thenAnswer(inv -> java.util.stream.Stream.of(mockResolver));
+
+            VocabAiService.SuggestedVocab s1 = new VocabAiService.SuggestedVocab("ubiquitous", "/juːˈbɪkwɪtəs/", "adjective", "phổ biến", "Mobile phones are ubiquitous", "ubiquitous presence", "B2");
+            VocabAiService.SuggestedVocab s2 = new VocabAiService.SuggestedVocab("pristine", "/ˈprɪstiːn/", "adjective", "nguyên sơ", "A pristine beach", "pristine environment", "C1");
+            VocabAiService.SuggestedVocab s3 = new VocabAiService.SuggestedVocab("PRISTINE", "/ˈprɪstiːn/", "adjective", "nguyên sơ", "A pristine beach", "pristine environment", "C1");
+            VocabAiService.SuggestedVocab s4 = new VocabAiService.SuggestedVocab("", "", "", "", "", "", "");
+
+            when(vocabAiService.suggestVocabulary("Test passage text with some words")).thenReturn(List.of(s1, s2, s3, s4));
+
+            List<VocabAiService.SuggestedVocab> result = vocabularyService.suggestVocabulary(1L, "READING", 100L);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getWord()).isEqualTo("pristine");
+        }
+    }
+
+    // ===================================================================
+    //  bulkSaveVocabulary
+    // ===================================================================
+
+    @Nested
+    @DisplayName("bulkSaveVocabulary")
+    class BulkSaveVocabulary {
+
+        @Test
+        @DisplayName("should merge fields when word already exists")
+        void mergeExistingWord() {
+            VocabBulkSaveRequest request = new VocabBulkSaveRequest();
+            VocabCreateRequest item = new VocabCreateRequest();
+            item.setWord("ubiquitous");
+            item.setMeaningVi("ở khắp nơi");
+            item.setPhonetic("/juːˈbɪkwɪtəs/");
+            item.setSourceSkill("READING");
+            item.setSourceRef("Passage 1");
+            request.setVocabularies(List.of(item));
+
+            Vocabulary existingVocab = Vocabulary.builder()
+                    .vocabId(500L)
+                    .word("ubiquitous")
+                    .meaningVi("")
+                    .build();
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(vocabularyRepository.findByUserUserIdAndWord(1L, "ubiquitous"))
+                    .thenReturn(Optional.of(existingVocab));
+
+            int count = vocabularyService.bulkSaveVocabulary(1L, request);
+
+            assertThat(count).isEqualTo(1);
+            verify(vocabularyRepository).save(existingVocab);
+            assertThat(existingVocab.getMeaningVi()).isEqualTo("ở khắp nơi");
+            assertThat(existingVocab.getPhonetic()).isEqualTo("/juːˈbɪkwɪtəs/");
+            assertThat(existingVocab.getSourceSkill()).isEqualTo(SkillType.READING);
+            assertThat(existingVocab.getSourceRef()).isEqualTo("Passage 1");
+        }
+
+        @Test
+        @DisplayName("should save new word if not exists")
+        void saveNewWord() {
+            VocabBulkSaveRequest request = new VocabBulkSaveRequest();
+            VocabCreateRequest item = new VocabCreateRequest();
+            item.setWord("novel");
+            item.setMeaningVi("mới lạ");
+            item.setPartOfSpeech("adjective");
+            request.setVocabularies(List.of(item));
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
+            when(vocabularyRepository.findByUserUserIdAndWord(1L, "novel")).thenReturn(Optional.empty());
+
+            int count = vocabularyService.bulkSaveVocabulary(1L, request);
+
+            assertThat(count).isEqualTo(1);
+            verify(vocabularyRepository).save(any(Vocabulary.class));
+        }
+
+        @Test
+        @DisplayName("should return 0 for empty list")
+        void emptyRequest() {
+            int count = vocabularyService.bulkSaveVocabulary(1L, new VocabBulkSaveRequest());
+            assertThat(count).isZero();
+        }
     }
 
     // ===================================================================

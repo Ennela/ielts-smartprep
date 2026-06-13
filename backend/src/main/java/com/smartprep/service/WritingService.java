@@ -89,7 +89,8 @@ public class WritingService {
     }
 
     @Transactional
-    public WritingGradeResponse evaluateAndSaveSubmission(User user, WritingPrompt prompt, String essayText, int wordCount) {
+    public WritingGradeResponse evaluateAndSaveSubmission(User user, WritingPrompt prompt, String essayText,
+            int wordCount) {
         boolean isTask1 = prompt.getEssayType().isTask1();
 
         // Delegate AI grading to service.ai.WritingGradingService
@@ -125,7 +126,8 @@ public class WritingService {
         }
         try {
             return objectMapper.readValue(errorsJson,
-                    new TypeReference<List<WritingGradeResponse.ErrorDto>>() {});
+                    new TypeReference<List<WritingGradeResponse.ErrorDto>>() {
+                    });
         } catch (Exception e) {
             log.warn("Failed to parse errors JSON from AI grading result: {}", e.getMessage());
             return new ArrayList<>();

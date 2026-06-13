@@ -1,29 +1,33 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import writingApi from '../api/writingApi';
+import attemptApi from '../api/attemptApi';
+import useExamTimer from '../hooks/useExamTimer';
 
 const TASK1_TYPES = ['LINE_GRAPH', 'BAR_CHART', 'PIE_CHART', 'TABLE', 'MAP', 'DIAGRAM'];
 
+const SESSION_KEY_PREFIX = 'writing_single_attemptId_';
+
 const GRADING_CRITERIA = [
-  { 
-    label: 'Task Achievement (TA)', 
-    desc: 'This criterion is based on your ability to complete all requirements of the task correctly and fully. If all parts of the question are addressed through logical arguments and accurate data, you will easily achieve a high score.', 
-    icon: 'task_alt' 
+  {
+    label: 'Task Achievement (TA)',
+    desc: 'This criterion is based on your ability to complete all requirements of the task correctly and fully. If all parts of the question are addressed through logical arguments and accurate data, you will easily achieve a high score.',
+    icon: 'task_alt'
   },
-  { 
-    label: 'Coherence & Cohesion (CC)', 
-    desc: 'This criterion evaluates the clarity and logical flow of the essay. A cohesive essay is easy to read, consistent, and objectively clarifies both main and supporting points.', 
-    icon: 'account_tree' 
+  {
+    label: 'Coherence & Cohesion (CC)',
+    desc: 'This criterion evaluates the clarity and logical flow of the essay. A cohesive essay is easy to read, consistent, and objectively clarifies both main and supporting points.',
+    icon: 'account_tree'
   },
-  { 
-    label: 'Lexical Resource (LR)', 
-    desc: 'This criterion tests the candidate\'s vocabulary range and precision. The more varied and natural the lexical choices, the higher the score. Proper spelling and collocation are also evaluated here.', 
-    icon: 'spellcheck' 
+  {
+    label: 'Lexical Resource (LR)',
+    desc: 'This criterion tests the candidate\'s vocabulary range and precision. The more varied and natural the lexical choices, the higher the score. Proper spelling and collocation are also evaluated here.',
+    icon: 'spellcheck'
   },
-  { 
-    label: 'Grammatical Range & Accuracy (GRA)', 
-    desc: 'This criterion assesses grammatical diversity and precision. Candidates should use a mix of simple and complex sentence structures correctly. Proper punctuation is also essential.', 
-    icon: 'edit' 
+  {
+    label: 'Grammatical Range & Accuracy (GRA)',
+    desc: 'This criterion assesses grammatical diversity and precision. Candidates should use a mix of simple and complex sentence structures correctly. Proper punctuation is also essential.',
+    icon: 'edit'
   },
 ];
 
@@ -47,9 +51,18 @@ export default function WritingEditorPage() {
   const [grading, setGrading] = useState(false);
   const [error, setError] = useState('');
 
+  // Attempt / timer state
+  const [attemptId, setAttemptId] = useState(null);
+  const [deadline, setDeadline] = useState(null);
+  const [suggestedTime, setSuggestedTime] = useState(null); // seconds
+  const submittingRef = useRef(false);
+  const essayTextRef = useRef(essayText);
+  useEffect(() => { essayTextRef.current = essayText; }, [essayText]);
+
   const isTask1 = prompt ? TASK1_TYPES.includes(prompt.essayType) : false;
   const minWords = isTask1 ? 150 : 250;
 
+  // ── Load prompt ──
   useEffect(() => {
     writingApi.getPromptById(promptId)
       .then(res => setPrompt(res.data.data))
@@ -57,6 +70,105 @@ export default function WritingEditorPage() {
       .finally(() => setLoading(false));
   }, [promptId]);
 
+  // ── Start / resume attempt after prompt loads ──
+  useEffect(() => {
+    if (!prompt) return;
+
+    const sessionKey = SESSION_KEY_PREFIX + promptId;
+
+    const initAttempt = async () => {
+      try {
+        const storedAttemptId = sessionStorage.getItem(sessionKey);
+        let attempt = null;
+
+        // Try to resume existing attempt
+        if (storedAttemptId) {
+          try {
+            const res = await attemptApi.getAttempt(storedAttemptId);
+            attempt = res.data.data;
+            if (attempt.status !== 'IN_PROGRESS') attempt = null;
+          } catch (e) {
+            attempt = null;
+          }
+        }
+
+        // Create new attempt if none found
+        if (!attempt) {
+          const res = await attemptApi.startAttempt({
+            skillType: 'WRITING',
+            examReferenceIds: JSON.stringify([Number(promptId)]),
+          });
+          attempt = res.data.data;
+        }
+
+        setAttemptId(attempt.attemptId);
+        setDeadline(attempt.deadline);
+        sessionStorage.setItem(sessionKey, String(attempt.attemptId));
+
+        // Set suggested time based on task type
+        const task1 = TASK1_TYPES.includes(prompt.essayType);
+        setSuggestedTime(task1
+          ? (attempt.suggestedTask1Duration || 1200)
+          : (attempt.suggestedTask2Duration || 2400));
+      } catch (err) {
+        // Timer is non-blocking — if attempt fails, user can still write without timer
+        console.warn('Failed to initialize exam attempt for timer:', err);
+      }
+    };
+
+    initAttempt();
+  }, [prompt, promptId]);
+
+  // ── Auto-submit when timer expires ──
+  const handleAutoSubmit = useCallback(() => {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setGrading(true);
+    setError('');
+
+    const currentEssay = essayTextRef.current;
+    const currentWordCount = currentEssay?.trim()
+      ? currentEssay.trim().split(/\s+/).filter(w => w.length > 0).length
+      : 0;
+
+    const sessionKey = SESSION_KEY_PREFIX + promptId;
+    const storedAttemptId = attemptId || sessionStorage.getItem(sessionKey);
+
+    // Complete the attempt first
+    if (storedAttemptId) {
+      attemptApi.completeAttempt(storedAttemptId, { autoSubmitted: true }).catch(() => {});
+    }
+
+    // If essay meets minimum, grade it; otherwise show time-expired message
+    if (currentWordCount >= (isTask1 ? 150 : 250)) {
+      writingApi.gradeEssay(Number(promptId), currentEssay)
+        .then(res => {
+          sessionStorage.removeItem(sessionKey);
+          navigate(`/writing/result/${res.data.data.submissionId}`, { replace: true });
+        })
+        .catch(() => {
+          setError('Auto-submit failed. Please try submitting manually.');
+          setGrading(false);
+          submittingRef.current = false;
+        });
+    } else {
+      // Not enough words — notify user but don't block
+      sessionStorage.removeItem(sessionKey);
+      alert(`⏰ Time is up! Your essay has ${currentWordCount} words (minimum: ${isTask1 ? 150 : 250}). The essay was not graded because it did not meet the minimum word count.`);
+      setGrading(false);
+      submittingRef.current = false;
+      navigate('/writing', { replace: true });
+    }
+  }, [attemptId, promptId, isTask1, navigate]);
+
+  // ── Server-authoritative countdown timer ──
+  const { timeLeft, isWarning, isCritical, formattedTime, stopTimer } = useExamTimer({
+    deadline,
+    onTimeUp: handleAutoSubmit,
+    enabled: !loading && !grading && !!deadline,
+  });
+
+  // ── Word count ──
   const countWords = useCallback((text) => {
     if (!text?.trim()) return 0;
     return text.trim().split(/\s+/).filter(w => w.length > 0).length;
@@ -67,15 +179,30 @@ export default function WritingEditorPage() {
     return () => clearTimeout(t);
   }, [essayText, countWords]);
 
+  // ── Manual submit (grade) ──
   const handleGrade = async () => {
-    if (wordCount < minWords) return;
+    if (wordCount < minWords || submittingRef.current) return;
+    submittingRef.current = true;
     setGrading(true);
     setError('');
+    stopTimer();
+
+    const sessionKey = SESSION_KEY_PREFIX + promptId;
+
     try {
       const res = await writingApi.gradeEssay(Number(promptId), essayText);
+
+      // Complete the attempt
+      const storedAttemptId = attemptId || sessionStorage.getItem(sessionKey);
+      if (storedAttemptId) {
+        await attemptApi.completeAttempt(storedAttemptId, { autoSubmitted: false }).catch(() => {});
+      }
+
+      sessionStorage.removeItem(sessionKey);
       navigate(`/writing/result/${res.data.data.submissionId}`);
     } catch (err) {
       setError(err.response?.data?.message || 'Grading failed. Please try again.');
+      submittingRef.current = false;
     } finally {
       setGrading(false);
     }
@@ -85,6 +212,9 @@ export default function WritingEditorPage() {
 
   const pct = Math.min(100, Math.round((wordCount / minWords) * 100));
   const isOk = wordCount >= minWords;
+
+  // Timer visual states
+  const timerColor = isCritical ? 'var(--error)' : isWarning ? 'var(--error)' : 'var(--on-surface)';
 
   return (
     <div className="writing-editor-page" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
@@ -118,6 +248,28 @@ export default function WritingEditorPage() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           {error && <span style={{ color: 'var(--error)', fontSize: '0.875rem' }}>{error}</span>}
+
+          {/* Countdown timer pill */}
+          {deadline && (
+            <div
+              className={`exam-timer-pill ${isCritical ? 'warning' : isWarning ? 'warning' : ''}`}
+              id="writing-countdown-timer"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '6px 14px',
+                background: isCritical ? 'rgba(186,26,26,0.12)' : undefined,
+                color: timerColor,
+                fontWeight: 700, fontSize: '1rem',
+                border: isCritical ? '1px solid var(--error)' : undefined,
+                animation: isCritical ? 'pulse 1s ease-in-out infinite' : undefined,
+              }}
+              title="Time remaining for this writing session"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>timer</span>
+              {formattedTime}
+            </div>
+          )}
+
           <button
             className="btn btn-primary btn-grade"
             onClick={handleGrade}
@@ -128,6 +280,20 @@ export default function WritingEditorPage() {
           </button>
         </div>
       </header>
+
+      {/* ── Suggested time indicator ── */}
+      {deadline && (
+        <div className="writing-suggested-time" id="writing-suggested-time">
+          <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--primary)' }}>info</span>
+          <span>
+            {isTask1
+              ? 'Suggested: ~20 minutes for Task 1 (Report)'
+              : 'Suggested: ~40 minutes for Task 2 (Essay)'}
+          </span>
+          <span style={{ color: 'var(--outline)' }}>·</span>
+          <span>Total: 60 minutes</span>
+        </div>
+      )}
 
       {/* ── 3-Pane Body ── */}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>

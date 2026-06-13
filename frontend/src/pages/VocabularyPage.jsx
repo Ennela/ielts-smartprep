@@ -8,6 +8,13 @@ export default function VocabularyPage() {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('review'); // 'review' or 'all'
   const [searchTerm, setSearchTerm] = useState('');
+  const [stats, setStats] = useState({
+    masteredCount: 0,
+    learningCount: 0,
+    dueTodayCount: 0
+  });
+  const [filterCefr, setFilterCefr] = useState('ALL');
+  const [filterSkill, setFilterSkill] = useState('ALL');
 
   // Manual Add Modal State
   const [showAddModal, setShowAddModal] = useState(false);
@@ -38,12 +45,17 @@ export default function VocabularyPage() {
     setLoading(true);
     setError('');
     try {
-      const [allRes, dueRes] = await Promise.all([
+      const [allRes, dueRes, statsRes] = await Promise.all([
         vocabApi.getAllVocab(),
-        vocabApi.getDueVocab()
+        vocabApi.getDueVocab(0, 10),
+        vocabApi.getStats()
       ]);
       setVocabList(allRes.data?.data || []);
-      setDueList(dueRes.data?.data || []);
+      
+      const duePage = dueRes.data?.data;
+      setDueList(duePage?.content || duePage || []);
+      
+      setStats(statsRes.data?.data || { masteredCount: 0, learningCount: 0, dueTodayCount: 0 });
       setReviewIndex(0);
       setIsFlipped(false);
     } catch (err) {
@@ -117,11 +129,17 @@ export default function VocabularyPage() {
 
   const filteredAllList = vocabList.filter((item) => {
     const term = searchTerm.toLowerCase();
-    return (
+    const matchesSearch = (
       item.word.toLowerCase().includes(term) ||
       item.meaningVi.toLowerCase().includes(term) ||
       (item.partOfSpeech && item.partOfSpeech.toLowerCase().includes(term))
     );
+
+    const matchesCefr = filterCefr === 'ALL' || item.cefrLevel === filterCefr;
+    const matchesSkill = filterSkill === 'ALL' || 
+      (item.sourceSkill && item.sourceSkill.toUpperCase() === filterSkill.toUpperCase());
+
+    return matchesSearch && matchesCefr && matchesSkill;
   });
 
   const getCefrBadgeStyle = (level) => {
@@ -388,17 +406,17 @@ export default function VocabularyPage() {
 
       {/* Metrics Row */}
       <div className="metric-cards-grid">
-        <div className="metric-item-card">
-          <div className="metric-item-num" style={{ color: 'var(--error)' }}>{dueList.length}</div>
-          <div className="metric-item-lbl">Due for Review</div>
+        <div className="metric-item-card" style={{ borderLeft: '4px solid var(--error)' }}>
+          <div className="metric-item-num" style={{ color: 'var(--error)' }}>{stats.dueTodayCount}</div>
+          <div className="metric-item-lbl">Due Today (Đến hạn)</div>
         </div>
-        <div className="metric-item-card">
-          <div className="metric-item-num">{vocabList.length}</div>
-          <div className="metric-item-lbl">Total Words Saved</div>
+        <div className="metric-item-card" style={{ borderLeft: '4px solid var(--secondary)' }}>
+          <div className="metric-item-num" style={{ color: 'var(--secondary)' }}>{stats.learningCount}</div>
+          <div className="metric-item-lbl">Learning (Đang học)</div>
         </div>
-        <div className="metric-item-card">
-          <div className="metric-item-num" style={{ color: 'var(--secondary)' }}>{reviewCount}</div>
-          <div className="metric-item-lbl">Reviewed Today</div>
+        <div className="metric-item-card" style={{ borderLeft: '4px solid var(--color-success, #006c4a)' }}>
+          <div className="metric-item-num" style={{ color: 'var(--color-success, #006c4a)' }}>{stats.masteredCount}</div>
+          <div className="metric-item-lbl">Mastered (Đã thuộc)</div>
         </div>
       </div>
 
@@ -574,25 +592,73 @@ export default function VocabularyPage() {
           {/* TAB 2: WORD BANK */}
           {activeTab === 'all' && (
             <div>
-              {/* Search Control */}
-              <div style={{ marginBottom: '24px', position: 'relative' }}>
-                <span className="material-symbols-outlined" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--outline)' }}>
-                  search
-                </span>
-                <input
-                  type="text"
-                  placeholder="Search by word, definition, part of speech..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '12px 16px 12px 48px',
-                    borderRadius: 'var(--radius-lg)',
-                    border: '1px solid var(--outline-variant)',
-                    background: 'var(--surface-container-lowest)',
-                    fontSize: '0.95rem'
-                  }}
-                />
+              {/* Search & Filter Controls */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+                <div style={{ position: 'relative' }}>
+                  <span className="material-symbols-outlined" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--outline)' }}>
+                    search
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Search by word, definition, part of speech..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px 12px 48px',
+                      borderRadius: 'var(--radius-lg)',
+                      border: '1px solid var(--outline-variant)',
+                      background: 'var(--surface-container-lowest)',
+                      fontSize: '0.95rem',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <select
+                    value={filterCefr}
+                    onChange={(e) => setFilterCefr(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      borderRadius: 'var(--radius-lg)',
+                      border: '1px solid var(--outline-variant)',
+                      background: 'var(--surface-container-lowest)',
+                      fontSize: '0.95rem',
+                      color: 'var(--on-surface)',
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="ALL">CEFR Level: All</option>
+                    <option value="B2">B2</option>
+                    <option value="C1">C1</option>
+                    <option value="C2">C2</option>
+                  </select>
+                </div>
+
+                <div>
+                  <select
+                    value={filterSkill}
+                    onChange={(e) => setFilterSkill(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      borderRadius: 'var(--radius-lg)',
+                      border: '1px solid var(--outline-variant)',
+                      background: 'var(--surface-container-lowest)',
+                      fontSize: '0.95rem',
+                      color: 'var(--on-surface)',
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="ALL">Skill Type: All</option>
+                    <option value="READING">Reading</option>
+                    <option value="LISTENING">Listening</option>
+                    <option value="WRITING">Writing</option>
+                    <option value="SPEAKING">Speaking</option>
+                  </select>
+                </div>
               </div>
 
               {filteredAllList.length === 0 ? (

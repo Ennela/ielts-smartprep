@@ -38,6 +38,7 @@ export default function ReadingConfigPage() {
   const [topic, setTopic] = useState('ENVIRONMENT');
   const [difficulty, setDifficulty] = useState('PASSAGE_1');
   const [passageCount, setPassageCount] = useState(1);
+  const [moduleType, setModuleType] = useState('ACADEMIC');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -89,7 +90,7 @@ export default function ReadingConfigPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await readingApi.generateQuiz(topic, difficulty, passageCount);
+      const res = await readingApi.generateQuiz(topic, difficulty, passageCount, moduleType);
       const data = res.data.data;
       if (data.quizIds && data.quizIds.length > 1) {
         navigate(`/reading/full-exam?quizIds=${data.quizIds.join(',')}`);
@@ -258,6 +259,35 @@ export default function ReadingConfigPage() {
                     <span className="diff-time">3 Passages</span>
                   </div>
                   <p className="diff-desc">Simulate a full IELTS exam with 3 passages (40 questions, 60 minutes timer).</p>
+                </button>
+              </div>
+            </div>
+
+            {/* Module Type Selection */}
+            <div className="config-section">
+              <h2>Select Module Type</h2>
+              <div className="difficulty-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                <button
+                  type="button"
+                  className={`difficulty-card ${moduleType === 'ACADEMIC' ? 'active' : ''}`}
+                  onClick={() => setModuleType('ACADEMIC')}
+                  id="module-academic"
+                >
+                  <div className="diff-top">
+                    <span className="diff-label">Academic</span>
+                  </div>
+                  <p className="diff-desc">Practice Academic Reading. Rich passages from books, journals, magazines.</p>
+                </button>
+                <button
+                  type="button"
+                  className={`difficulty-card ${moduleType === 'GENERAL_TRAINING' ? 'active' : ''}`}
+                  onClick={() => setModuleType('GENERAL_TRAINING')}
+                  id="module-gt"
+                >
+                  <div className="diff-top">
+                    <span className="diff-label">General Training</span>
+                  </div>
+                  <p className="diff-desc">Practice General Training Reading. Passages about daily life, work, general topics.</p>
                 </button>
               </div>
             </div>

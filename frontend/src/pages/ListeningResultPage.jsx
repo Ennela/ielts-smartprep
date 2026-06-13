@@ -103,7 +103,26 @@ export default function ListeningResultPage() {
                 {result.totalQuestions ? Math.round((result.correctAnswers / result.totalQuestions) * 100) : 0}%
               </span>
             </div>
+            {result.timeSpentSeconds != null && (
+              <div className="stat-item">
+                <span className="stat-label">Time Spent</span>
+                <span className="stat-value">
+                  {Math.floor(result.timeSpentSeconds / 60)}:{(result.timeSpentSeconds % 60).toString().padStart(2, '0')}
+                </span>
+              </div>
+            )}
           </div>
+          {result.autoSubmitted && (
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 12,
+              padding: '4px 12px', borderRadius: 'var(--radius-full)',
+              background: 'rgba(186,26,26,0.08)', color: 'var(--error)',
+              fontSize: '0.8rem', fontWeight: 600,
+            }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>timer_off</span>
+              Auto-submitted (time expired)
+            </div>
+          )}
         </div>
 
         {/* Tabs */}

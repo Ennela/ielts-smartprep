@@ -17,4 +17,5 @@ public class WritingPromptResponse {
     private String promptText;
     private String essayType;
     private String imageUrl;
+    private String visualData;
 }

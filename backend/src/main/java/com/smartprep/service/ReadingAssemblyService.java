@@ -72,7 +72,9 @@ public class ReadingAssemblyService {
                 .user(user).topic(template.getTopic()).difficulty(template.getDifficulty())
                 .passageText(template.getPassageText()).timeLimitSeconds(template.getTimeLimitSeconds())
                 .totalQuestions(template.getTotalQuestions()).isTemplate(false)
-                .parentTemplateId(template.getQuizId()).build();
+                .parentTemplateId(template.getQuizId())
+                .moduleType(template.getModuleType() != null ? template.getModuleType() : "ACADEMIC")
+                .build();
 
         List<ReadingQuestion> questions = template.getQuestions().stream()
                 .map(q -> {
@@ -82,7 +84,11 @@ public class ReadingAssemblyService {
                             .explanation(q.getExplanation()).orderIndex(q.getOrderIndex())
                             .optionsJson(q.getOptionsJson()).wordLimit(q.getWordLimit())
                             .groupLabel(q.getGroupLabel()).groupId(q.getGroupId())
-                            .groupContext(q.getGroupContext()).build();
+                            .groupContext(q.getGroupContext())
+                            .evidenceText(q.getEvidenceText())
+                            .evidenceOffset(q.getEvidenceOffset())
+                            .evidenceLength(q.getEvidenceLength())
+                            .build();
 
                     List<QuestionOption> options = new ArrayList<>();
                     if (q.getOptions() != null) {

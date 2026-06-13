@@ -3,9 +3,9 @@ import axiosClient from './axiosClient';
 import type { ApiResponse, WritingPrompt, EssayGradingResult, PaginatedResult } from './types';
 
 interface GetPromptsParams {
-  page: number;
-  size: number;
-  essayType?: string;
+    page: number;
+    size: number;
+    essayType?: string;
 }
 
 const writingApi = {
@@ -32,6 +32,15 @@ const writingApi = {
 
     submitFullWriting: (data: any): Promise<AxiosResponse<ApiResponse<any>>> =>
         axiosClient.post('/writing/submit-full', data),
+
+    generateMockTest: (data: { topic?: string; difficulty: string; moduleType?: string }): Promise<AxiosResponse<ApiResponse<any>>> =>
+        axiosClient.post('/writing/generate-mock', data),
+
+    getFullHistory: (): Promise<AxiosResponse<ApiResponse<any>>> =>
+        axiosClient.get('/writing/full-history'),
+
+    getFullSubmission: (id: number | string): Promise<AxiosResponse<ApiResponse<any>>> =>
+        axiosClient.get(`/writing/full-submissions/${id}`),
 };
 
 export default writingApi;

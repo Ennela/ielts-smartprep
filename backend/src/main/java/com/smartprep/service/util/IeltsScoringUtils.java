@@ -12,6 +12,7 @@ public class IeltsScoringUtils {
 
     private static final Map<Integer, BigDecimal> LISTENING_BAND_MAP = new HashMap<>();
     private static final Map<Integer, BigDecimal> READING_BAND_MAP = new HashMap<>();
+    private static final Map<Integer, BigDecimal> READING_GT_BAND_MAP = new HashMap<>();
 
     static {
         // Listening Band Map (out of 40)
@@ -99,6 +100,49 @@ public class IeltsScoringUtils {
         READING_BAND_MAP.put(2, new BigDecimal("2.0"));
         READING_BAND_MAP.put(1, new BigDecimal("1.0"));
         READING_BAND_MAP.put(0, new BigDecimal("1.0"));
+
+        // Reading General Training Band Map (out of 40)
+        READING_GT_BAND_MAP.put(40, new BigDecimal("9.0"));
+        READING_GT_BAND_MAP.put(39, new BigDecimal("8.5"));
+        READING_GT_BAND_MAP.put(38, new BigDecimal("8.0"));
+        READING_GT_BAND_MAP.put(37, new BigDecimal("8.0"));
+        READING_GT_BAND_MAP.put(36, new BigDecimal("7.5"));
+        READING_GT_BAND_MAP.put(35, new BigDecimal("7.0"));
+        READING_GT_BAND_MAP.put(34, new BigDecimal("7.0"));
+        READING_GT_BAND_MAP.put(33, new BigDecimal("6.5"));
+        READING_GT_BAND_MAP.put(32, new BigDecimal("6.5"));
+        READING_GT_BAND_MAP.put(31, new BigDecimal("6.0"));
+        READING_GT_BAND_MAP.put(30, new BigDecimal("6.0"));
+        READING_GT_BAND_MAP.put(29, new BigDecimal("5.5"));
+        READING_GT_BAND_MAP.put(28, new BigDecimal("5.5"));
+        READING_GT_BAND_MAP.put(27, new BigDecimal("5.5"));
+        READING_GT_BAND_MAP.put(26, new BigDecimal("5.0"));
+        READING_GT_BAND_MAP.put(25, new BigDecimal("5.0"));
+        READING_GT_BAND_MAP.put(24, new BigDecimal("5.0"));
+        READING_GT_BAND_MAP.put(23, new BigDecimal("5.0"));
+        READING_GT_BAND_MAP.put(22, new BigDecimal("4.5"));
+        READING_GT_BAND_MAP.put(21, new BigDecimal("4.5"));
+        READING_GT_BAND_MAP.put(20, new BigDecimal("4.5"));
+        READING_GT_BAND_MAP.put(19, new BigDecimal("4.5"));
+        READING_GT_BAND_MAP.put(18, new BigDecimal("4.0"));
+        READING_GT_BAND_MAP.put(17, new BigDecimal("4.0"));
+        READING_GT_BAND_MAP.put(16, new BigDecimal("4.0"));
+        READING_GT_BAND_MAP.put(15, new BigDecimal("4.0"));
+        READING_GT_BAND_MAP.put(14, new BigDecimal("3.5"));
+        READING_GT_BAND_MAP.put(13, new BigDecimal("3.5"));
+        READING_GT_BAND_MAP.put(12, new BigDecimal("3.5"));
+        READING_GT_BAND_MAP.put(11, new BigDecimal("3.0"));
+        READING_GT_BAND_MAP.put(10, new BigDecimal("3.0"));
+        READING_GT_BAND_MAP.put(9, new BigDecimal("3.0"));
+        READING_GT_BAND_MAP.put(8, new BigDecimal("2.5"));
+        READING_GT_BAND_MAP.put(7, new BigDecimal("2.5"));
+        READING_GT_BAND_MAP.put(6, new BigDecimal("2.5"));
+        READING_GT_BAND_MAP.put(5, new BigDecimal("2.0"));
+        READING_GT_BAND_MAP.put(4, new BigDecimal("2.0"));
+        READING_GT_BAND_MAP.put(3, new BigDecimal("2.0"));
+        READING_GT_BAND_MAP.put(2, new BigDecimal("1.5"));
+        READING_GT_BAND_MAP.put(1, new BigDecimal("1.0"));
+        READING_GT_BAND_MAP.put(0, new BigDecimal("1.0"));
     }
 
     /**
@@ -113,7 +157,17 @@ public class IeltsScoringUtils {
      * Calculate IELTS Academic Reading Band Score (out of 40)
      */
     public static BigDecimal calculateReadingBand(int correctCount) {
+        return calculateReadingBand(correctCount, "ACADEMIC");
+    }
+
+    /**
+     * Calculate IELTS Reading Band Score (Academic or General Training, out of 40)
+     */
+    public static BigDecimal calculateReadingBand(int correctCount, String moduleType) {
         int correct = Math.min(Math.max(correctCount, 0), 40);
+        if ("GENERAL_TRAINING".equalsIgnoreCase(moduleType)) {
+            return READING_GT_BAND_MAP.getOrDefault(correct, new BigDecimal("1.0"));
+        }
         return READING_BAND_MAP.getOrDefault(correct, new BigDecimal("1.0"));
     }
 
@@ -157,7 +211,7 @@ public class IeltsScoringUtils {
             case MATCHING_HEADINGS ->
                 correct.equalsIgnoreCase(answer);
 
-            case SENTENCE_COMPLETION, SUMMARY_COMPLETION, FILL_BLANK -> {
+            case SENTENCE_COMPLETION, SUMMARY_COMPLETION, FILL_BLANK, DIAGRAM_LABEL_COMPLETION, SHORT_ANSWER -> {
                 String normCorrect = normalizeCompletionText(correct);
                 String normAnswer = normalizeCompletionText(answer);
                 yield normCorrect.equals(normAnswer);

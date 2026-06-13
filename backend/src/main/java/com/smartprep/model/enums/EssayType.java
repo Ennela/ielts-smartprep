@@ -15,17 +15,19 @@ public enum EssayType {
     PIE_CHART,
     TABLE,
     MAP,
-    DIAGRAM;
+    DIAGRAM,
+    LETTER;
 
     /**
      * Returns true if this essay type belongs to IELTS Writing Task 1.
      */
-    public boolean isTask1() {
-        return this == LINE_GRAPH
-            || this == BAR_CHART
-            || this == PIE_CHART
-            || this == TABLE
-            || this == MAP
-            || this == DIAGRAM;
-    }
+     public boolean isTask1() {
+         return this == LINE_GRAPH
+             || this == BAR_CHART
+             || this == PIE_CHART
+             || this == TABLE
+             || this == MAP
+             || this == DIAGRAM
+             || this == LETTER;
+     }
 }

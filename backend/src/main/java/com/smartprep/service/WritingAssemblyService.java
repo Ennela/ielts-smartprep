@@ -8,11 +8,16 @@ import com.smartprep.exception.ResourceNotFoundException;
 import com.smartprep.exception.WordCountTooLowException;
 import com.smartprep.model.entity.ScoreHistory;
 import com.smartprep.model.entity.User;
+import com.smartprep.model.entity.ExamAttempt;
+import com.smartprep.model.entity.WritingFullSubmission;
 import com.smartprep.model.entity.WritingPrompt;
+import com.smartprep.model.entity.WritingSubmission;
 import com.smartprep.model.enums.SkillType;
 import com.smartprep.repository.ScoreHistoryRepository;
 import com.smartprep.repository.UserRepository;
+import com.smartprep.repository.WritingFullSubmissionRepository;
 import com.smartprep.repository.WritingPromptRepository;
+import com.smartprep.repository.WritingSubmissionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +30,6 @@ import java.util.stream.Collectors;
 
 /**
  * Assembles full Writing mock tests and orchestrates multi-task submissions.
- * Extracted from the original WritingService (SRP refactor).
  */
 @Service
 @RequiredArgsConstructor
@@ -34,7 +38,11 @@ public class WritingAssemblyService {
     private final WritingPromptRepository promptRepository;
     private final ScoreHistoryRepository scoreHistoryRepository;
     private final UserRepository userRepository;
-    private final WritingService writingService; // delegates grading to WritingService
+    private final WritingService writingService;
+    private final WritingQueryService writingQueryService;
+    private final WritingFullSubmissionRepository writingFullSubmissionRepository;
+    private final WritingSubmissionRepository writingSubmissionRepository;
+    private final ExamAttemptService examAttemptService;
 
     private static final int MIN_WORD_COUNT_TASK1 = 150;
     private static final int MIN_WORD_COUNT_TASK2 = 250;
@@ -56,10 +64,20 @@ public class WritingAssemblyService {
         WritingPrompt t2 = task2Prompts.get(rand.nextInt(task2Prompts.size()));
 
         return List.of(
-                WritingPromptResponse.builder().promptId(t1.getPromptId()).promptText(t1.getPromptText())
-                        .essayType(t1.getEssayType().name()).imageUrl(t1.getImageUrl()).build(),
-                WritingPromptResponse.builder().promptId(t2.getPromptId()).promptText(t2.getPromptText())
-                        .essayType(t2.getEssayType().name()).imageUrl(t2.getImageUrl()).build()
+                WritingPromptResponse.builder()
+                        .promptId(t1.getPromptId())
+                        .promptText(t1.getPromptText())
+                        .essayType(t1.getEssayType().name())
+                        .imageUrl(t1.getImageUrl())
+                        .visualData(t1.getVisualData())
+                        .build(),
+                WritingPromptResponse.builder()
+                        .promptId(t2.getPromptId())
+                        .promptText(t2.getPromptText())
+                        .essayType(t2.getEssayType().name())
+                        .imageUrl(t2.getImageUrl())
+                        .visualData(t2.getVisualData())
+                        .build()
         );
     }
 
@@ -83,14 +101,77 @@ public class WritingAssemblyService {
         BigDecimal average = weightedSum.divide(BigDecimal.valueOf(3), 4, RoundingMode.HALF_UP);
         BigDecimal overallWritingBand = com.smartprep.service.util.IeltsScoringUtils.roundOverallBand(average);
 
+        // Persist individual submissions reference
+        WritingSubmission sub1 = writingSubmissionRepository.findById(res1.getSubmissionId())
+                .orElseThrow(() -> new ResourceNotFoundException("Task 1 submission not found after creation"));
+        WritingSubmission sub2 = writingSubmissionRepository.findById(res2.getSubmissionId())
+                .orElseThrow(() -> new ResourceNotFoundException("Task 2 submission not found after creation"));
+
+        WritingFullSubmission fullSub = WritingFullSubmission.builder()
+                .user(user)
+                .task1Submission(sub1)
+                .task2Submission(sub2)
+                .overallBand(overallWritingBand)
+                .build();
+        fullSub = writingFullSubmissionRepository.save(fullSub);
+
+        // Complete exam attempt if provided
+        ExamAttempt completedAttempt = null;
+        boolean autoSubmitted = request.getAutoSubmitted() != null && request.getAutoSubmitted();
+        if (request.getAttemptId() != null) {
+            completedAttempt = examAttemptService.completeAttemptInternal(
+                    request.getAttemptId(), userId, autoSubmitted,
+                    request.getTimeSpentTask1(), request.getTimeSpentTask2());
+        }
+
+        Integer timeSpentSeconds = completedAttempt != null ? completedAttempt.getTimeSpentSeconds() : null;
+        Integer timeSpentTask1 = request.getTimeSpentTask1();
+        Integer timeSpentTask2 = request.getTimeSpentTask2();
+
         ScoreHistory history = ScoreHistory.builder()
-                .user(user).skillType(SkillType.WRITING).score(overallWritingBand).build();
+                .user(user).skillType(SkillType.WRITING).score(overallWritingBand)
+                .timeSpentSeconds(timeSpentSeconds)
+                .timeSpentTask1(timeSpentTask1)
+                .timeSpentTask2(timeSpentTask2)
+                .autoSubmitted(autoSubmitted)
+                .build();
         scoreHistoryRepository.save(history);
 
         return WritingFullResultResponse.builder()
+                .id(fullSub.getId())
                 .overallWritingBand(overallWritingBand)
-                .task1Result(res1).task2Result(res2)
-                .submittedAt(LocalDateTime.now()).build();
+                .task1Result(res1)
+                .task2Result(res2)
+                .submittedAt(fullSub.getSubmittedAt())
+                .timeSpentSeconds(timeSpentSeconds)
+                .timeSpentTask1(timeSpentTask1)
+                .timeSpentTask2(timeSpentTask2)
+                .autoSubmitted(autoSubmitted)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public List<WritingFullResultResponse> getFullSubmissionsHistory(Long userId) {
+        return writingFullSubmissionRepository.findByUserUserIdOrderBySubmittedAtDesc(userId).stream()
+                .map(this::toFullResultResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public WritingFullResultResponse getFullSubmission(Long userId, Long id) {
+        WritingFullSubmission fullSub = writingFullSubmissionRepository.findByIdAndUserUserId(id, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Full writing submission not found"));
+        return toFullResultResponse(fullSub);
+    }
+
+    private WritingFullResultResponse toFullResultResponse(WritingFullSubmission fullSub) {
+        return WritingFullResultResponse.builder()
+                .id(fullSub.getId())
+                .overallWritingBand(fullSub.getOverallBand())
+                .task1Result(writingQueryService.getSubmission(fullSub.getUser().getUserId(), fullSub.getTask1Submission().getSubmissionId()))
+                .task2Result(writingQueryService.getSubmission(fullSub.getUser().getUserId(), fullSub.getTask2Submission().getSubmissionId()))
+                .submittedAt(fullSub.getSubmittedAt())
+                .build();
     }
 
     private int countWords(String text) {

@@ -10,8 +10,8 @@ interface GetTemplatesParams {
 }
 
 const readingApi = {
-    generateQuiz: (topic: string, difficulty: string, passageCount?: number): Promise<AxiosResponse<ApiResponse<Quiz>>> =>
-        axiosClient.post('/reading/generate', { topic, difficulty, passageCount }),
+    generateQuiz: (topic: string, difficulty: string, passageCount?: number, moduleType?: string): Promise<AxiosResponse<ApiResponse<Quiz>>> =>
+        axiosClient.post('/reading/generate', { topic, difficulty, passageCount, moduleType }),
 
     getQuiz: (quizId: number | string): Promise<AxiosResponse<ApiResponse<Quiz>>> =>
         axiosClient.get(`/reading/${quizId}`),
@@ -38,8 +38,8 @@ const readingApi = {
     assembleMockTest: (): Promise<AxiosResponse<ApiResponse<any>>> =>
         axiosClient.get('/reading/assemble'),
 
-    submitFullQuiz: (quizIds: number[], answers: Record<number, string>): Promise<AxiosResponse<ApiResponse<any>>> =>
-        axiosClient.post('/reading/submit-full', { quizIds, answers }),
+    submitFullQuiz: (quizIds: number[], answers: Record<number, string>, attemptId?: number | null, autoSubmitted?: boolean): Promise<AxiosResponse<ApiResponse<any>>> =>
+        axiosClient.post('/reading/submit-full', { quizIds, answers, attemptId: attemptId || undefined, autoSubmitted: autoSubmitted || false }),
 };
 
 export default readingApi;

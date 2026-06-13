@@ -40,7 +40,7 @@ public class VocabAiService {
     private static final String SYSTEM_PROMPT = """
             You are an expert IELTS vocabulary tutor and lexicographer.
             Analyze the provided IELTS source text (reading passage, listening transcript, essay prompt, or transcript) and extract advanced vocabulary items (CEFR levels B2, C1, C2) that are useful for students to learn.
-            
+
             For each vocabulary item, provide:
             1. The word or phrase itself.
             2. Phonetic spelling (e.g. /jūˈbikwədəs/).
@@ -62,9 +62,12 @@ public class VocabAiService {
                 "collocation": "ubiquitous presence"
               }
             ]
-            
+
             Return ONLY the valid JSON array. No markdown code fences, no extra text, no HTML tags.
-            Extract between 6 to 12 advanced vocabulary items from the source text.
+            Extract advanced vocabulary items from the source text.
+            Choose roughly 1 item per 40–60 words of source, with a minimum of 12.
+            Do not impose an upper limit; cover all genuinely useful advanced items.
+            Return as a JSON array.
             """;
 
     public List<SuggestedVocab> suggestVocabulary(String sourceText) {
@@ -81,13 +84,14 @@ public class VocabAiService {
                     response -> {
                         String cleanResponse = cleanResponseText(response);
                         try {
-                            return objectMapper.readValue(cleanResponse, new TypeReference<List<SuggestedVocab>>() {});
+                            return objectMapper.readValue(cleanResponse, new TypeReference<List<SuggestedVocab>>() {
+                            });
                         } catch (Exception e) {
                             log.error("Failed to parse JSON response: {}", response, e);
-                            throw new InvalidAiResponseException("AI returned invalid JSON array for vocabulary: " + e.getMessage());
+                            throw new InvalidAiResponseException(
+                                    "AI returned invalid JSON array for vocabulary: " + e.getMessage());
                         }
-                    }
-            );
+                    });
         } catch (Exception e) {
             log.error("Error in AI vocabulary suggestion generation: ", e);
             return Collections.emptyList();
@@ -95,7 +99,8 @@ public class VocabAiService {
     }
 
     private String cleanResponseText(String response) {
-        if (response == null) return "[]";
+        if (response == null)
+            return "[]";
         String clean = response.trim();
         if (clean.startsWith("```json")) {
             clean = clean.substring(7);

@@ -17,4 +17,6 @@ public class ListeningHistoryResponse {
     private Integer totalQuestions;
     private Integer correctAnswers;
     private LocalDateTime submittedAt;
+    private Integer timeSpentSeconds;
+    private Boolean autoSubmitted;
 }

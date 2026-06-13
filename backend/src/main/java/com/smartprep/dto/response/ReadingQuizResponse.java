@@ -17,6 +17,7 @@ public class ReadingQuizResponse {
     private Long quizId;
     private String topic;
     private String difficulty;
+    private String moduleType;
     private String passageText;
     private Integer timeLimitSeconds;
     private boolean submitted;

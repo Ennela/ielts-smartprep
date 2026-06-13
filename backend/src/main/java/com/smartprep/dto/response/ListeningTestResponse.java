@@ -19,6 +19,8 @@ public class ListeningTestResponse {
     private Integer correctAnswers;
     private LocalDateTime submittedAt;
     private List<PartResult> parts;
+    private Integer timeSpentSeconds;
+    private Boolean autoSubmitted;
 
     @Data @Builder @NoArgsConstructor @AllArgsConstructor
     public static class PartResult {

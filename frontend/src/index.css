@@ -148,6 +148,14 @@ body::after {
   font-size: 0.95rem; color: var(--on-surface);
 }
 .exam-timer-pill.warning { background: rgba(186,26,26,0.06); border-color: rgba(186,26,26,0.3); color: var(--error); }
+/* Writing suggested time indicator */
+.writing-suggested-time {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 6px 16px; background: var(--surface-container-low);
+  border-bottom: 1px solid var(--outline-variant);
+  font-size: 0.8rem; color: var(--on-surface-variant);
+  font-family: var(--font-body);
+}
 .btn-exam-help {
   display: flex; align-items: center; gap: 6px; background: transparent;
   border: 1px solid var(--outline-variant); border-radius: var(--radius-full);

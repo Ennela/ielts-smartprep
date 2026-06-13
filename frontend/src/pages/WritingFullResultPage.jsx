@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import AiVocabularyButton from '../components/vocab/AiVocabularyButton';
+import VisualDataRenderer from '../components/writing/VisualDataRenderer';
 
 const CRITERIA_EXPLANATIONS = [
   {
@@ -107,6 +108,36 @@ export default function WritingFullResultPage() {
             <p style={{ margin: '0.5rem 0 0', color: 'var(--text-secondary)' }}>
               Task 1 score: <strong>{result.task1Result.overallBand}</strong> · Task 2 score (Double Weight): <strong>{result.task2Result.overallBand}</strong>
             </p>
+            {(result.timeSpentSeconds != null || result.timeSpentTask1 != null) && (
+              <p style={{ margin: '0.5rem 0 0', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                {result.timeSpentSeconds != null && (
+                  <span>
+                    Total: <strong>{Math.floor(result.timeSpentSeconds / 60)}:{(result.timeSpentSeconds % 60).toString().padStart(2, '0')}</strong>
+                  </span>
+                )}
+                {result.timeSpentTask1 != null && (
+                  <span>
+                    {' · '}Task 1: <strong>{Math.floor(result.timeSpentTask1 / 60)}:{(result.timeSpentTask1 % 60).toString().padStart(2, '0')}</strong>
+                  </span>
+                )}
+                {result.timeSpentTask2 != null && (
+                  <span>
+                    {' · '}Task 2: <strong>{Math.floor(result.timeSpentTask2 / 60)}:{(result.timeSpentTask2 % 60).toString().padStart(2, '0')}</strong>
+                  </span>
+                )}
+              </p>
+            )}
+            {result.autoSubmitted && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8,
+                padding: '4px 12px', borderRadius: 'var(--radius-full)',
+                background: 'rgba(186,26,26,0.08)', color: 'var(--error)',
+                fontSize: '0.8rem', fontWeight: 600, width: 'fit-content',
+              }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>timer_off</span>
+                Auto-submitted (time expired)
+              </div>
+            )}
           </div>
         </div>
 
@@ -141,26 +172,60 @@ export default function WritingFullResultPage() {
         {/* Selected Task Details */}
         {activeTaskResult && (
           <div style={{ animation: 'fadeIn 0.3s ease' }}>
-            <div className="writing-score-section" style={{ marginTop: '1rem', padding: '1.5rem', background: 'var(--surface-container-low)', borderRadius: 'var(--radius-lg)' }}>
-              <div className="criteria-bars" style={{ flex: 1, width: '100%' }}>
-                <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>Component Scores Breakdown</h3>
-                {criteria.map((c, i) => (
-                  <div key={i} className="criteria-row">
-                    <span className="criteria-label">{c.label}</span>
-                    <div className="criteria-bar-track">
-                      <div
-                        className="criteria-bar-fill"
-                        style={{
-                          width: `${getScorePercent(c.score)}%`,
-                          background: getScoreColor(c.score),
-                        }}
-                      />
+            <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', marginTop: '1rem' }}>
+              {/* Left Column: Prompt Text & Visual Chart */}
+              <div style={{ flex: '1 1 320px', minWidth: 320, background: 'var(--surface-container-low)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--outline-variant)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <h3 style={{ marginTop: 0, marginBottom: 0, display: 'flex', alignItems: 'center', gap: 6, fontSize: '1.1rem' }}>
+                  <span className="material-symbols-outlined" style={{ color: 'var(--primary)', fontSize: 20 }}>description</span>
+                  Prompt Description
+                </h3>
+                <p style={{ fontSize: '0.92rem', lineHeight: 1.6, color: 'var(--on-surface)', margin: 0 }}>
+                  {activeTaskResult.promptText}
+                </p>
+
+                {activeTaskTab === 1 && activeTaskResult.visualData && (
+                  <VisualDataRenderer visualDataJson={activeTaskResult.visualData} essayType={activeTaskResult.essayType} />
+                )}
+
+                {activeTaskTab === 1 && activeTaskResult.essayType === 'LETTER' && (
+                  <div style={{
+                    padding: 12, background: 'var(--surface-container-lowest)', borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--outline-variant)', marginTop: 8
+                  }}>
+                    <div style={{ fontWeight: 700, marginBottom: 6, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem' }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>mail</span>
+                      Letter Guidelines
                     </div>
-                    <span className="criteria-score" style={{ color: getScoreColor(c.score) }}>
-                      {c.score}
-                    </span>
+                    <ul style={{ margin: 0, paddingLeft: 16, fontSize: '0.8rem', color: 'var(--on-surface-variant)', lineHeight: 1.4 }}>
+                      <li>Formal, Semi-Formal, or Informal address</li>
+                      <li>Check salutations and sign-off tone</li>
+                    </ul>
                   </div>
-                ))}
+                )}
+              </div>
+
+              {/* Right Column: Component Scores Breakdown */}
+              <div style={{ flex: '1 1 400px', minWidth: 320, background: 'var(--surface-container-low)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <h3 style={{ marginTop: 0, marginBottom: 0, fontSize: '1.1rem' }}>Component Scores Breakdown</h3>
+                <div className="criteria-bars" style={{ width: '100%' }}>
+                  {criteria.map((c, i) => (
+                    <div key={i} className="criteria-row">
+                      <span className="criteria-label">{c.label}</span>
+                      <div className="criteria-bar-track">
+                        <div
+                          className="criteria-bar-fill"
+                          style={{
+                            width: `${getScorePercent(c.score)}%`,
+                            background: getScoreColor(c.score),
+                          }}
+                        />
+                      </div>
+                      <span className="criteria-score" style={{ color: getScoreColor(c.score) }}>
+                        {c.score}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 

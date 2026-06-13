@@ -52,7 +52,8 @@ public class WritingQueryService {
         try {
             errors = objectMapper.readValue(
                     submission.getErrorListJson(),
-                    new TypeReference<List<WritingGradeResponse.ErrorDto>>() {});
+                    new TypeReference<List<WritingGradeResponse.ErrorDto>>() {
+                    });
         } catch (Exception e) {
             errors = new ArrayList<>();
         }
@@ -69,6 +70,7 @@ public class WritingQueryService {
                 .promptText(prompt.getPromptText())
                 .essayType(prompt.getEssayType().name())
                 .essayText(submission.getEssayText())
+                .visualData(prompt.getVisualData())
                 .wordCount(submission.getWordCount())
                 .overallBand(submission.getOverallBand())
                 .taskResponse(submission.getTaskResponseScore())
@@ -84,8 +86,10 @@ public class WritingQueryService {
     }
 
     private String truncate(String text, int maxLen) {
-        if (text == null) return "";
-        if (text.length() <= maxLen) return text;
+        if (text == null)
+            return "";
+        if (text.length() <= maxLen)
+            return text;
         return text.substring(0, maxLen) + "...";
     }
 }

@@ -118,6 +118,19 @@ class IeltsScoringUtilsTest {
             assertThat(IeltsScoringUtils.calculateReadingBand(50))
                     .isEqualByComparingTo(new BigDecimal("9.0"));
         }
+
+        @Test
+        @DisplayName("should calculate GT reading band")
+        void shouldCalculateGtReadingBand() {
+            assertThat(IeltsScoringUtils.calculateReadingBand(40, "GENERAL_TRAINING"))
+                    .isEqualByComparingTo(new BigDecimal("9.0"));
+            assertThat(IeltsScoringUtils.calculateReadingBand(38, "GENERAL_TRAINING"))
+                    .isEqualByComparingTo(new BigDecimal("8.0"));
+            assertThat(IeltsScoringUtils.calculateReadingBand(30, "GENERAL_TRAINING"))
+                    .isEqualByComparingTo(new BigDecimal("6.0"));
+            assertThat(IeltsScoringUtils.calculateReadingBand(15, "GENERAL_TRAINING"))
+                    .isEqualByComparingTo(new BigDecimal("4.0"));
+        }
     }
 
     // ===================================================================
@@ -216,6 +229,20 @@ class IeltsScoringUtilsTest {
         void fillBlank_normalization() {
             assertThat(IeltsScoringUtils.isReadingCorrect(
                     QuestionType.FILL_BLANK, "the  ocean  current", "ocean current")).isTrue();
+        }
+
+        @Test
+        @DisplayName("DIAGRAM_LABEL_COMPLETION — normalizes articles and whitespace")
+        void diagramLabelCompletion_normalization() {
+            assertThat(IeltsScoringUtils.isReadingCorrect(
+                    QuestionType.DIAGRAM_LABEL_COMPLETION, "the outer crust", "outer crust")).isTrue();
+        }
+
+        @Test
+        @DisplayName("SHORT_ANSWER — normalizes articles and whitespace")
+        void shortAnswer_normalization() {
+            assertThat(IeltsScoringUtils.isReadingCorrect(
+                    QuestionType.SHORT_ANSWER, "an ancient ritual", "ancient ritual")).isTrue();
         }
 
         @Test

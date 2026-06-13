@@ -76,7 +76,26 @@ export default function ReadingFullResultPage() {
                 <span className="stat-value" style={{ display: 'block', fontSize: '1.75rem', fontWeight: 700 }}>{percentage}%</span>
                 <span className="stat-label" style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Accuracy</span>
               </div>
+              {result.timeSpentSeconds != null && (
+                <div className="score-stat">
+                  <span className="stat-value" style={{ display: 'block', fontSize: '1.75rem', fontWeight: 700 }}>
+                    {Math.floor(result.timeSpentSeconds / 60)}:{(result.timeSpentSeconds % 60).toString().padStart(2, '0')}
+                  </span>
+                  <span className="stat-label" style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Time Spent</span>
+                </div>
+              )}
             </div>
+            {result.autoSubmitted && (
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '4px 12px', borderRadius: 'var(--radius-full)',
+                background: 'rgba(186,26,26,0.08)', color: 'var(--error)',
+                fontSize: '0.8rem', fontWeight: 600,
+              }}>
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>timer_off</span>
+                Auto-submitted (time expired)
+              </div>
+            )}
           </div>
         </div>
 

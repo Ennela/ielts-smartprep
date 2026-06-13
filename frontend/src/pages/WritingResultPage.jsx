@@ -4,22 +4,22 @@ import writingApi from '../api/writingApi';
 import AiVocabularyButton from '../components/vocab/AiVocabularyButton';
 
 const CRITERIA_EXPLANATIONS = [
-  {
-    label: 'Task Achievement / Response (TA)',
-    desc: 'This criterion is based on your ability to complete all requirements of the task correctly and fully. If all parts of the question are addressed through logical arguments and accurate data, you will easily achieve a high score.',
-  },
-  {
-    label: 'Coherence & Cohesion (CC)',
-    desc: 'This criterion evaluates the clarity and logical flow of the essay. A cohesive essay is easy to read, consistent, and objectively clarifies both main and supporting points.',
-  },
-  {
-    label: 'Lexical Resource (LR)',
-    desc: 'This criterion tests the candidate\'s vocabulary range and precision. The more varied and natural the lexical choices, the higher the score. Proper spelling and collocation are also evaluated here.',
-  },
-  {
-    label: 'Grammatical Range & Accuracy (GRA)',
-    desc: 'This criterion assesses grammatical diversity and precision. Candidates should use a mix of simple and complex sentence structures correctly. Proper punctuation is also essential.',
-  }
+    {
+        label: 'Task Achievement / Response (TA)',
+        desc: 'This criterion is based on your ability to complete all requirements of the task correctly and fully. If all parts of the question are addressed through logical arguments and accurate data, you will easily achieve a high score.',
+    },
+    {
+        label: 'Coherence & Cohesion (CC)',
+        desc: 'This criterion evaluates the clarity and logical flow of the essay. A cohesive essay is easy to read, consistent, and objectively clarifies both main and supporting points.',
+    },
+    {
+        label: 'Lexical Resource (LR)',
+        desc: 'This criterion tests the candidate\'s vocabulary range and precision. The more varied and natural the lexical choices, the higher the score. Proper spelling and collocation are also evaluated here.',
+    },
+    {
+        label: 'Grammatical Range & Accuracy (GRA)',
+        desc: 'This criterion assesses grammatical diversity and precision. Candidates should use a mix of simple and complex sentence structures correctly. Proper punctuation is also essential.',
+    }
 ];
 
 export default function WritingResultPage() {
@@ -87,7 +87,7 @@ export default function WritingResultPage() {
         <div className="writing-result-page">
             <div className="writing-result-content">
                 <button className="btn-back" onClick={() => navigate('/writing')} id="back-to-writing">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
                     Go Back to Writing
                 </button>
 

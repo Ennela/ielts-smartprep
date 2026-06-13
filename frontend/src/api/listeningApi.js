@@ -20,8 +20,12 @@ const listeningApi = {
     assembleMockTest: () =>
         axiosClient.get('/listening/mock-test'),
 
-    submitTest: (testMode, partIds, answers) =>
-        axiosClient.post('/listening/submit', { testMode, partIds, answers }),
+    submitTest: (testMode, partIds, answers, attemptId, autoSubmitted) =>
+        axiosClient.post('/listening/submit', {
+            testMode, partIds, answers,
+            attemptId: attemptId || undefined,
+            autoSubmitted: autoSubmitted || false,
+        }),
 
     submitMockTest: (testId, answers) =>
         axiosClient.post(`/listening/mock-test/${testId}/submit`, { answers }),
@@ -40,6 +44,9 @@ const listeningApi = {
 
     generatePart: (partNumber, topic) =>
         axiosClient.post('/listening/generate', { partNumber, topic }),
+
+    generateMockTest: (topic) =>
+        axiosClient.post('/listening/generate-mock', { topic }),
 };
 
 export default listeningApi;

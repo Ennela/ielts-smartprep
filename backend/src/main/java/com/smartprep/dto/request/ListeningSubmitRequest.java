@@ -21,4 +21,10 @@ public class ListeningSubmitRequest {
      */
     @NotEmpty
     private Map<Long, String> answers;
+
+    /** Optional: links to ExamAttempt for timer tracking */
+    private Long attemptId;
+
+    /** True if auto-submitted when time expired */
+    private Boolean autoSubmitted;
 }

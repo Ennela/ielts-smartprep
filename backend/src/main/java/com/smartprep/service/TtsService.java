@@ -203,17 +203,55 @@ public class TtsService {
 
     // ========== MP3 Concatenation ==========
 
+    private byte[] stripId3Tags(byte[] mp3Data) {
+        if (mp3Data == null || mp3Data.length < 10) {
+            return mp3Data;
+        }
+        int startOffset = 0;
+        // Check for ID3v2 tag: starts with "ID3" (0x49, 0x44, 0x33)
+        if (mp3Data[0] == 0x49 && mp3Data[1] == 0x44 && mp3Data[2] == 0x33) {
+            // ID3v2 header size is stored in bytes 6, 7, 8, 9 as a 28-bit synchsafe integer
+            int size = ((mp3Data[6] & 0x7F) << 21) |
+                       ((mp3Data[7] & 0x7F) << 14) |
+                       ((mp3Data[8] & 0x7F) << 7)  |
+                       (mp3Data[9] & 0x7F);
+            startOffset = 10 + size;
+        }
+        int endOffset = mp3Data.length;
+        // Check for ID3v1 tag at the end (128 bytes starting with "TAG" i.e., 0x54, 0x41, 0x47)
+        if (mp3Data.length >= 128) {
+            int tagIndex = mp3Data.length - 128;
+            if (mp3Data[tagIndex] == 0x54 && mp3Data[tagIndex + 1] == 0x41 && mp3Data[tagIndex + 2] == 0x47) {
+                endOffset = tagIndex;
+            }
+        }
+        if (startOffset > 0 || endOffset < mp3Data.length) {
+            if (startOffset >= endOffset) {
+                return new byte[0];
+            }
+            byte[] cleaned = new byte[endOffset - startOffset];
+            System.arraycopy(mp3Data, startOffset, cleaned, 0, cleaned.length);
+            return cleaned;
+        }
+        return mp3Data;
+    }
+
     byte[] concatenateMp3Segments(List<byte[]> segments) {
-        int totalSize = segments.stream().mapToInt(s -> s.length).sum();
+        List<byte[]> cleanedSegments = new ArrayList<>();
+        for (byte[] segment : segments) {
+            cleanedSegments.add(stripId3Tags(segment));
+        }
+
+        int totalSize = cleanedSegments.stream().mapToInt(s -> s.length).sum();
         byte[] result = new byte[totalSize];
         int offset = 0;
 
-        for (byte[] segment : segments) {
+        for (byte[] segment : cleanedSegments) {
             System.arraycopy(segment, 0, result, offset, segment.length);
             offset += segment.length;
         }
 
-        log.info("Concatenated {} MP3 segments into {}KB audio", segments.size(), totalSize / 1024);
+        log.info("Concatenated {} cleaned MP3 segments into {}KB audio", segments.size(), totalSize / 1024);
         return result;
     }
 

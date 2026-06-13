@@ -62,6 +62,26 @@ export default function ListeningPracticePage() {
     }
   };
 
+  const generateAiMockTest = async () => {
+    setMockLoading(true);
+    setError('');
+    try {
+      const res = await listeningApi.generateMockTest(selectedTopic);
+      const mockParts = res.data?.data || [];
+      if (mockParts.length > 0) {
+        const partIds = mockParts.map(p => p.partId).join(',');
+        navigate(`/listening/exam?mode=mock-test&parts=${partIds}`);
+      } else {
+        setError('Failed to generate AI Mock Test.');
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to generate AI Mock Test');
+      console.error(err);
+    } finally {
+      setMockLoading(false);
+    }
+  };
+
   const handleGenerate = async () => {
     setGenerateLoading(true);
     setError('');
@@ -101,15 +121,26 @@ export default function ListeningPracticePage() {
             <h1>Listening Practice</h1>
             <p className="subtitle">Practice your listening skills with AI-generated or curated tests</p>
           </div>
-          <button
-            className="btn btn-primary"
-            onClick={startMockTest}
-            disabled={mockLoading}
-            id="start-mock-test-btn"
-            style={{ padding: '0.75rem 1.5rem', height: 'fit-content' }}
-          >
-            {mockLoading ? 'Preparing...' : 'Start Mock Test (40 Questions)'}
-          </button>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button
+              className="btn btn-outline"
+              onClick={startMockTest}
+              disabled={mockLoading}
+              id="start-mock-test-btn"
+              style={{ padding: '0.75rem 1.5rem', height: 'fit-content' }}
+            >
+              {mockLoading ? 'Preparing...' : 'Curated Mock Test'}
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={generateAiMockTest}
+              disabled={mockLoading}
+              id="generate-ai-mock-btn"
+              style={{ padding: '0.75rem 1.5rem', height: 'fit-content' }}
+            >
+              {mockLoading ? 'Generating...' : 'Generate AI Mock Test'}
+            </button>
+          </div>
         </div>
 
         {/* Tab Container */}

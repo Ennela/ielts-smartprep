@@ -115,3 +115,31 @@ export interface ListeningPart {
   topic: string;
   questions: Question[];
 }
+
+export interface StartAttemptRequest {
+  skillType: string;
+  examReferenceIds?: string;
+  durationOverride?: number;
+}
+
+export interface CompleteAttemptRequest {
+  autoSubmitted?: boolean;
+  timeSpentTask1?: number;
+  timeSpentTask2?: number;
+}
+
+export interface AttemptResponse {
+  attemptId: number;
+  skillType: string;
+  durationSeconds: number;
+  startedAt: string;
+  deadline: string;
+  status: string;
+  autoSubmitted: boolean;
+  timeSpentSeconds?: number;
+  timeSpentTask1?: number;
+  timeSpentTask2?: number;
+  examReferenceIds?: string;
+  suggestedTask1Duration?: number;
+  suggestedTask2Duration?: number;
+}

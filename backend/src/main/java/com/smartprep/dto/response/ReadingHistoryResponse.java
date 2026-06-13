@@ -23,4 +23,6 @@ public class ReadingHistoryResponse {
     private Integer totalQuestions;
     private LocalDateTime createdAt;
     private LocalDateTime submittedAt;
+    private Integer timeSpentSeconds;
+    private Boolean autoSubmitted;
 }

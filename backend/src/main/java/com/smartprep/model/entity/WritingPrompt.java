@@ -23,6 +23,9 @@ public class WritingPrompt {
     @Column(name = "image_url", length = 512)
     private String imageUrl;
 
+    @Column(name = "visual_data", columnDefinition = "TEXT")
+    private String visualData;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

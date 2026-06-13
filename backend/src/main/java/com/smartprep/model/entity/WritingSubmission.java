@@ -7,10 +7,14 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "writing_submissions")
-@Data @NoArgsConstructor @AllArgsConstructor @Builder
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class WritingSubmission {
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long submissionId;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -54,5 +58,7 @@ public class WritingSubmission {
     private LocalDateTime submittedAt;
 
     @PrePersist
-    protected void onCreate() { submittedAt = LocalDateTime.now(); }
+    protected void onCreate() {
+        submittedAt = LocalDateTime.now();
+    }
 }

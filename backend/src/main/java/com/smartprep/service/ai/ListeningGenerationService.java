@@ -44,8 +44,169 @@ public class ListeningGenerationService {
     private final TtsService ttsService;
     private final AudioGenerationService audioGenerationService;
     private final ListeningQueryService listeningQueryService;
+    private final java.util.concurrent.Executor ttsExecutor;
 
     // ========== AI Generation ==========
+
+    @Transactional
+    public List<ListeningPartResponse> generateFullTest(Long userId, String topic) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        log.info("Starting parallel generation of full 4-part Listening test for user {}", userId);
+
+        List<java.util.concurrent.CompletableFuture<ListeningPart>> futures = new ArrayList<>();
+
+        for (int partNum = 1; partNum <= 4; partNum++) {
+            final int pNum = partNum;
+            futures.add(java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+                String systemPrompt = "You are a professional IELTS Listening test designer with 15 years of experience.";
+                String userPrompt = promptBuilder.buildGeneratePrompt(pNum, topic, null);
+
+                String skillType = "LISTENING";
+                String topicKey = topic != null ? topic.toUpperCase() : "GENERAL";
+                String cacheKey = String.format("%s:%s:PART_%d:ALL:%s", skillType, topicKey, pNum, PROMPT_VERSION);
+
+                String cachedResponse = null;
+                if (redisTemplate != null) {
+                    try {
+                        cachedResponse = redisTemplate.opsForValue().get(cacheKey);
+                    } catch (Exception e) {
+                        log.warn("Failed to retrieve cache from Redis: {}", e.getMessage());
+                    }
+                }
+
+                String aiResponseText = null;
+                boolean fromCache = false;
+
+                if (cachedResponse != null) {
+                    aiResponseText = cachedResponse;
+                    fromCache = true;
+                } else {
+                    try {
+                        aiResponseText = geminiClient.generate(systemPrompt, userPrompt);
+                        if (redisTemplate != null && aiResponseText != null) {
+                            try {
+                                redisTemplate.opsForValue().set(cacheKey, aiResponseText, java.time.Duration.ofHours(24));
+                            } catch (Exception e) {
+                                log.warn("Failed to write to Redis cache: {}", e.getMessage());
+                            }
+                        }
+                    } catch (Exception ex) {
+                        log.error("Gemini generation failed for part {}", pNum, ex);
+                        throw new RuntimeException("Failed to generate part " + pNum, ex);
+                    }
+                }
+
+                try {
+                    ListeningPart part = parseListeningPart(aiResponseText, pNum, topic);
+                    validateListeningPart(part);
+                    return part;
+                } catch (Exception e) {
+                    log.warn("Parsing of AI response failed for part {}. Attempting fresh generation.", pNum, e);
+                    if (fromCache && redisTemplate != null) {
+                        try { redisTemplate.delete(cacheKey); } catch (Exception dEx) {}
+                    }
+                    try {
+                        String freshResponse = geminiClient.generate(systemPrompt, userPrompt);
+                        ListeningPart part = parseListeningPart(freshResponse, pNum, topic);
+                        validateListeningPart(part);
+                        if (redisTemplate != null && freshResponse != null) {
+                            try {
+                                redisTemplate.opsForValue().set(cacheKey, freshResponse, java.time.Duration.ofHours(24));
+                            } catch (Exception wEx) {}
+                        }
+                        return part;
+                    } catch (Exception ex) {
+                        log.error("Fresh Gemini generation failed for part {}", pNum, ex);
+                        throw new RuntimeException("Failed to generate part " + pNum, ex);
+                    }
+                }
+            }, ttsExecutor));
+        }
+
+        // Wait for all futures to complete
+        List<ListeningPart> generatedParts = new ArrayList<>();
+        for (int i = 0; i < 4; i++) {
+            try {
+                generatedParts.add(futures.get(i).join());
+            } catch (Exception e) {
+                log.error("Parallel generation of part {} failed, falling back", i + 1, e);
+                int pNum = i + 1;
+                ListeningPart fallback = getFallbackEntity(pNum, topic);
+                generatedParts.add(fallback);
+            }
+        }
+
+        // Save parts and trigger audio generation
+        List<ListeningPartResponse> responses = new ArrayList<>();
+        for (ListeningPart part : generatedParts) {
+            ListeningPart saved = partRepository.save(part);
+            if (ttsService.isAvailable()) {
+                audioGenerationService.generateAudioAsync(saved.getPartId());
+            } else {
+                log.info("TTS unavailable, part {} will use silent fallback", saved.getPartId());
+            }
+            responses.add(listeningQueryService.toPartResponse(saved));
+        }
+
+        return responses;
+    }
+
+    private ListeningPart getFallbackEntity(int partNumber, String topic) {
+        List<ListeningPart> existingParts = partRepository.findByPartNumberOrderByPartIdAsc(partNumber);
+        if (existingParts.isEmpty()) {
+            existingParts = partRepository.findAllByOrderByPartNumberAscPartIdAsc();
+        }
+        if (existingParts.isEmpty()) {
+            throw new RuntimeException("No fallback parts found in database");
+        }
+        ListeningPart selected = null;
+        if (topic != null && !topic.isBlank()) {
+            String cleanTopic = topic.toLowerCase();
+            selected = existingParts.stream()
+                    .filter(p -> p.getTopic() != null && p.getTopic().toLowerCase().contains(cleanTopic))
+                    .findFirst()
+                    .orElse(null);
+        }
+        if (selected == null) {
+            selected = existingParts.get(new java.util.Random().nextInt(existingParts.size()));
+        }
+
+        ListeningPart clone = ListeningPart.builder()
+                .partNumber(selected.getPartNumber())
+                .title(selected.getTitle() + " (AI Fallback)")
+                .topic(selected.getTopic())
+                .audioUrl(selected.getAudioUrl())
+                .audioStatus(selected.getAudioStatus())
+                .transcriptText(selected.getTranscriptText())
+                .durationSeconds(selected.getDurationSeconds())
+                .build();
+        List<ListeningQuestion> clonedQuestions = new ArrayList<>();
+        for (ListeningQuestion q : selected.getQuestions()) {
+            ListeningQuestion cq = ListeningQuestion.builder()
+                    .part(clone)
+                    .questionType(q.getQuestionType())
+                    .questionText(q.getQuestionText())
+                    .correctAnswer(q.getCorrectAnswer())
+                    .orderIndex(q.getOrderIndex())
+                    .build();
+            List<QuestionOption> clonedOptions = new ArrayList<>();
+            for (QuestionOption opt : q.getOptions()) {
+                clonedOptions.add(QuestionOption.builder()
+                        .listeningQuestion(cq)
+                        .label(opt.getLabel())
+                        .content(opt.getContent())
+                        .isCorrect(opt.getIsCorrect())
+                        .orderIndex(opt.getOrderIndex())
+                        .build());
+            }
+            cq.setOptions(clonedOptions);
+            clonedQuestions.add(cq);
+        }
+        clone.setQuestions(clonedQuestions);
+        return clone;
+    }
 
     @Transactional
     public ListeningPartResponse generatePart(Long userId, com.smartprep.dto.request.ListeningGenerateRequest request) {
@@ -265,7 +426,7 @@ public class ListeningGenerationService {
                 for (JsonNode qNode : questionsNode) {
                     int questionNumber = qNode.path("questionNumber").asInt();
                     String typeStr = qNode.path("questionType").asText("").toUpperCase();
-                    QuestionType questionType = (typeStr.contains("MCQ") || typeStr.contains("MULTIPLE_CHOICE"))
+                    QuestionType questionType = (typeStr.contains("MCQ") || typeStr.contains("MULTIPLE_CHOICE") || typeStr.contains("MATCHING"))
                             ? QuestionType.MCQ : QuestionType.FILL_BLANK;
 
                     ListeningQuestion question = ListeningQuestion.builder()
@@ -276,25 +437,38 @@ public class ListeningGenerationService {
 
                     List<QuestionOption> options = new ArrayList<>();
                     JsonNode optionsNode = qNode.path("options");
-                    if (questionType == QuestionType.MCQ && optionsNode.isArray() && !optionsNode.isEmpty()) {
-                        int optIndex = 1;
-                        for (JsonNode optNode : optionsNode) {
-                            String label, content;
-                            if (optNode.isObject()) {
-                                label = optNode.path("label").asText();
-                                content = optNode.path("content").asText();
-                            } else {
-                                String optText = optNode.asText();
-                                label = optText.length() > 0 ? optText.substring(0, 1).toUpperCase() : "";
-                                content = optText;
-                                if (optText.length() > 2 && (optText.charAt(1) == '.' || optText.charAt(1) == ')')) {
-                                    content = optText.substring(2).trim();
+                    if (questionType == QuestionType.MCQ) {
+                        if (optionsNode.isArray() && !optionsNode.isEmpty()) {
+                            int optIndex = 1;
+                            for (JsonNode optNode : optionsNode) {
+                                String label, content;
+                                if (optNode.isObject()) {
+                                    label = optNode.path("label").asText();
+                                    content = optNode.path("content").asText();
+                                } else {
+                                    String optText = optNode.asText();
+                                    label = optText.length() > 0 ? optText.substring(0, 1).toUpperCase() : "";
+                                    content = optText;
+                                    if (optText.length() > 2 && (optText.charAt(1) == '.' || optText.charAt(1) == ')')) {
+                                        content = optText.substring(2).trim();
+                                    }
                                 }
+                                options.add(QuestionOption.builder()
+                                        .listeningQuestion(question).label(label).content(content)
+                                        .isCorrect(qNode.path("correctAnswer").asText().equalsIgnoreCase(label))
+                                        .orderIndex(optIndex++).build());
                             }
-                            options.add(QuestionOption.builder()
-                                    .listeningQuestion(question).label(label).content(content)
-                                    .isCorrect(qNode.path("correctAnswer").asText().equalsIgnoreCase(label))
-                                    .orderIndex(optIndex++).build());
+                        } else if (typeStr.contains("MATCHING") && root.has("matchingOptions") && root.path("matchingOptions").isArray()) {
+                            JsonNode matchingOptionsNode = root.path("matchingOptions");
+                            int optIndex = 1;
+                            for (JsonNode optNode : matchingOptionsNode) {
+                                String label = optNode.path("label").asText();
+                                String content = optNode.path("content").asText();
+                                options.add(QuestionOption.builder()
+                                        .listeningQuestion(question).label(label).content(content)
+                                        .isCorrect(qNode.path("correctAnswer").asText().equalsIgnoreCase(label))
+                                        .orderIndex(optIndex++).build());
+                            }
                         }
                     }
                     question.setOptions(options);

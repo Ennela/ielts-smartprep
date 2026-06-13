@@ -50,6 +50,10 @@ public class ReadingQuiz {
 
     private Long parentTemplateId;
 
+    @Column(nullable = false, length = 30)
+    @Builder.Default
+    private String moduleType = "ACADEMIC";
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

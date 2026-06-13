@@ -20,6 +20,7 @@ public class WritingGradeResponse {
     private String promptText;
     private String essayType;
     private String essayText;
+    private String visualData;
     private Integer wordCount;
 
     // Scores

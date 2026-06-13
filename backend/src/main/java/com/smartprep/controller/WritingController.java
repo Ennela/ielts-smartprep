@@ -114,4 +114,44 @@ public class WritingController {
         WritingFullResultResponse result = writingAssemblyService.submitFullWriting(user.getUserId(), request);
         return ResponseEntity.ok(ApiResponse.ok(result, "Full Writing test submitted and graded successfully"));
     }
+
+    private final com.smartprep.service.ai.WritingGenerationService writingGenerationService;
+
+    /**
+     * Generate dynamic AI writing mock test prompts.
+     * POST /api/v1/writing/generate-mock
+     */
+    @PostMapping("/generate-mock")
+    @Operation(summary = "Generate paired IELTS Writing prompts using Gemini AI")
+    public ResponseEntity<ApiResponse<List<WritingPromptResponse>>> generateMock(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody com.smartprep.dto.request.WritingGenerateRequest request) {
+        List<WritingPromptResponse> prompts = writingGenerationService.generatePromptPair(user.getUserId(), request);
+        return ResponseEntity.ok(ApiResponse.ok(prompts, "Paired writing prompts generated successfully"));
+    }
+
+    /**
+     * Get full mock test submissions history.
+     * GET /api/v1/writing/full-history
+     */
+    @GetMapping("/full-history")
+    @Operation(summary = "Get full writing test submission history for current user")
+    public ResponseEntity<ApiResponse<List<WritingFullResultResponse>>> getFullHistory(
+            @AuthenticationPrincipal User user) {
+        List<WritingFullResultResponse> history = writingAssemblyService.getFullSubmissionsHistory(user.getUserId());
+        return ResponseEntity.ok(ApiResponse.ok(history));
+    }
+
+    /**
+     * Get details of a specific full writing submission.
+     * GET /api/v1/writing/full-submissions/{id}
+     */
+    @GetMapping("/full-submissions/{id}")
+    @Operation(summary = "Get details of a full mock writing submission")
+    public ResponseEntity<ApiResponse<WritingFullResultResponse>> getFullSubmission(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id) {
+        WritingFullResultResponse result = writingAssemblyService.getFullSubmission(user.getUserId(), id);
+        return ResponseEntity.ok(ApiResponse.ok(result));
+    }
 }

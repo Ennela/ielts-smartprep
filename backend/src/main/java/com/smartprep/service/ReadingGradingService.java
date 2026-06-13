@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.util.Optional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -38,6 +39,7 @@ public class ReadingGradingService {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
     private final ReadingQueryService readingQueryService;
+    private final ExamAttemptService examAttemptService;
 
     // Band score conversion for 13-question quizzes
     private static final BigDecimal[] BAND_SCORES_13 = {
@@ -80,7 +82,9 @@ public class ReadingGradingService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         ScoreHistory history = ScoreHistory.builder()
                 .user(user).skillType(SkillType.READING).score(bandScore)
-                .difficulty(quiz.getDifficulty().name()).build();
+                .difficulty(quiz.getDifficulty().name())
+                .moduleType(quiz.getModuleType() != null ? quiz.getModuleType() : "ACADEMIC")
+                .build();
         List<UserAnswer> userAnswerList = new ArrayList<>();
         for (ReadingQuestion question : quiz.getQuestions()) {
             String ua = answers.getOrDefault(question.getQuestionId(), "");
@@ -127,10 +131,33 @@ public class ReadingGradingService {
             quizResults.add(readingQueryService.mapToResultResponse(quiz));
         }
 
-        BigDecimal overallBand = IeltsScoringUtils.calculateReadingBand(totalCorrect);
+        String moduleType = "ACADEMIC";
+        if (!request.getQuizIds().isEmpty()) {
+            ReadingQuiz firstQuiz = quizRepository.findById(request.getQuizIds().get(0)).orElse(null);
+            if (firstQuiz != null && firstQuiz.getModuleType() != null) {
+                moduleType = firstQuiz.getModuleType();
+            }
+        }
+
+        BigDecimal overallBand = IeltsScoringUtils.calculateReadingBand(totalCorrect, moduleType);
+
+        // Complete exam attempt if provided
+        ExamAttempt completedAttempt = null;
+        boolean autoSubmitted = request.getAutoSubmitted() != null && request.getAutoSubmitted();
+        if (request.getAttemptId() != null) {
+            completedAttempt = examAttemptService.completeAttemptInternal(
+                    request.getAttemptId(), userId, autoSubmitted, null, null);
+        }
+
+        Integer timeSpentSeconds = completedAttempt != null ? completedAttempt.getTimeSpentSeconds() : null;
+
         ScoreHistory history = ScoreHistory.builder()
                 .user(user).skillType(SkillType.READING).score(overallBand)
-                .difficulty("FULL_TEST").build();
+                .difficulty("FULL_TEST")
+                .moduleType(moduleType)
+                .timeSpentSeconds(timeSpentSeconds)
+                .autoSubmitted(autoSubmitted)
+                .build();
         allUserAnswers.forEach(ua -> ua.setScoreHistory(history));
         history.setUserAnswers(allUserAnswers);
         scoreHistoryRepository.save(history);
@@ -138,7 +165,10 @@ public class ReadingGradingService {
         return ReadingFullResultResponse.builder()
                 .overallBand(overallBand).totalCorrect(totalCorrect)
                 .totalQuestions(totalQuestions).submittedAt(LocalDateTime.now())
-                .quizResults(quizResults).build();
+                .quizResults(quizResults)
+                .timeSpentSeconds(timeSpentSeconds)
+                .autoSubmitted(autoSubmitted)
+                .build();
     }
 
     // =========================================================================

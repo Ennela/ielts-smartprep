@@ -57,6 +57,7 @@ export default function ReadingHistoryPage() {
                 <tr>
                   <th>#</th>
                   <th>Topic</th>
+                  <th>Module</th>
                   <th>Difficulty</th>
                   <th>Score</th>
                   <th>Band</th>
@@ -69,6 +70,7 @@ export default function ReadingHistoryPage() {
                   <tr key={item.quizId}>
                     <td>{idx + 1}</td>
                     <td><span className="meta-badge">{item.topic}</span></td>
+                    <td><span className="meta-badge module">{item.moduleType || 'ACADEMIC'}</span></td>
                     <td><span className="meta-badge diff">{item.difficulty?.replace('_', ' ')}</span></td>
                     <td>{item.correctAnswers}/{item.totalQuestions}</td>
                     <td><span className={`band-score band-${getBandClass(item.bandScore)}`}>{item.bandScore}</span></td>

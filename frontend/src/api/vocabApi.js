@@ -4,8 +4,11 @@ const vocabApi = {
     addVocab: (data) =>
         axiosClient.post('/vocab', data),
 
-    getDueVocab: () =>
-        axiosClient.get('/vocab/due'),
+    getDueVocab: (page = 0, size = 10) =>
+        axiosClient.get(`/vocab/due?page=${page}&size=${size}`),
+
+    getStats: () =>
+        axiosClient.get('/vocab/stats'),
 
     getAllVocab: () =>
         axiosClient.get('/vocab'),
