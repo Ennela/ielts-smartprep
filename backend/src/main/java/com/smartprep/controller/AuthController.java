@@ -7,6 +7,9 @@ import com.smartprep.model.entity.User;
 import com.smartprep.service.EmailVerificationService;
 import com.smartprep.service.PasswordResetService;
 import com.smartprep.service.UserService;
+import com.smartprep.service.StorageService;
+import org.springframework.web.multipart.MultipartFile;
+import java.util.Map;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -25,6 +28,7 @@ public class AuthController {
     private final UserService userService;
     private final PasswordResetService passwordResetService;
     private final EmailVerificationService emailVerificationService;
+    private final StorageService storageService;
 
     // ── Registration & Login ──────────────────────────────────────────────
 
@@ -117,5 +121,58 @@ public class AuthController {
             @Valid @RequestBody ChangePasswordRequest request) {
         userService.changePassword(user.getUserId(), request);
         return ResponseEntity.ok(ApiResponse.ok(null, "Password changed successfully"));
+    }
+
+    @PostMapping(value = "/avatar", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Upload user avatar", description = "Uploads a new user avatar to MinIO storage")
+    public ResponseEntity<ApiResponse<Map<String, String>>> uploadAvatar(
+            @AuthenticationPrincipal User user,
+            @RequestParam("file") MultipartFile file) throws Exception {
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("File cannot be empty");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || (!contentType.equals("image/png") && !contentType.equals("image/jpeg") && !contentType.equals("image/jpg"))) {
+            throw new IllegalArgumentException("Only PNG or JPG images are allowed");
+        }
+        if (file.getSize() > 5 * 1024 * 1024) {
+            throw new IllegalArgumentException("File size must be under 5MB");
+        }
+        String originalName = file.getOriginalFilename();
+        String extension = originalName != null && originalName.contains(".") ? originalName.substring(originalName.lastIndexOf(".")) : ".jpg";
+        String key = "avatar_" + user.getUserId() + "_" + System.currentTimeMillis() + extension;
+        
+        String avatarUrl = storageService.uploadImage(key, file.getBytes(), contentType);
+        return ResponseEntity.ok(ApiResponse.ok(Map.of("avatarUrl", avatarUrl), "Avatar uploaded successfully"));
+    }
+
+    @GetMapping(value = "/avatar/{fileName}")
+    @Operation(summary = "Serve user avatar", description = "Serves the user's avatar image from storage")
+    public ResponseEntity<org.springframework.core.io.Resource> getAvatarFile(@PathVariable String fileName) {
+        try {
+            byte[] imageBytes = storageService.downloadAudio(fileName);
+            org.springframework.core.io.ByteArrayResource resource =
+                new org.springframework.core.io.ByteArrayResource(imageBytes);
+            String contentType = "image/jpeg";
+            if (fileName.endsWith(".png")) {
+                contentType = "image/png";
+            }
+            return ResponseEntity.ok()
+                    .contentType(org.springframework.http.MediaType.parseMediaType(contentType))
+                    .body(resource);
+        } catch (Exception e) {
+            try {
+                org.springframework.core.io.ClassPathResource resource =
+                    new org.springframework.core.io.ClassPathResource("static/assets/avatars/avatar_sarah.png");
+                if (resource.exists()) {
+                    return ResponseEntity.ok()
+                            .contentType(org.springframework.http.MediaType.IMAGE_PNG)
+                            .body(resource);
+                }
+            } catch (Exception ex) {
+                // Ignore
+            }
+            return ResponseEntity.notFound().build();
+        }
     }
 }

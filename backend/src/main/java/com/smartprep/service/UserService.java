@@ -141,6 +141,7 @@ public class UserService {
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         
         user.setDisplayName(request.getDisplayName());
+        user.setAvatarUrl(request.getAvatarUrl());
         user.setTargetReadingScore(request.getTargetReadingScore());
         user.setTargetWritingScore(request.getTargetWritingScore());
         user.setTargetListeningScore(request.getTargetListeningScore());
@@ -167,6 +168,7 @@ public class UserService {
                 .userId(user.getUserId())
                 .username(user.getUsername())
                 .displayName(user.getDisplayName())
+                .avatarUrl(user.getAvatarUrl())
                 .email(user.getEmail())
                 .token(token)
                 .refreshToken(refreshToken)

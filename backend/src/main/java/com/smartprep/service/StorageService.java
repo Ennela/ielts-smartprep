@@ -43,6 +43,27 @@ public class StorageService {
     }
 
     /**
+     * Upload an image file to MinIO.
+     *
+     * @param key         the object key (e.g., "avatar_123.png")
+     * @param imgData     the raw image bytes
+     * @param contentType the image content type (e.g., "image/png")
+     * @return the access URL for the uploaded file
+     */
+    public String uploadImage(String key, byte[] imgData, String contentType) {
+        PutObjectRequest putRequest = PutObjectRequest.builder()
+                .bucket(bucket)
+                .key(key)
+                .contentType(contentType)
+                .build();
+
+        s3Client.putObject(putRequest, RequestBody.fromBytes(imgData));
+        log.info("Uploaded image to MinIO: bucket={}, key={}, size={}KB", bucket, key, imgData.length / 1024);
+
+        return "/api/v1/auth/avatar/" + key;
+    }
+
+    /**
      * Download audio bytes from MinIO.
      *
      * @param key the object key

@@ -17,6 +17,9 @@ public class AuthResponse {
     @Schema(description = "User display name", example = "John Doe")
     private String displayName;
 
+    @Schema(description = "User avatar URL", example = "/api/v1/auth/avatar/avatar_123.png")
+    private String avatarUrl;
+
     @Schema(description = "User email address", example = "john.doe@example.com")
     private String email;
 

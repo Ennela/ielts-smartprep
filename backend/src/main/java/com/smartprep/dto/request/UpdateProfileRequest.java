@@ -10,6 +10,8 @@ public class UpdateProfileRequest {
     @NotBlank
     private String displayName;
 
+    private String avatarUrl;
+
     @NotNull
     private BigDecimal targetReadingScore;
 
