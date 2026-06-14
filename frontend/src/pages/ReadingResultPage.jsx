@@ -40,6 +40,16 @@ export default function ReadingResultPage() {
       .catch(() => {});
   }, [result]);
 
+  const timeSpentFormatted = useMemo(() => {
+    if (!result?.createdAt || !result?.submittedAt) return null;
+    const start = new Date(result.createdAt).getTime();
+    const end = new Date(result.submittedAt).getTime();
+    const diffSeconds = Math.max(0, Math.floor((end - start) / 1000));
+    const m = Math.floor(diffSeconds / 60).toString().padStart(2, '0');
+    const s = (diffSeconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  }, [result]);
+
   if (loading) {
     return <div className="loading-screen">Loading result...</div>;
   }
@@ -65,9 +75,10 @@ export default function ReadingResultPage() {
 
   return (
     <div className="reading-result-page" id="reading-result-page">
-      <div className="result-content">
+      <div className="result-content" style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1rem' }}>
+        
         {/* Score Card */}
-        <div className="result-score-card" id="result-score-card">
+        <div className="result-score-card" id="result-score-card" style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
           <div className="score-ring-container">
             <svg className="score-ring" viewBox="0 0 120 120">
               <circle className="score-ring-bg" cx="60" cy="60" r="50" />
@@ -83,24 +94,33 @@ export default function ReadingResultPage() {
             </div>
           </div>
           <div className="score-details">
-            <h1>Quiz Completed!</h1>
-            <div className="score-stats">
+            <h1 style={{ margin: 0, fontSize: '2rem' }}>Practice Quiz Completed!</h1>
+            <p className="subtitle" style={{ margin: '0.5rem 0 1.5rem', color: 'var(--text-secondary)' }}>
+              Here is your single passage reading performance breakdown.
+            </p>
+            <div className="score-stats" style={{ display: 'flex', gap: '2rem', marginBottom: '1.5rem' }}>
               <div className="score-stat">
-                <span className="stat-value">{result.correctAnswers}</span>
-                <span className="stat-label">Correct</span>
+                <span className="stat-value" style={{ display: 'block', fontSize: '1.75rem', fontWeight: 700 }}>{result.correctAnswers}</span>
+                <span className="stat-label" style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Correct Answers</span>
               </div>
               <div className="score-stat">
-                <span className="stat-value">{result.totalQuestions}</span>
-                <span className="stat-label">Total</span>
+                <span className="stat-value" style={{ display: 'block', fontSize: '1.75rem', fontWeight: 700 }}>{result.totalQuestions}</span>
+                <span className="stat-label" style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Total Questions</span>
               </div>
               <div className="score-stat">
-                <span className="stat-value">{percentage}%</span>
-                <span className="stat-label">Accuracy</span>
+                <span className="stat-value" style={{ display: 'block', fontSize: '1.75rem', fontWeight: 700 }}>{percentage}%</span>
+                <span className="stat-label" style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Accuracy</span>
               </div>
+              {timeSpentFormatted && (
+                <div className="score-stat">
+                  <span className="stat-value" style={{ display: 'block', fontSize: '1.75rem', fontWeight: 700 }}>{timeSpentFormatted}</span>
+                  <span className="stat-label" style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>Time Spent</span>
+                </div>
+              )}
             </div>
-            <div className="score-meta">
-              <span className="meta-badge">{result.topic}</span>
-              <span className="meta-badge">{result.difficulty?.replace('_', ' ')}</span>
+            <div className="score-meta" style={{ display: 'flex', gap: '0.5rem' }}>
+              <span className="meta-badge" style={{ fontSize: '0.75rem', padding: '4px 10px', background: 'var(--surface-container-high)', borderRadius: '100px' }}>{result.topic}</span>
+              <span className="meta-badge" style={{ fontSize: '0.75rem', padding: '4px 10px', background: 'var(--surface-container-high)', borderRadius: '100px' }}>{result.difficulty?.replace('_', ' ')}</span>
             </div>
           </div>
         </div>
@@ -139,21 +159,26 @@ export default function ReadingResultPage() {
           </div>
         )}
 
-        {/* Passage Review */}
-        {result.passageText && (
-          <details className="result-passage-toggle">
-            <summary>View Passage</summary>
-            <div className="result-passage">
-              {renderHighlightedPassage(result.passageText, result.questions)}
+        {/* Split Screen side-by-side review container */}
+        <div className="passage-detail-review" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginTop: '2rem' }}>
+          {/* Left Column: Passage Text */}
+          {result.passageText && (
+            <div className="passage-container-column" style={{ background: 'var(--surface-container-low)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', maxHeight: '600px', overflowY: 'auto' }}>
+              <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '1rem', fontWeight: 750 }}>Passage Content</h3>
+              <div className="result-passage">
+                {renderHighlightedPassage(result.passageText, result.questions)}
+              </div>
             </div>
-          </details>
-        )}
+          )}
 
-        {/* Question Results — grouped */}
-        <ResultQuestions questions={result.questions} />
+          {/* Right Column: Question Reviews */}
+          <div className="questions-container-column" style={{ background: 'var(--surface-container-low)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', maxHeight: '600px', overflowY: 'auto' }}>
+            <ResultQuestions questions={result.questions} />
+          </div>
+        </div>
 
         {/* Action Buttons */}
-        <div className="result-actions">
+        <div className="result-actions" style={{ display: 'flex', gap: '1rem', marginTop: '3rem', justifyContent: 'center' }}>
           <button className="btn btn-primary" onClick={() => navigate('/reading')} id="new-test-btn">
             Take Another Test
           </button>
@@ -167,9 +192,6 @@ export default function ReadingResultPage() {
   );
 }
 
-// ============================================================
-// ResultQuestions — groups and renders question results
-// ============================================================
 function ResultQuestions({ questions }) {
   const groups = useMemo(() => {
     if (!questions) return [];
@@ -192,14 +214,15 @@ function ResultQuestions({ questions }) {
 
   return (
     <div className="result-questions">
-      <h2>Review Answers</h2>
+      <h3 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem', marginBottom: '1rem', fontWeight: 750 }}>Review Answers</h3>
       {groups.map((group) => (
-        <div key={group.groupId} className="result-question-group">
+        <div key={group.groupId} className="result-question-group" style={{ marginBottom: '2rem' }}>
           {group.groupLabel && (
-            <div className="group-label result-group-label">{group.groupLabel}</div>
+            <div className="group-label result-group-label" style={{ fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+              {group.groupLabel}
+            </div>
           )}
 
-          {/* Summary context with filled answers */}
           {group.groupContext && group.groupType === 'SUMMARY_COMPLETION' && (
             <ResultSummaryBlock context={group.groupContext} questions={group.questions} />
           )}
@@ -213,9 +236,6 @@ function ResultQuestions({ questions }) {
   );
 }
 
-// ============================================================
-// ResultQuestionItem — single question result
-// ============================================================
 function ResultQuestionItem({ q, idx }) {
   const typeLabel = formatQuestionType(q.questionType);
 
@@ -223,19 +243,35 @@ function ResultQuestionItem({ q, idx }) {
     <div
       className={`result-question-item ${q.correct ? 'correct' : 'incorrect'}`}
       id={`result-q-${q.orderIndex || idx + 1}`}
+      style={{
+        borderLeft: q.correct ? '4px solid var(--success)' : '4px solid var(--error)',
+        background: 'var(--surface-container-high)',
+        padding: '1rem',
+        borderRadius: 'var(--radius-md)',
+        marginBottom: '1rem'
+      }}
     >
-      <div className="rq-header">
-        <span className="rq-number">Q{q.orderIndex || idx + 1}</span>
-        <span className={`rq-status ${q.correct ? 'correct' : 'incorrect'}`}>
+      <div className="rq-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+        <span className="rq-number" style={{ fontWeight: 700 }}>Q{q.orderIndex || idx + 1}</span>
+        <span className={`rq-status ${q.correct ? 'correct' : 'incorrect'}`} style={{
+          color: q.correct ? 'var(--success)' : 'var(--error)',
+          fontWeight: 600,
+          fontSize: '0.875rem'
+        }}>
           {q.correct ? 'Correct' : 'Incorrect'}
         </span>
-        <span className="rq-type-badge">{typeLabel}</span>
+        <span className="rq-type-badge" style={{
+          fontSize: '0.75rem',
+          padding: '2px 8px',
+          background: 'var(--surface-container-highest)',
+          borderRadius: '100px'
+        }}>{typeLabel}</span>
       </div>
-      <p className="rq-text">{q.questionText}</p>
+      <p className="rq-text" style={{ margin: '0 0 1rem' }}>{q.questionText}</p>
 
       {/* MCQ: Show options with highlights */}
       {q.questionType === 'MCQ' && (
-        <div className="rq-options">
+        <div className="rq-options" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           {(q.options && q.options.length > 0
             ? q.options.map(opt => ({ key: opt.label, text: opt.content }))
             : [
@@ -256,15 +292,20 @@ function ResultQuestionItem({ q, idx }) {
                   ${isWrongSelection ? 'wrong-answer' : ''}
                   ${isUserAnswer && q.correct ? 'correct-answer user-selected' : ''}
                 `}
+                style={{
+                  display: 'flex', gap: '0.5rem', padding: '0.5rem', borderRadius: 'var(--radius-sm)',
+                  background: isCorrectAnswer ? 'var(--success-container)' : isWrongSelection ? 'var(--error-container)' : 'transparent',
+                  color: isCorrectAnswer ? 'var(--on-success-container)' : isWrongSelection ? 'var(--on-error-container)' : 'inherit'
+                }}
               >
-                <span className="rq-option-key">{opt.key}</span>
+                <span className="rq-option-key" style={{ fontWeight: 700 }}>{opt.key}.</span>
                 <span>{opt.text}</span>
               </div>
             );
           })}
           {!q.userAnswer && (
             <div className="rq-no-answer">
-              <em>(Not answered)</em>
+              <em style={{ color: 'var(--text-secondary)' }}>(Not answered)</em>
             </div>
           )}
         </div>
@@ -272,26 +313,26 @@ function ResultQuestionItem({ q, idx }) {
 
       {/* TFNG / YNNG */}
       {(q.questionType === 'TFNG' || q.questionType === 'YNNG') && (
-        <div className="rq-tfng-answer">
-          <span>Your answer: <strong className={q.correct ? 'text-success' : 'text-error'}>{q.userAnswer || '(not answered)'}</strong></span>
-          {!q.correct && <span>Correct answer: <strong className="text-success">{q.correctAnswer}</strong></span>}
+        <div className="rq-tfng-answer" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          <span>Your answer: <strong style={{ color: q.correct ? 'var(--success)' : 'var(--error)' }}>{q.userAnswer || '(not answered)'}</strong></span>
+          {!q.correct && <span>Correct answer: <strong style={{ color: 'var(--success)' }}>{q.correctAnswer}</strong></span>}
         </div>
       )}
 
       {/* Completion types */}
       {(q.questionType === 'SENTENCE_COMPLETION' || q.questionType === 'SUMMARY_COMPLETION') && (
-        <div className="rq-completion-answer">
-          <span>Answer: <strong className={q.correct ? 'text-success' : 'text-error'}>{q.userAnswer || '(not answered)'}</strong></span>
-          {!q.correct && <span>Correct answer: <strong className="text-success">{q.correctAnswer}</strong></span>}
+        <div className="rq-completion-answer" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          <span>Answer: <strong style={{ color: q.correct ? 'var(--success)' : 'var(--error)' }}>{q.userAnswer || '(not answered)'}</strong></span>
+          {!q.correct && <span>Correct answer: <strong style={{ color: 'var(--success)' }}>{q.correctAnswer}</strong></span>}
         </div>
       )}
 
       {/* Matching types */}
       {(q.questionType === 'MATCHING_HEADINGS' || q.questionType === 'MATCHING_INFORMATION' ||
         q.questionType === 'MATCHING_FEATURES' || q.questionType === 'MATCHING_SENTENCE_ENDINGS') && (
-        <div className="rq-matching-answer">
-          <span>You chose: <strong className={q.correct ? 'text-success' : 'text-error'}>{q.userAnswer || '(not answered)'}</strong></span>
-          {!q.correct && <span>Correct answer: <strong className="text-success">{q.correctAnswer}</strong></span>}
+        <div className="rq-matching-answer" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          <span>You chose: <strong style={{ color: q.correct ? 'var(--success)' : 'var(--error)' }}>{q.userAnswer || '(not answered)'}</strong></span>
+          {!q.correct && <span>Correct answer: <strong style={{ color: 'var(--success)' }}>{q.correctAnswer}</strong></span>}
         </div>
       )}
 
@@ -304,7 +345,7 @@ function ResultQuestionItem({ q, idx }) {
 
       {/* Explanation */}
       {q.explanation && (
-        <div className="rq-explanation" style={{ whiteSpace: 'pre-line' }}>
+        <div className="rq-explanation" style={{ marginTop: '1rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border-color)', fontSize: '0.875rem', whiteSpace: 'pre-line' }}>
           <strong>Explanation:</strong> {renderExplanationText(q.explanation)}
         </div>
       )}
@@ -312,9 +353,6 @@ function ResultQuestionItem({ q, idx }) {
   );
 }
 
-// ============================================================
-// ResultSummaryBlock — shows filled summary with color-coded answers
-// ============================================================
 function ResultSummaryBlock({ context, questions }) {
   if (!context) return null;
 
@@ -327,18 +365,30 @@ function ResultSummaryBlock({ context, questions }) {
   const parts = context.split(/(___\d+___)/g);
 
   return (
-    <div className="summary-block result-summary-block">
-      <div className="summary-text">
+    <div className="summary-block result-summary-block" style={{ padding: '1rem', background: 'var(--surface-container-high)', borderRadius: 'var(--radius-md)', marginBottom: '1.5rem' }}>
+      <div className="summary-text" style={{ lineHeight: '1.6' }}>
         {parts.map((part, idx) => {
           const blankMatch = part.match(/___(\d+)___/);
           if (blankMatch) {
             const q = blankMap[blankMatch[1]];
             if (!q) return <span key={idx}>{part}</span>;
             return (
-              <span key={idx} className={`summary-filled ${q.correct ? 'correct' : 'incorrect'}`}>
+              <span
+                key={idx}
+                className={`summary-filled ${q.correct ? 'correct' : 'incorrect'}`}
+                style={{
+                  fontWeight: 700,
+                  padding: '2px 6px',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: q.correct ? 'var(--success-container)' : 'var(--error-container)',
+                  color: q.correct ? 'var(--on-success-container)' : 'var(--on-error-container)',
+                  margin: '0 4px',
+                  display: 'inline-block'
+                }}
+              >
                 {q.userAnswer || '___'}
                 {!q.correct && (
-                  <span className="summary-correct-hint"> [{q.correctAnswer}]</span>
+                  <span className="summary-correct-hint" style={{ fontSize: '0.8em', opacity: 0.8 }}> [{q.correctAnswer}]</span>
                 )}
               </span>
             );
@@ -350,9 +400,6 @@ function ResultSummaryBlock({ context, questions }) {
   );
 }
 
-// ============================================================
-// Helper
-// ============================================================
 function formatQuestionType(type) {
   const labels = {
     MCQ: 'MCQ',

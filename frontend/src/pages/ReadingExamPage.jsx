@@ -1,15 +1,60 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useReading } from '../context/ReadingContext';
+import { useToast } from '../context/ToastContext';
 import readingApi from '../api/readingApi';
 import PassageViewer from '../components/reading/PassageViewer';
 import QuestionPanel from '../components/reading/QuestionPanel';
 import CountdownTimer from '../components/reading/CountdownTimer';
 
+// Dynamic chimes generator using Web Audio API to prevent audio asset loading failures.
+const playAlertSound = (freq = 440, duration = 0.5) => {
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    oscillator.type = 'sine';
+    oscillator.frequency.value = freq;
+    gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    oscillator.start();
+    oscillator.stop(audioCtx.currentTime + duration);
+  } catch (e) {
+    console.error("Audio error", e);
+  }
+};
+
 export default function ReadingExamPage() {
   const { quizId } = useParams();
   const navigate = useNavigate();
-  const { quiz, answers, loading, error, isSubmitted, setQuiz, setLoading, setError, submitStart, setResult } = useReading();
+  const { quiz, answers, loading, error, isSubmitted, timeRemaining, setQuiz, setLoading, setError, submitStart, setResult } = useReading();
+  const { warning: triggerWarningToast } = useToast();
+  
+  const warningPlayedRef = useRef({ fiveMin: false, oneMin: false });
+
+  // Fallback direct submission helper
+  const handleSubmitForce = async (qId, currentAnswers) => {
+    submitStart();
+    try {
+      let finalAnswers = currentAnswers;
+      if (!finalAnswers || Object.keys(finalAnswers).length === 0) {
+        try {
+          const draft = localStorage.getItem(`reading_quiz_draft_${qId}`);
+          if (draft) finalAnswers = JSON.parse(draft);
+        } catch {}
+      }
+      const res = await readingApi.submitQuiz(qId, finalAnswers || {});
+      setResult(res.data.data);
+      navigate(`/reading/result/${qId}`, { replace: true });
+    } catch (err) {
+      setError(err.response?.data?.message || 'Submission failed');
+    }
+  };
 
   useEffect(() => {
     const fetchQuiz = async () => {
@@ -21,6 +66,21 @@ export default function ReadingExamPage() {
           navigate(`/reading/result/${quizId}`, { replace: true });
           return;
         }
+
+        // Server authoritative timer calculation
+        const now = new Date();
+        const created = new Date(quizData.createdAt);
+        const elapsed = Math.floor((now.getTime() - created.getTime()) / 1000);
+        const remaining = Math.max(0, quizData.timeLimitSeconds - elapsed);
+
+        if (remaining <= 0) {
+          // Auto-submit immediately if expired on load
+          handleSubmitForce(quizData.quizId, {});
+          return;
+        }
+
+        // Override timeLimitSeconds with computed remaining time
+        quizData.timeLimitSeconds = remaining;
         setQuiz(quizData);
       } catch (err) {
         setError(err.response?.data?.message || 'Unable to load test');
@@ -29,6 +89,7 @@ export default function ReadingExamPage() {
     fetchQuiz();
   }, [quizId]);
 
+  // Handle manual/automatic standard submission
   const handleSubmit = useCallback(async () => {
     if (isSubmitted) return;
     submitStart();
@@ -40,6 +101,26 @@ export default function ReadingExamPage() {
       setError(err.response?.data?.message || 'Submission failed');
     }
   }, [quizId, answers, isSubmitted, submitStart, setResult, setError, navigate]);
+
+  // Audio-visual warnings at 5 minutes and 1 minute
+  useEffect(() => {
+    if (!quiz || isSubmitted) return;
+
+    if (timeRemaining === 300 && !warningPlayedRef.current.fiveMin) {
+      warningPlayedRef.current.fiveMin = true;
+      triggerWarningToast("5 minutes remaining! Please review and finalize your answers.");
+      playAlertSound(523.25, 0.15); // C5 chime
+      setTimeout(() => playAlertSound(659.25, 0.3), 150); // E5 chime
+    }
+
+    if (timeRemaining === 60 && !warningPlayedRef.current.oneMin) {
+      warningPlayedRef.current.oneMin = true;
+      triggerWarningToast("1 minute remaining! Your exam will be submitted automatically.");
+      playAlertSound(880, 0.12);
+      setTimeout(() => playAlertSound(880, 0.12), 150);
+      setTimeout(() => playAlertSound(880, 0.25), 300);
+    }
+  }, [timeRemaining, quiz, isSubmitted]);
 
   if (loading && !quiz) return <div className="loading-screen">Loading test...</div>;
 
