@@ -1,11 +1,14 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import { ReadingProvider } from './context/ReadingContext';
 import { MockTestProvider } from './context/MockTestContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import AdminRoute from './components/common/AdminRoute';
+import UserRoute from './components/common/UserRoute';
 import MainLayout from './components/common/MainLayout';
+import UserLayout from './components/common/UserLayout';
 
 // Lazy loaded page components
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -40,32 +43,37 @@ const WritingFullExamPage = lazy(() => import('./pages/WritingFullExamPage'));
 const WritingFullResultPage = lazy(() => import('./pages/WritingFullResultPage'));
 const HistoryReviewPage = lazy(() => import('./pages/HistoryReviewPage'));
 const VocabularyPage = lazy(() => import('./pages/VocabularyPage'));
+const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'));
 
 import './index.css';
 
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <Suspense fallback={
-          <div className="loading-spinner" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-            <div className="spinner" style={{ width: 40, height: 40, border: '4px solid var(--color-border-subtle)', borderTopColor: 'var(--color-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-            <p style={{ marginTop: 16, color: 'var(--color-text-muted)', fontFamily: 'var(--font-heading)' }}>Loading page...</p>
-          </div>
-        }>
-          <Routes>
-            {/* Public */}
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <ToastProvider>
+        <AuthProvider>
+          <Suspense fallback={
+            <div className="loading-spinner" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+              <div className="spinner" style={{ width: 40, height: 40, border: '4px solid var(--color-border-subtle)', borderTopColor: 'var(--color-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+              <p style={{ marginTop: 16, color: 'var(--color-text-muted)', fontFamily: 'var(--font-heading)' }}>Loading page...</p>
+            </div>
+          }>
+            <Routes>
+              {/* Public */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/verify-email" element={<VerifyEmailPage />} />
 
-            {/* Protected with MainLayout */}
-            <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+            {/* Student Portal Routes wrapped in UserLayout & UserRoute */}
+            <Route element={<ProtectedRoute><UserRoute><UserLayout /></UserRoute></ProtectedRoute>}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/history" element={<HistoryPage />} />
 
               {/* Mock Tests */}
               <Route path="/mock-tests" element={
@@ -75,7 +83,7 @@ export default function App() {
                 <MockTestProvider><MockTestResultPage /></MockTestProvider>
               } />
 
-              {/* Reading (config, result, history use MainLayout) */}
+              {/* Reading (config, result, history use UserLayout) */}
               <Route path="/reading" element={<ReadingConfigPage />} />
               <Route path="/reading/result/:quizId" element={
                 <ReadingProvider><ReadingResultPage /></ReadingProvider>
@@ -90,7 +98,7 @@ export default function App() {
               <Route path="/writing/full-result" element={<WritingFullResultPage />} />
               <Route path="/writing/history" element={<WritingHistoryPage />} />
 
-              {/* Listening (practice, result, history use MainLayout) */}
+              {/* Listening (practice, result, history use UserLayout) */}
               <Route path="/listening" element={<ListeningPracticePage />} />
               <Route path="/listening/result/:testId" element={<ListeningResultPage />} />
               <Route path="/listening/history" element={<ListeningHistoryPage />} />
@@ -100,9 +108,11 @@ export default function App() {
 
               {/* History Review (across all skills) */}
               <Route path="/history/:historyId/review" element={<HistoryReviewPage />} />
+            </Route>
 
-              {/* Admin (guard: ADMIN role only) */}
-              <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
+            {/* Admin Portal Routes wrapped in MainLayout & AdminRoute */}
+            <Route element={<ProtectedRoute><AdminRoute><MainLayout /></AdminRoute></ProtectedRoute>}>
+              <Route path="/admin" element={<AdminDashboardPage />} />
               <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
               <Route path="/admin/mock-tests" element={<AdminRoute><AdminMockTestsPage /></AdminRoute>} />
               <Route path="/admin/writing-prompts" element={<AdminRoute><AdminWritingPromptsPage /></AdminRoute>} />
@@ -110,28 +120,30 @@ export default function App() {
               <Route path="/admin/listening" element={<AdminRoute><AdminListeningListPage /></AdminRoute>} />
               <Route path="/admin/listening/new" element={<AdminRoute><AdminPartEditorPage /></AdminRoute>} />
               <Route path="/admin/listening/edit/:partId" element={<AdminRoute><AdminPartEditorPage /></AdminRoute>} />
-
-
             </Route>
 
-            {/* Full-screen exam pages (no MainLayout) */}
+            {/* Full-screen student exam pages (no UserLayout, but protected with UserRoute) */}
             <Route path="/reading/exam/:quizId" element={
               <ProtectedRoute>
-                <ReadingProvider><ReadingExamPage /></ReadingProvider>
+                <UserRoute>
+                  <ReadingProvider><ReadingExamPage /></ReadingProvider>
+                </UserRoute>
               </ProtectedRoute>
             } />
             <Route path="/reading/full-exam" element={
-              <ProtectedRoute><ReadingFullExamPage /></ProtectedRoute>
+              <ProtectedRoute><UserRoute><ReadingFullExamPage /></UserRoute></ProtectedRoute>
             } />
             <Route path="/writing/full-exam" element={
-              <ProtectedRoute><WritingFullExamPage /></ProtectedRoute>
+              <ProtectedRoute><UserRoute><WritingFullExamPage /></UserRoute></ProtectedRoute>
             } />
             <Route path="/listening/exam" element={
-              <ProtectedRoute><ListeningExamPage /></ProtectedRoute>
+              <ProtectedRoute><UserRoute><ListeningExamPage /></UserRoute></ProtectedRoute>
             } />
             <Route path="/mock-tests/take/:sessionId" element={
               <ProtectedRoute>
-                <MockTestProvider><MockTestSessionPage /></MockTestProvider>
+                <UserRoute>
+                  <MockTestProvider><MockTestSessionPage /></MockTestProvider>
+                </UserRoute>
               </ProtectedRoute>
             } />
 
@@ -141,6 +153,7 @@ export default function App() {
           </Routes>
         </Suspense>
       </AuthProvider>
+      </ToastProvider>
     </BrowserRouter>
   );
 }

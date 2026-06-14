@@ -126,7 +126,20 @@ function clearAuthAndRedirect() {
   localStorage.removeItem('token');
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('user');
-  window.location.href = '/login';
+  const currentPath = window.location.pathname + window.location.search;
+  if (
+    currentPath &&
+    currentPath !== '/' &&
+    !currentPath.includes('/login') &&
+    !currentPath.includes('/register') &&
+    !currentPath.includes('/forgot-password') &&
+    !currentPath.includes('/reset-password') &&
+    !currentPath.includes('/verify-email')
+  ) {
+    window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
+  } else {
+    window.location.href = '/login';
+  }
 }
 
 export default axiosClient;
