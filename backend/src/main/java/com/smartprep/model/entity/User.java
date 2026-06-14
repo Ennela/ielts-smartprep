@@ -30,6 +30,9 @@ public class User {
     @Column(length = 100)
     private String displayName;
 
+    @Column(length = 255)
+    private String avatarUrl;
+
     @Column(precision = 2, scale = 1)
     private BigDecimal targetReadingScore;
 
