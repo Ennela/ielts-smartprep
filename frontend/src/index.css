@@ -1,4 +1,7 @@
 @import './styles/tokens.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* ===== RESET ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1055,3 +1058,21 @@ select.profile-input { cursor: pointer; }
   .quick-nav-legend { margin-left: 0; width: 100%; justify-content: center; }
   .review-content { padding: 1rem; }
 }
+
+/* Custom Animations for Toasts and Auth transitions */
+@keyframes slide-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.animate-slide-in {
+  animation: slide-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-fade-in {
+  animation: fade-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+

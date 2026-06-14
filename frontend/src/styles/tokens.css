@@ -1,83 +1,132 @@
-/* ===== DESIGN TOKENS — ACADEMIC PRECISION (MD3) ===== */
+/* ===== DESIGN TOKENS — ACADEMIC PRECISION (STITCH MD3) ===== */
 :root {
-  /* MD3 Surfaces */
+  /* MD3 Surfaces & Background */
+  --background: #f7f9fb;
+  --on-background: #191c1e;
+  --surface: #f7f9fb;
+  --surface-dim: #d8dadc;
+  --surface-bright: #f7f9fb;
   --surface-container-lowest: #ffffff;
-  --surface-container-low: #eef4ff;
-  --surface-container: #e5eeff;
-  --surface-container-high: #dfe9fa;
-  --surface-container-highest: #d9e3f4;
-  --surface-variant: #d9e3f4;
-  --surface-dim: #d1dbec;
-  --surface-bright: #f8f9ff;
-  /* MD3 Primary */
-  --primary: #003fb1;
-  --primary-container: #1a56db;
+  --surface-container-low: #f2f4f6;
+  --surface-container: #eceef0;
+  --surface-container-high: #e6e8ea;
+  --surface-container-highest: #e0e3e5;
+  --surface-variant: #e0e3e5;
+  --on-surface: #191c1e;
+  --on-surface-variant: #434652;
+  --inverse-surface: #2d3133;
+  --inverse-on-surface: #eff1f3;
+
+  /* MD3 Primary (Royal Blue) */
+  --primary: #003178;
   --on-primary: #ffffff;
-  --on-primary-container: #d4dcff;
-  --primary-fixed: #dbe1ff;
-  --primary-fixed-dim: #b5c4ff;
-  --surface-tint: #1353d8;
-  /* MD3 Secondary (Success Green) */
-  --secondary: #006c4a;
-  --secondary-container: #82f5c1;
+  --primary-container: #0d47a1;
+  --on-primary-container: #a1bbff;
+  --inverse-primary: #b0c6ff;
+  --primary-fixed: #d9e2ff;
+  --primary-fixed-dim: #b0c6ff;
+  --on-primary-fixed: #001945;
+  --on-primary-fixed-variant: #00429c;
+  --surface-tint: #2b5bb5;
+
+  /* MD3 Secondary (Marine Blue / Focus) */
+  --secondary: #005faf;
   --on-secondary: #ffffff;
-  --on-secondary-container: #00714e;
-  /* MD3 Tertiary (Alert Orange) */
-  --tertiary: #842c00;
-  --tertiary-container: #ac3c00;
+  --secondary-container: #54a0fe;
+  --on-secondary-container: #003567;
+  --secondary-fixed: #d4e3ff;
+  --secondary-fixed-dim: #a5c8ff;
+  --on-secondary-fixed: #001c3a;
+  --on-secondary-fixed-variant: #004786;
+
+  /* MD3 Tertiary (Burnt Orange / Action) */
+  --tertiary: #602100;
   --on-tertiary: #ffffff;
-  --on-tertiary-container: #ffd4c5;
+  --tertiary-container: #853100;
+  --on-tertiary-container: #ffa781;
+  --tertiary-fixed: #ffdbcd;
+  --tertiary-fixed-dim: #ffb596;
+  --on-tertiary-fixed: #360f00;
+  --on-tertiary-fixed-variant: #7d2d00;
+
   /* MD3 Error */
   --error: #ba1a1a;
   --on-error: #ffffff;
   --error-container: #ffdad6;
-  /* MD3 Neutral */
-  --background: #f8f9ff;
-  --on-background: #121c28;
-  --on-surface: #121c28;
-  --on-surface-variant: #434654;
-  --outline: #737686;
-  --outline-variant: #c3c5d7;
-  --inverse-surface: #27313e;
-  --inverse-on-surface: #eaf1ff;
-  --inverse-primary: #b5c4ff;
+  --on-error-container: #93000a;
 
-  /* Legacy aliases — keep for backward compat */
-  --color-bg: #f8f9ff;
-  --color-bg-secondary: #eef4ff;
+  /* Outlines */
+  --outline: #737783;
+  --outline-variant: #c3c6d4;
+
+  /* Spacing */
+  --spacing-base: 8px;
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-gutter: 24px;
+  --spacing-margin: 32px;
+  --spacing-container-max-width: 1280px;
+
+  /* Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0px 1px 2px rgba(25,28,30,0.03);
+  --shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0px 8px 24px rgba(25,28,30,0.08);
+
+  /* Transitions */
+  --transition: 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --sidebar-width: 240px;
+
+  /* Fonts */
+  --font-heading: 'Inter', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Legacy aliases — kept to guarantee backward compatibility with Admin and existing files */
+  --color-bg: var(--background);
+  --color-bg-secondary: var(--surface-container-low);
   --color-surface: rgba(255,255,255,0.72);
   --color-surface-solid: #ffffff;
-  --color-surface-hover: #eef4ff;
+  --color-surface-hover: var(--surface-container-low);
   --color-surface-elevated: rgba(255,255,255,0.85);
-  --color-border: #c3c5d7;
-  --color-border-subtle: rgba(18,28,40,0.06);
-  --color-text: #121c28;
-  --color-text-secondary: #434654;
-  --color-text-muted: #737686;
-  --color-primary: #003fb1;
-  --color-primary-light: #1a56db;
+  --color-border: var(--outline-variant);
+  --color-border-subtle: rgba(25,28,30,0.06);
+  --color-text: var(--on-background);
+  --color-text-secondary: var(--on-surface-variant);
+  --color-text-muted: var(--outline);
+  --color-primary: var(--primary);
+  --color-primary-light: var(--primary-container);
   --color-emerald: #006c4a;
   --color-emerald-light: #82f5c1;
-  --color-amber: #842c00;
-  --color-amber-light: #ffd4c5;
-  --color-blue: #003fb1;
-  --color-error: #ba1a1a;
+  --color-amber: var(--tertiary-container);
+  --color-amber-light: var(--on-tertiary-container);
+  --color-blue: var(--secondary);
+  --color-error: var(--error);
   --color-success: #006c4a;
   --color-warning: #842c00;
-  --color-accent-gradient: linear-gradient(135deg, #003fb1, #1a56db);
+  --color-accent-gradient: linear-gradient(135deg, var(--primary), var(--primary-container));
   --color-emerald-gradient: linear-gradient(135deg, #006c4a, #82f5c1);
-  /* Primary color opacities for design refinement */
-  --color-primary-02: rgba(0, 63, 177, 0.02);
-  --color-primary-03: rgba(0, 63, 177, 0.03);
-  --color-primary-04: rgba(0, 63, 177, 0.04);
-  --color-primary-05: rgba(0, 63, 177, 0.05);
-  --color-primary-06: rgba(0, 63, 177, 0.06);
-  --color-primary-08: rgba(0, 63, 177, 0.08);
-  --color-primary-10: rgba(0, 63, 177, 0.1);
-  --color-primary-15: rgba(0, 63, 177, 0.15);
-  --color-primary-20: rgba(0, 63, 177, 0.2);
-  --color-primary-40: rgba(0, 63, 177, 0.4);
-  /* Aliases for listening module compat */
+  --color-primary-02: rgba(0, 49, 120, 0.02);
+  --color-primary-03: rgba(0, 49, 120, 0.03);
+  --color-primary-04: rgba(0, 49, 120, 0.04);
+  --color-primary-05: rgba(0, 49, 120, 0.05);
+  --color-primary-06: rgba(0, 49, 120, 0.06);
+  --color-primary-08: rgba(0, 49, 120, 0.08);
+  --color-primary-10: rgba(0, 49, 120, 0.1);
+  --color-primary-15: rgba(0, 49, 120, 0.15);
+  --color-primary-20: rgba(0, 49, 120, 0.2);
+  --color-primary-40: rgba(0, 49, 120, 0.4);
+
   --clr-bg: var(--color-bg);
   --clr-surface: var(--color-surface-solid);
   --clr-border: var(--color-border);
@@ -87,17 +136,4 @@
   --clr-success: var(--color-success);
   --clr-warning: var(--color-warning);
   --clr-error: var(--color-error);
-  --font-heading: 'Hanken Grotesk', sans-serif;
-  --font-body: 'Inter', sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
-  --radius-sm: 0.25rem;
-  --radius-md: 0.5rem;
-  --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --shadow-sm: 0px 1px 2px rgba(18,28,40,0.03);
-  --shadow: 0px 4px 12px rgba(18,28,40,0.05);
-  --shadow-lg: 0px 8px 24px rgba(18,28,40,0.08);
-  --transition: 0.2s cubic-bezier(0.22, 1, 0.36, 1);
-  --ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --sidebar-width: 240px;
 }

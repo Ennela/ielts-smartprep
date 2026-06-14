@@ -1,0 +1,92 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: [
+    "./index.html",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "surface-dim": "var(--surface-dim)",
+        "on-tertiary-fixed": "var(--on-tertiary-fixed)",
+        "on-surface": "var(--on-surface)",
+        "surface-bright": "var(--surface-bright)",
+        "tertiary-fixed-dim": "var(--tertiary-fixed-dim)",
+        "primary-fixed": "var(--primary-fixed)",
+        "surface-container-low": "var(--surface-container-low)",
+        "surface-variant": "var(--surface-variant)",
+        "on-tertiary": "var(--on-tertiary)",
+        "on-primary-fixed": "var(--on-primary-fixed)",
+        "on-primary-fixed-variant": "var(--on-primary-fixed-variant)",
+        "tertiary-fixed": "var(--tertiary-fixed)",
+        "primary": "var(--primary)",
+        "on-background": "var(--on-background)",
+        "background": "var(--background)",
+        "on-secondary-fixed": "var(--on-secondary-fixed)",
+        "error": "var(--error)",
+        "secondary": "var(--secondary)",
+        "primary-container": "var(--primary-container)",
+        "on-primary": "var(--on-primary)",
+        "surface-container-highest": "var(--surface-container-highest)",
+        "on-error": "var(--on-error)",
+        "outline-variant": "var(--outline-variant)",
+        "tertiary": "var(--tertiary)",
+        "on-secondary-fixed-variant": "var(--on-secondary-fixed-variant)",
+        "outline": "var(--outline)",
+        "surface-container": "var(--surface-container)",
+        "inverse-on-surface": "var(--inverse-on-surface)",
+        "secondary-fixed": "var(--secondary-fixed)",
+        "inverse-primary": "var(--inverse-primary)",
+        "on-secondary-container": "var(--on-secondary-container)",
+        "on-secondary": "var(--on-secondary)",
+        "tertiary-container": "var(--tertiary-container)",
+        "secondary-fixed-dim": "var(--secondary-fixed-dim)",
+        "secondary-container": "var(--secondary-container)",
+        "on-tertiary-container": "var(--on-tertiary-container)",
+        "inverse-surface": "var(--inverse-surface)",
+        "surface-container-lowest": "var(--surface-container-lowest)",
+        "surface": "var(--surface)",
+        "on-error-container": "var(--on-error-container)",
+        "on-primary-container": "var(--on-primary-container)",
+        "surface-container-high": "var(--surface-container-high)",
+        "error-container": "var(--error-container)",
+        "primary-fixed-dim": "var(--primary-fixed-dim)",
+        "on-surface-variant": "var(--on-surface-variant)",
+        "on-tertiary-fixed-variant": "var(--on-tertiary-fixed-variant)",
+        "surface-tint": "var(--surface-tint)"
+      },
+      borderRadius: {
+        "DEFAULT": "0.25rem",
+        "lg": "0.5rem",
+        "xl": "0.75rem",
+        "full": "9999px"
+      },
+      spacing: {
+        "md": "16px",
+        "xs": "4px",
+        "lg": "24px",
+        "sm": "8px",
+        "base": "8px",
+        "margin": "32px",
+        "xl": "32px",
+        "gutter": "24px",
+        "container_max_width": "1280px"
+      },
+      fontFamily: {
+        sans: ["Inter", "sans-serif"],
+        body: ["Inter", "sans-serif"]
+      },
+      fontSize: {
+        "display-lg-mobile": ["24px", { lineHeight: "32px", fontWeight: "700" }],
+        "headline-md": ["24px", { lineHeight: "32px", fontWeight: "600" }],
+        "display-lg": ["32px", { lineHeight: "40px", letterSpacing: "-0.02em", fontWeight: "700" }],
+        "body-lg": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+        "label-md": ["12px", { lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "500" }],
+        "title-lg": ["20px", { lineHeight: "28px", fontWeight: "600" }],
+        "body-md": ["14px", { lineHeight: "20px", fontWeight: "400" }]
+      }
+    },
+  },
+  plugins: [],
+}
