@@ -1,9 +1,9 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 const SKILL_COLORS = {
-  READING: '#006c4a',   // Success Green
-  WRITING: '#003fb1',   // Trustworthy Blue
-  LISTENING: '#842c00'  // Alert Orange
+  READING: '#005faf',   // Reading (Emerald/Secondary)
+  WRITING: '#853100',   // Writing (Burnt Orange/Tertiary)
+  LISTENING: '#003178'  // Listening (Marine/Primary)
 };
 
 export default function ScoreTrendChart({ dataPoints = [], targetScore, skill = 'READING' }) {
