@@ -11,6 +11,7 @@ export function MockTestProvider({ children }) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [latestSubmissionId, setLatestSubmissionId] = useState(null);
 
   const answersRef = useRef({});
   const timerRef = useRef(0);
@@ -231,6 +232,7 @@ export function MockTestProvider({ children }) {
       setActiveSession(null);
       setAnswers({});
       setTimeRemaining(0);
+      setLatestSubmissionId(submissionData.submissionId);
 
       return submissionData;
     } catch (err) {
@@ -282,6 +284,8 @@ export function MockTestProvider({ children }) {
       isSyncing,
       loading,
       error,
+      latestSubmissionId,
+      clearLatestSubmissionId: () => setLatestSubmissionId(null),
       startOrResumeTest,
       loadActiveSession,
       setAnswer,

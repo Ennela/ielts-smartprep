@@ -17,6 +17,8 @@ export default function MockTestSessionPage() {
     isSyncing,
     loading,
     error,
+    latestSubmissionId,
+    clearLatestSubmissionId,
     loadActiveSession,
     setAnswer,
     advanceSection,
@@ -31,14 +33,43 @@ export default function MockTestSessionPage() {
 
   useEffect(() => {
     // Ensure active session is loaded on mount
-    if (!activeSession) {
+    if (!activeSession && !latestSubmissionId) {
       loadActiveSession().then((session) => {
         if (!session) {
           navigate('/mock-tests');
         }
       });
     }
-  }, [activeSession]);
+  }, [activeSession, latestSubmissionId]);
+
+  // Handle auto-submission redirect
+  useEffect(() => {
+    if (latestSubmissionId) {
+      const subId = latestSubmissionId;
+      clearLatestSubmissionId();
+      navigate(`/mock-tests/result/${subId}`);
+    }
+  }, [latestSubmissionId, navigate, clearLatestSubmissionId]);
+
+  // Tab close/reload warning interceptor
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      const message = 'Are you sure you want to leave? Your exam is in progress and the timer will continue to run!';
+      e.preventDefault();
+      e.returnValue = message;
+      return message;
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
+  const handleExitLobby = () => {
+    if (window.confirm('Are you sure you want to exit to the lobby? The exam timer will NOT pause, and the test will continue running on the server.')) {
+      navigate('/mock-tests');
+    }
+  };
 
   // Helper to format countdown timer
   const formatTime = (seconds) => {
@@ -183,7 +214,7 @@ export default function MockTestSessionPage() {
       {/* ── Exam Header ── */}
       <header className="exam-topbar">
         <div className="exam-topbar-left">
-          <span className="exam-logo" onClick={() => navigate('/mock-tests')} style={{ cursor: 'pointer' }}>IELTS Full Mock Test</span>
+          <span className="exam-logo" onClick={handleExitLobby} style={{ cursor: 'pointer' }}>IELTS Full Mock Test</span>
           <div className="exam-divider-v" />
           <span className="exam-topic-badge" style={{ background: 'var(--surface-container-highest)', color: 'var(--primary)', fontWeight: 700 }}>
             {currentSection}
@@ -200,13 +231,31 @@ export default function MockTestSessionPage() {
           )}
         </div>
 
-        <div className="exam-topbar-center">
-          <h1 style={{ fontSize: '1.1rem', fontWeight: 700 }}>{activeSession.title}</h1>
-          <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>
-            {currentSection === 'LISTENING' && `Section 1 of 3`}
-            {currentSection === 'READING' && `Section 2 of 3`}
-            {currentSection === 'WRITING' && `Section 3 of 3`}
-          </p>
+        <div className="exam-topbar-center" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+          <h1 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0 }}>{activeSession.title}</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {['LISTENING', 'READING', 'WRITING'].map((sec, idx) => {
+              const secIdx = ['LISTENING', 'READING', 'WRITING'].indexOf(currentSection);
+              const isActive = idx === secIdx;
+              const isCompleted = idx < secIdx;
+              return (
+                <div key={sec} style={{ display: 'flex', alignItems: 'center', gap: '6px', opacity: isActive || isCompleted ? 1 : 0.45 }}>
+                  <div style={{
+                    width: '18px', height: '18px', borderRadius: '50%',
+                    background: isCompleted ? 'var(--secondary)' : isActive ? 'var(--primary)' : 'var(--surface-container-high)',
+                    color: isCompleted || isActive ? 'var(--on-primary)' : 'var(--on-surface-variant)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.68rem', fontWeight: 'bold'
+                  }}>
+                    {isCompleted ? '✓' : idx + 1}
+                  </div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: isActive ? 700 : 500 }}>
+                    {sec.charAt(0) + sec.slice(1).toLowerCase()}
+                  </span>
+                  {idx < 2 && <span style={{ color: 'var(--outline-variant)', fontSize: '10px' }}>&rarr;</span>}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <div className="exam-topbar-right">
@@ -431,7 +480,7 @@ export default function MockTestSessionPage() {
           )}
         </div>
         <div className="exam-action-bar-right">
-          <button className="btn btn-outline" onClick={() => navigate('/mock-tests')}>
+          <button className="btn btn-outline" onClick={handleExitLobby}>
             Exit Exam Lobby
           </button>
           
