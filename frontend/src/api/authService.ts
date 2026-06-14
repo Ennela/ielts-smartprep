@@ -18,6 +18,17 @@ const authService = {
     changePassword: (currentPassword: string, newPassword: string): Promise<AxiosResponse<ApiResponse<void>>> =>
         axiosClient.put('/auth/password', { currentPassword, newPassword }),
 
+    uploadAvatar: (file: File): Promise<AxiosResponse<ApiResponse<{ avatarUrl: string }>>> => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return axiosClient.post('/auth/avatar', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+    },
+
+
     // ── Token Management ──────────────────────────────────────────────────
 
     refreshToken: (refreshToken: string): Promise<AxiosResponse<ApiResponse<{ token: string; refreshToken?: string }>>> =>
