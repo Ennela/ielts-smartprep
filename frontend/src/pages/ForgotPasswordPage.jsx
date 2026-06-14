@@ -1,93 +1,120 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import authService from '../api/authService';
+import { useToast } from '../context/ToastContext';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
-  const [error, setError] = useState('');
+  
+  const { success, error } = useToast();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    if (!email.trim()) {
+      error('Please enter your email address');
+      return;
+    }
+
     setLoading(true);
     try {
       await authService.forgotPassword(email);
+      success('If an account exists, a password reset link has been sent.');
       setSent(true);
     } catch (err) {
-      setError(err.message || 'Failed to send reset email');
+      const msg = err.response?.data?.message || err.message || 'Failed to send reset link';
+      error(msg);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-left">
-        <div className="auth-left-content">
-          <div className="auth-shapes">
-            <div className="auth-shape auth-shape-1"></div>
-            <div className="auth-shape auth-shape-2"></div>
-            <div className="auth-shape auth-shape-3"></div>
+    <div className="bg-background min-h-screen flex items-center justify-center p-md md:p-margin text-on-background relative overflow-hidden font-sans">
+      {/* Decorative ambient background elements */}
+      <div className="absolute top-[-10%] left-[-10%] w-1/2 h-1/2 bg-secondary-fixed-dim rounded-full blur-[120px] opacity-20 pointer-events-none"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-1/2 h-1/2 bg-primary-fixed-dim rounded-full blur-[120px] opacity-30 pointer-events-none"></div>
+
+      {/* Forgot Password Card */}
+      <main className="bg-surface-container-lowest rounded-2xl shadow-ambient w-full max-w-md p-xl relative z-10 border border-outline-variant/30 animate-fade-in">
+        {/* Header / Logo */}
+        <div className="flex flex-col items-center mb-xl">
+          <div className="bg-primary/10 p-sm rounded-lg mb-sm">
+            <span className="material-symbols-outlined text-primary text-[32px]">lock_reset</span>
           </div>
-          <h1>IELTS SmartPrep</h1>
-          <p>Conquer IELTS with AI</p>
-          <div className="auth-features">
-            <div className="auth-feature">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              <span>Secure password recovery</span>
-            </div>
-            <div className="auth-feature">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-              <span>Reset link via email</span>
-            </div>
-          </div>
+          <h1 className="font-display-lg text-display-lg text-primary text-center tracking-tight">SmartPrep</h1>
+          <h2 className="font-headline-md text-headline-md text-on-surface mt-sm">Reset Password</h2>
         </div>
-      </div>
-      <div className="auth-right">
+
         {sent ? (
-          <div className="auth-form" style={{ textAlign: 'center' }}>
-            <div className="reveal" style={{ fontSize: '48px', marginBottom: '16px' }}>📧</div>
-            <h2 className="reveal">Check Your Email</h2>
-            <p className="reveal reveal-delay-1" style={{ color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '24px' }}>
-              If an account with <strong>{email}</strong> exists, we've sent a password reset link.
-              Please check your inbox (and spam folder).
+          <div className="text-center space-y-md">
+            <div className="text-[48px]">📧</div>
+            <h3 className="font-headline-md text-on-surface">Check Your Email</h3>
+            <p className="font-body-md text-on-surface-variant leading-relaxed">
+              If an account with <strong>{email}</strong> exists, we've sent a password reset link to your email inbox.
             </p>
-            <p className="reveal reveal-delay-2" style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-              The link expires in 15 minutes.
+            <p className="font-body-md text-outline text-[12px]">
+              Please check your spam or junk folder if you don't receive it in 5 minutes.
             </p>
-            <Link to="/login" className="btn btn-primary reveal reveal-delay-3" style={{ display: 'inline-block', marginTop: '16px', textDecoration: 'none' }}>
-              Back to Login
-            </Link>
+            <div className="pt-md">
+              <Link to="/login" className="w-full flex justify-center items-center py-sm px-md border border-transparent rounded-lg shadow-sm font-title-lg text-title-lg text-on-primary bg-primary hover:bg-primary-container transition-colors duration-200">
+                Back to Login
+              </Link>
+            </div>
           </div>
         ) : (
-          <form className="auth-form" onSubmit={handleSubmit}>
-            <h2 className="reveal">Forgot Password</h2>
-            <p className="reveal reveal-delay-1" style={{ color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: '1.5' }}>
+          <form onSubmit={handleSubmit} className="space-y-lg">
+            <p className="font-body-md text-on-surface-variant text-center">
               Enter your email address and we'll send you a link to reset your password.
             </p>
-            {error && <div className="error-msg reveal">{error}</div>}
-            <div className="form-group floating reveal reveal-delay-2">
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                id="forgot-email"
-                placeholder=" "
-              />
-              <label htmlFor="forgot-email">Email Address</label>
+
+            {/* Email Address */}
+            <div className="space-y-xs">
+              <label className="block font-label-md text-label-md text-on-surface" htmlFor="email">Email Address</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-sm flex items-center pointer-events-none">
+                  <span className="material-symbols-outlined text-outline text-[20px]">mail</span>
+                </div>
+                <input
+                  className="block w-full pl-[40px] pr-sm py-sm font-body-md text-body-md text-on-surface bg-surface-container-lowest border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none transition-shadow"
+                  id="email"
+                  name="email"
+                  placeholder="student@example.com"
+                  required
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
             </div>
-            <button type="submit" className="btn btn-primary reveal reveal-delay-3" disabled={loading} id="forgot-submit-btn">
-              {loading ? <><span className="spinner"></span> Sending...</> : 'Send Reset Link'}
+
+            {/* Submit Button */}
+            <button
+              className="w-full flex justify-center items-center py-sm px-md border border-transparent rounded-lg shadow-sm font-title-lg text-title-lg text-on-primary bg-primary hover:bg-primary-container focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200 active:scale-[0.98] mt-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              type="submit"
+              disabled={loading}
+              id="forgot-submit-btn"
+            >
+              {loading ? (
+                <>
+                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-sm"></span>
+                  Sending...
+                </>
+              ) : (
+                'Send Reset Link'
+              )}
             </button>
-            <p className="auth-link reveal reveal-delay-4">
-              Remember your password? <Link to="/login">Login</Link>
+
+            {/* Footnote Link */}
+            <p className="mt-xl text-center font-body-md text-body-md text-on-surface-variant">
+              Remember your password?{' '}
+              <Link className="font-title-lg text-[14px] text-primary hover:text-primary-container transition-colors font-semibold ml-xs" to="/login">Login here</Link>
             </p>
           </form>
         )}
-      </div>
+      </main>
     </div>
   );
 }

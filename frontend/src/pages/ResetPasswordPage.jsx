@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import authService from '../api/authService';
+import { useToast } from '../context/ToastContext';
 
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -9,120 +10,161 @@ export default function ResetPasswordPage() {
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
+  const [successState, setSuccessState] = useState(false);
+  
+  const { success, error, warning } = useToast();
 
   useEffect(() => {
     if (!token) {
-      setError('Invalid or missing reset token. Please request a new password reset.');
+      warning('Invalid or missing reset token. Please request a new password reset.');
     }
-  }, [token]);
+  }, [token, warning]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    if (!token) {
+      error('Reset token is missing');
+      return;
+    }
 
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
+      error('Passwords do not match');
       return;
     }
 
     if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters');
+      error('Password must be at least 6 characters');
       return;
     }
 
     setLoading(true);
     try {
       await authService.resetPassword(token, newPassword);
-      setSuccess(true);
-      setTimeout(() => navigate('/login'), 3000);
+      success('Password reset successfully! Redirecting to login...');
+      setSuccessState(true);
+      setTimeout(() => navigate('/login', { replace: true }), 3000);
     } catch (err) {
-      setError(err.message || 'Failed to reset password');
+      const msg = err.response?.data?.message || err.message || 'Failed to reset password';
+      error(msg);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-left">
-        <div className="auth-left-content">
-          <div className="auth-shapes">
-            <div className="auth-shape auth-shape-1"></div>
-            <div className="auth-shape auth-shape-2"></div>
-            <div className="auth-shape auth-shape-3"></div>
+    <div className="bg-background min-h-screen flex items-center justify-center p-md md:p-margin text-on-background relative overflow-hidden font-sans">
+      {/* Decorative ambient background elements */}
+      <div className="absolute top-[-10%] left-[-10%] w-1/2 h-1/2 bg-secondary-fixed-dim rounded-full blur-[120px] opacity-20 pointer-events-none"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-1/2 h-1/2 bg-primary-fixed-dim rounded-full blur-[120px] opacity-30 pointer-events-none"></div>
+
+      {/* Reset Password Card */}
+      <main className="bg-surface-container-lowest rounded-2xl shadow-ambient w-full max-w-md p-xl relative z-10 border border-outline-variant/30 animate-fade-in">
+        {/* Header / Logo */}
+        <div className="flex flex-col items-center mb-xl">
+          <div className="bg-primary/10 p-sm rounded-lg mb-sm">
+            <span className="material-symbols-outlined text-primary text-[32px]">lock_open</span>
           </div>
-          <h1>IELTS SmartPrep</h1>
-          <p>Conquer IELTS with AI</p>
-          <div className="auth-features">
-            <div className="auth-feature">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              <span>Secure password reset</span>
-            </div>
-            <div className="auth-feature">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
-              <span>Create a strong password</span>
-            </div>
-          </div>
+          <h1 className="font-display-lg text-display-lg text-primary text-center tracking-tight">SmartPrep</h1>
+          <h2 className="font-headline-md text-headline-md text-on-surface mt-sm">Choose New Password</h2>
         </div>
-      </div>
-      <div className="auth-right">
-        {success ? (
-          <div className="auth-form" style={{ textAlign: 'center' }}>
-            <div className="reveal" style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
-            <h2 className="reveal">Password Reset!</h2>
-            <p className="reveal reveal-delay-1" style={{ color: 'var(--text-secondary)', lineHeight: '1.6', marginBottom: '24px' }}>
-              Your password has been changed successfully.
-              Redirecting to login...
+
+        {successState ? (
+          <div className="text-center space-y-md">
+            <div className="text-[48px]">✅</div>
+            <h3 className="font-headline-md text-on-surface">Password Updated!</h3>
+            <p className="font-body-md text-on-surface-variant leading-relaxed">
+              Your password has been changed successfully. You will be redirected to the login page shortly.
             </p>
-            <Link to="/login" className="btn btn-primary reveal reveal-delay-2" style={{ display: 'inline-block', textDecoration: 'none' }}>
-              Go to Login
-            </Link>
+            <div className="pt-md">
+              <Link to="/login" className="w-full flex justify-center items-center py-sm px-md border border-transparent rounded-lg shadow-sm font-title-lg text-title-lg text-on-primary bg-primary hover:bg-primary-container transition-colors duration-200">
+                Go to Login
+              </Link>
+            </div>
           </div>
         ) : (
-          <form className="auth-form" onSubmit={handleSubmit}>
-            <h2 className="reveal">Reset Password</h2>
-            <p className="reveal reveal-delay-1" style={{ color: 'var(--text-secondary)', marginBottom: '20px', lineHeight: '1.5' }}>
-              Enter your new password below.
+          <form onSubmit={handleSubmit} className="space-y-lg">
+            <p className="font-body-md text-on-surface-variant text-center">
+              Please enter your new password details below.
             </p>
-            {error && <div className="error-msg reveal">{error}</div>}
-            <div className="form-group floating reveal reveal-delay-2">
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-                minLength={6}
-                id="reset-new-password"
-                placeholder=" "
-                disabled={!token}
-              />
-              <label htmlFor="reset-new-password">New Password</label>
+
+            {/* New Password */}
+            <div className="space-y-xs">
+              <label className="block font-label-md text-label-md text-on-surface" htmlFor="new-password">New Password</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-sm flex items-center pointer-events-none">
+                  <span className="material-symbols-outlined text-outline text-[20px]">lock</span>
+                </div>
+                <input
+                  className="block w-full pl-[40px] pr-[40px] py-sm font-body-md text-body-md text-on-surface bg-surface-container-lowest border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none transition-shadow disabled:opacity-50"
+                  id="new-password"
+                  name="new-password"
+                  placeholder="••••••••"
+                  required
+                  type={showPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  disabled={loading || !token}
+                />
+              </div>
             </div>
-            <div className="form-group floating reveal reveal-delay-3">
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                minLength={6}
-                id="reset-confirm-password"
-                placeholder=" "
-                disabled={!token}
-              />
-              <label htmlFor="reset-confirm-password">Confirm Password</label>
+
+            {/* Confirm Password */}
+            <div className="space-y-xs">
+              <label className="block font-label-md text-label-md text-on-surface" htmlFor="confirm-password">Confirm Password</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-sm flex items-center pointer-events-none">
+                  <span className="material-symbols-outlined text-outline text-[20px]">lock</span>
+                </div>
+                <input
+                  className="block w-full pl-[40px] pr-[40px] py-sm font-body-md text-body-md text-on-surface bg-surface-container-lowest border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none transition-shadow disabled:opacity-50"
+                  id="confirm-password"
+                  name="confirm-password"
+                  placeholder="••••••••"
+                  required
+                  type={showPassword ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  disabled={loading || !token}
+                />
+                <div className="absolute inset-y-0 right-0 pr-sm flex items-center">
+                  <button
+                    className="text-outline hover:text-on-surface transition-colors focus:outline-none"
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    disabled={!token}
+                  >
+                    <span className="material-symbols-outlined text-[20px]">{showPassword ? "visibility" : "visibility_off"}</span>
+                  </button>
+                </div>
+              </div>
             </div>
-            <button type="submit" className="btn btn-primary reveal reveal-delay-4" disabled={loading || !token} id="reset-submit-btn">
-              {loading ? <><span className="spinner"></span> Resetting...</> : 'Reset Password'}
+
+            {/* Submit Button */}
+            <button
+              className="w-full flex justify-center items-center py-sm px-md border border-transparent rounded-lg shadow-sm font-title-lg text-title-lg text-on-primary bg-primary hover:bg-primary-container focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200 active:scale-[0.98] mt-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              type="submit"
+              disabled={loading || !token}
+              id="reset-submit-btn"
+            >
+              {loading ? (
+                <>
+                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-sm"></span>
+                  Resetting...
+                </>
+              ) : (
+                'Reset Password'
+              )}
             </button>
-            <p className="auth-link reveal reveal-delay-5">
-              <Link to="/login">Back to Login</Link>
+
+            {/* Footnote Link */}
+            <p className="mt-xl text-center font-body-md text-body-md text-on-surface-variant">
+              <Link className="font-title-lg text-[14px] text-primary hover:text-primary-container transition-colors font-semibold" to="/login">Back to Login</Link>
             </p>
           </form>
         )}
-      </div>
+      </main>
     </div>
   );
 }
