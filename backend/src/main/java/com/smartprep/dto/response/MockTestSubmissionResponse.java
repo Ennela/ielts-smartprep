@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -24,5 +25,6 @@ public class MockTestSubmissionResponse {
     private WritingGradeResponse writingTask1;
     private WritingGradeResponse writingTask2;
     private ListeningTestResponse listeningTest;
+    private List<ReadingResultResponse> readingResults;
     private String progressJson; // Includes the mapped answers for verification
 }

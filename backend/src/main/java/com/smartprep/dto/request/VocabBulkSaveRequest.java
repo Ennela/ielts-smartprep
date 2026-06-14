@@ -12,7 +12,6 @@ import java.util.List;
 @AllArgsConstructor
 public class VocabBulkSaveRequest {
 
-    @NotEmpty(message = "Vocabulary list cannot be empty")
     @Valid
     private List<VocabCreateRequest> vocabularies;
 }

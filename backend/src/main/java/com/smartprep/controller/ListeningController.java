@@ -82,6 +82,16 @@ public class ListeningController {
     }
 
     /**
+     * Get a specific test result.
+     * GET /api/v1/listening/{testId}/result
+     */
+    @GetMapping("/{testId}/result")
+    public ResponseEntity<ApiResponse<ListeningTestResponse>> getTestResult(
+            @PathVariable Long testId) {
+        return ResponseEntity.ok(ApiResponse.ok(listeningQueryService.getTestResult(testId)));
+    }
+
+    /**
      * AI analysis for a specific question.
      * POST /api/v1/listening/ai-analyze/{questionId}
      */

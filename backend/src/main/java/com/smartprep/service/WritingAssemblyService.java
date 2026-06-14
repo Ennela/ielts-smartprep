@@ -88,10 +88,6 @@ public class WritingAssemblyService {
 
         int w1 = countWords(request.getTask1EssayText());
         int w2 = countWords(request.getTask2EssayText());
-        if (w1 < MIN_WORD_COUNT_TASK1)
-            throw new WordCountTooLowException("Task 1 essay must be at least " + MIN_WORD_COUNT_TASK1 + " words. Current: " + w1);
-        if (w2 < MIN_WORD_COUNT_TASK2)
-            throw new WordCountTooLowException("Task 2 essay must be at least " + MIN_WORD_COUNT_TASK2 + " words. Current: " + w2);
 
         // Delegate individual grading to WritingService
         WritingGradeResponse res1 = writingService.evaluateAndSaveSubmission(user, request.getTask1PromptId(), request.getTask1EssayText(), w1);

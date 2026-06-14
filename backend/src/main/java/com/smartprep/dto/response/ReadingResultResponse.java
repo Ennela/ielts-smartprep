@@ -22,6 +22,8 @@ public class ReadingResultResponse {
     private Integer correctAnswers;
     private Integer totalQuestions;
     private BigDecimal bandScore;
+    private java.time.LocalDateTime createdAt;
+    private java.time.LocalDateTime submittedAt;
     private List<QuestionResultDto> questions;
 
     @Data

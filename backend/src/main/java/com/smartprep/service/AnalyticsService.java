@@ -166,8 +166,12 @@ public class AnalyticsService {
 
         List<String> areasOfImprovement = new ArrayList<>();
         for (String skill : averages.keySet()) {
+            Double targetVal = targets.get(skill);
+            if (targetVal == null) {
+                continue;
+            }
             double avg = averages.get(skill);
-            double target = targets.get(skill);
+            double target = targetVal;
             if (avg < target) {
                 areasOfImprovement.add(skill.toLowerCase());
             }

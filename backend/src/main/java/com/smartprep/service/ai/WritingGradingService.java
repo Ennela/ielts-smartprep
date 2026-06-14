@@ -48,22 +48,49 @@ public class WritingGradingService {
     public GradingResult evaluateEssay(String promptText, String essayText, boolean isTask1) {
         int wordCount = countWords(essayText);
 
-        // Step 1: Call AI for grading
+        if (wordCount < 10) {
+            return GradingResult.builder()
+                    .overallBand(BigDecimal.valueOf(1.0))
+                    .taskResponse(BigDecimal.valueOf(1.0))
+                    .coherence(BigDecimal.valueOf(1.0))
+                    .lexical(BigDecimal.valueOf(1.0))
+                    .grammar(BigDecimal.valueOf(1.0))
+                    .generalFeedback("The essay is too short to be evaluated. Please write at least 150 words for Task 1 and 250 words for Task 2.")
+                    .errorsJson("[]")
+                    .rewrittenEssay(essayText != null ? essayText : "")
+                    .improvementNotes(List.of("The response is extremely short. Write a longer essay to receive AI feedback."))
+                    .wordCount(wordCount)
+                    .build();
+        }
+
+        // Step 1: Call AI for grading with retry loop
         String systemPrompt = isTask1 ? TASK1_GRADING_SYSTEM_PROMPT : GRADING_SYSTEM_PROMPT;
         String userPrompt = String.format(
             "IELTS Writing %s Prompt:\n\"%s\"\n\nStudent Essay:\n%s",
             isTask1 ? "Task 1" : "Task 2", promptText, essayText
         );
 
-        JsonNode gradingJson = geminiClient.generateAndParse(
-                systemPrompt,
-                userPrompt,
-                aiResponse -> {
-                    JsonNode json = parseJson(aiResponse);
-                    validateGradingJson(json);
-                    return json;
+        JsonNode gradingJson = null;
+        int maxRetries = 3;
+        for (int i = 0; i < maxRetries; i++) {
+            try {
+                gradingJson = geminiClient.generateAndParse(
+                        systemPrompt,
+                        userPrompt,
+                        aiResponse -> {
+                            JsonNode json = parseJson(aiResponse);
+                            validateGradingJson(json);
+                            return json;
+                        }
+                );
+                break;
+            } catch (Exception e) {
+                log.warn("Gemini grading attempt {} failed: {}", i + 1, e.getMessage());
+                if (i == maxRetries - 1) {
+                    throw e;
                 }
-        );
+            }
+        }
 
         String gradingResponse = gradingJson.toString();
 
@@ -96,15 +123,26 @@ public class WritingGradingService {
             isTask1 ? "Task 1" : "Task 2", promptText, essayText, gradingResponse
         );
 
-        JsonNode rewriteJson = geminiClient.generateAndParse(
-                rewriteSystemPrompt,
-                rewriteUserPrompt,
-                aiResponse -> {
-                    JsonNode json = parseJson(aiResponse);
-                    validateRewriteJson(json);
-                    return json;
+        JsonNode rewriteJson = null;
+        for (int i = 0; i < maxRetries; i++) {
+            try {
+                rewriteJson = geminiClient.generateAndParse(
+                        rewriteSystemPrompt,
+                        rewriteUserPrompt,
+                        aiResponse -> {
+                            JsonNode json = parseJson(aiResponse);
+                            validateRewriteJson(json);
+                            return json;
+                        }
+                );
+                break;
+            } catch (Exception e) {
+                log.warn("Gemini rewrite attempt {} failed: {}", i + 1, e.getMessage());
+                if (i == maxRetries - 1) {
+                    throw e;
                 }
-        );
+            }
+        }
 
         String rewrittenEssay = rewriteJson.path("rewrittenEssay").asText("");
         

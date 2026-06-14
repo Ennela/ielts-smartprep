@@ -156,6 +156,8 @@ public class ReadingQueryService {
                 .correctAnswers(quiz.getCorrectAnswers())
                 .totalQuestions(quiz.getTotalQuestions())
                 .bandScore(quiz.getScore())
+                .createdAt(quiz.getCreatedAt())
+                .submittedAt(quiz.getSubmittedAt())
                 .questions(questionDtos)
                 .build();
     }

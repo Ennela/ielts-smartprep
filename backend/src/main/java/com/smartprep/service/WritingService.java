@@ -62,10 +62,6 @@ public class WritingService {
         boolean isTask1 = prompt.getEssayType().isTask1();
         int minWordCount = isTask1 ? MIN_WORD_COUNT_TASK1 : MIN_WORD_COUNT_TASK2;
         int wordCount = writingGradingService.countWords(request.getEssayText());
-        if (wordCount < minWordCount) {
-            throw new WordCountTooLowException(
-                    "Essay must be at least " + minWordCount + " words. Current: " + wordCount);
-        }
 
         WritingGradeResponse result = evaluateAndSaveSubmission(user, prompt, request.getEssayText(), wordCount);
 

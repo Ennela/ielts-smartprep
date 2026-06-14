@@ -341,6 +341,60 @@ public class MockTestService {
         MockTestSession session = sessionRepository.findById(sub.getSessionId()).orElse(null);
         String progressJson = session != null ? session.getProgressJson() : "{}";
 
+        Map<String, String> answersMap = new HashMap<>();
+        try {
+            if (progressJson != null && !progressJson.trim().isEmpty()) {
+                answersMap = objectMapper.readValue(progressJson, new TypeReference<Map<String, String>>() {});
+            }
+        } catch (Exception e) {
+            log.error("Failed to parse progress JSON for reading results mapping", e);
+        }
+
+        final Map<String, String> finalAnswersMap = answersMap;
+
+        List<ReadingResultResponse> readingResults = sub.getMockTest().getReadingQuizzes().stream()
+                .map(quiz -> {
+                    List<ReadingResultResponse.QuestionResultDto> questionResults = quiz.getQuestions().stream()
+                            .map(q -> {
+                                String userAnswer = finalAnswersMap.get(q.getQuestionId().toString());
+                                boolean isCorrect = IeltsScoringUtils.isReadingCorrect(q.getQuestionType(), q.getCorrectAnswer(), userAnswer);
+                                return ReadingResultResponse.QuestionResultDto.builder()
+                                        .questionId(q.getQuestionId())
+                                        .questionType(q.getQuestionType().name())
+                                        .questionText(q.getQuestionText())
+                                        .options(mapOptions(q.getOptions(), true))
+                                        .orderIndex(q.getOrderIndex())
+                                        .correctAnswer(q.getCorrectAnswer())
+                                        .userAnswer(userAnswer)
+                                        .correct(isCorrect)
+                                        .explanation(q.getExplanation())
+                                        .optionsJson(q.getOptionsJson())
+                                        .wordLimit(q.getWordLimit())
+                                        .groupLabel(q.getGroupLabel())
+                                        .groupId(q.getGroupId())
+                                        .groupContext(q.getGroupContext())
+                                        .evidenceText(q.getEvidenceText())
+                                        .evidenceOffset(q.getEvidenceOffset())
+                                        .evidenceLength(q.getEvidenceLength())
+                                        .build();
+                            })
+                            .collect(Collectors.toList());
+
+                    int correctCount = (int) questionResults.stream().filter(ReadingResultResponse.QuestionResultDto::isCorrect).count();
+
+                    return ReadingResultResponse.builder()
+                            .quizId(quiz.getQuizId())
+                            .topic(quiz.getTopic().name())
+                            .difficulty(quiz.getDifficulty().name())
+                            .passageText(quiz.getPassageText())
+                            .correctAnswers(correctCount)
+                            .totalQuestions(questionResults.size())
+                            .bandScore(IeltsScoringUtils.calculateReadingBand(correctCount))
+                            .questions(questionResults)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
         WritingGradeResponse w1Response = null;
         if (sub.getWritingTask1Submission() != null) {
             w1Response = mapToWritingGradeResponse(sub.getWritingTask1Submission());
@@ -371,6 +425,7 @@ public class MockTestService {
                 .writingTask1(w1Response)
                 .writingTask2(w2Response)
                 .listeningTest(lResponse)
+                .readingResults(readingResults)
                 .progressJson(progressJson)
                 .build();
     }
