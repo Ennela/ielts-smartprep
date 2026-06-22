@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- FOUC prevention: apply dark theme before CSS loads -->
+    <script>
+      (function(){
+        var t = localStorage.getItem('smartprep-theme') || 'light';
+        if (t === 'system') {
+          t = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        if (t === 'dark') document.documentElement.setAttribute('data-theme','dark');
+      })();
+    </script>
     <title>IELTS SmartPrep - Nền tảng Luyện thi IELTS bằng AI</title>
     <meta name="description" content="Luyện thi IELTS Reading, Writing và Listening với nội dung do AI tạo và phản hồi tức thì." />
     <!-- Academic Precision Design System Fonts -->
