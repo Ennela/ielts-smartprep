@@ -1,5 +1,6 @@
 package com.smartprep.config;
 
+import com.smartprep.security.AuthRateLimitInterceptor;
 import com.smartprep.security.RateLimitInterceptor;
 import com.smartprep.security.RequestLoggingInterceptor;
 import lombok.RequiredArgsConstructor;
@@ -10,8 +11,9 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 /**
  * Registers MVC interceptors:
  * <ol>
- *   <li>Request logging — all API paths (runs first)</li>
- *   <li>Rate limiting — AI-intensive endpoints only</li>
+ *   <li>Request logging — all API paths (runs first, order 0)</li>
+ *   <li>Rate limiting — AI-intensive endpoints (order 1)</li>
+ *   <li>Auth rate limiting — login, register, forgot-password (order 2)</li>
  * </ol>
  */
 @Configuration
@@ -19,6 +21,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class WebMvcConfig implements WebMvcConfigurer {
 
     private final RateLimitInterceptor rateLimitInterceptor;
+    private final AuthRateLimitInterceptor authRateLimitInterceptor;
     private final RequestLoggingInterceptor requestLoggingInterceptor;
 
     @Override
@@ -40,5 +43,14 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/v1/vocab/ai-suggest"
                 )
                 .order(1);
+
+        // Auth rate limiting on public auth endpoints (order 2 = after logging)
+        registry.addInterceptor(authRateLimitInterceptor)
+                .addPathPatterns(
+                        "/api/v1/auth/login",
+                        "/api/v1/auth/register",
+                        "/api/v1/auth/forgot-password"
+                )
+                .order(2);
     }
 }
