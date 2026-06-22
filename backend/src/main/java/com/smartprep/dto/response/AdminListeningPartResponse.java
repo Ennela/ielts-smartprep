@@ -33,6 +33,7 @@ public class AdminListeningPartResponse {
     @AllArgsConstructor
     public static class QuestionDto {
         private Long questionId;
+        private Boolean verified;
         private String questionType;
         private String questionText;
         private String correctAnswer;

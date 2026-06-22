@@ -36,4 +36,8 @@ public class ListeningQuestion {
 
     @Column(nullable = false)
     private Integer orderIndex;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private Boolean verified = false;
 }

@@ -31,6 +31,7 @@ public class AdminReadingQuizResponse {
     @AllArgsConstructor
     public static class QuestionDto {
         private Long questionId;
+        private Boolean verified;
         private String questionType;
         private String questionText;
         private List<QuestionOptionResponse> options;
@@ -42,5 +43,8 @@ public class AdminReadingQuizResponse {
         private String groupLabel;
         private Integer groupId;
         private String groupContext;
+        private String evidenceText;
+        private Integer evidenceOffset;
+        private Integer evidenceLength;
     }
 }
