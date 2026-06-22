@@ -1,11 +1,13 @@
 import axiosClient from './axiosClient';
 
+const DEFAULT_SIZE = 20;
+
 const adminApi = {
     getDashboard: () =>
         axiosClient.get('/admin/dashboard'),
 
-    listUsers: (search, page = 0, size = 10) => {
-        const params = { page, size };
+    listUsers: (search, page = 0, size = DEFAULT_SIZE, sort = 'createdAt,desc') => {
+        const params = { page, size, sort };
         if (search) params.search = search;
         return axiosClient.get('/admin/users', { params });
     },
@@ -13,8 +15,8 @@ const adminApi = {
     getUserDetail: (userId) =>
         axiosClient.get(`/admin/users/${userId}`),
 
-    listWritingPrompts: (essayType, page = 0, size = 10) => {
-        const params = { page, size };
+    listWritingPrompts: (essayType, page = 0, size = DEFAULT_SIZE, sort = 'createdAt,desc') => {
+        const params = { page, size, sort };
         if (essayType) params.essayType = essayType;
         return axiosClient.get('/admin/writing-prompts', { params });
     },
@@ -28,8 +30,8 @@ const adminApi = {
     deleteWritingPrompt: (promptId) =>
         axiosClient.delete(`/admin/writing-prompts/${promptId}`),
 
-    listReadingQuizzes: (topic, difficulty, source, page = 0, size = 10) => {
-        const params = { page, size };
+    listReadingQuizzes: (topic, difficulty, source, page = 0, size = DEFAULT_SIZE, sort = 'createdAt,desc') => {
+        const params = { page, size, sort };
         if (topic) params.topic = topic;
         if (difficulty) params.difficulty = difficulty;
         if (source) params.source = source;
@@ -45,8 +47,8 @@ const adminApi = {
     deleteReadingQuiz: (quizId) =>
         axiosClient.delete(`/admin/reading-quizzes/${quizId}`),
 
-    listMockTests: (page = 0, size = 10) =>
-        axiosClient.get('/admin/mock-tests', { params: { page, size } }),
+    listMockTests: (page = 0, size = DEFAULT_SIZE, sort = 'createdAt,desc') =>
+        axiosClient.get('/admin/mock-tests', { params: { page, size, sort } }),
 
     createMockTest: (data) =>
         axiosClient.post('/admin/mock-tests', data),
@@ -57,8 +59,8 @@ const adminApi = {
     deleteMockTest: (id) =>
         axiosClient.delete(`/admin/mock-tests/${id}`),
 
-    listListeningParts: (audioStatus, topic, page = 0, size = 10) => {
-        const params = { page, size };
+    listListeningParts: (audioStatus, topic, page = 0, size = DEFAULT_SIZE, sort = 'createdAt,desc') => {
+        const params = { page, size, sort };
         if (audioStatus) params.audioStatus = audioStatus;
         if (topic) params.topic = topic;
         return axiosClient.get('/admin/listening/parts', { params });
