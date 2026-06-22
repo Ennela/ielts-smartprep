@@ -21,7 +21,8 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 /**
- * Service for managing exam attempt lifecycle (start → in-progress → completed).
+ * Service for managing exam attempt lifecycle (start → in-progress →
+ * completed).
  * Provides server-authoritative timer enforcement.
  */
 @Service
@@ -122,7 +123,8 @@ public class ExamAttemptService {
         // Calculate actual time spent
         long spentSeconds = Duration.between(attempt.getStartedAt(), now).getSeconds();
         // Cap at duration + buffer (don't record more than allowed)
-        spentSeconds = Math.min(spentSeconds, attempt.getDurationSeconds() + ExamDurationConfig.DEADLINE_BUFFER_SECONDS);
+        spentSeconds = Math.min(spentSeconds,
+                attempt.getDurationSeconds() + ExamDurationConfig.DEADLINE_BUFFER_SECONDS);
 
         attempt.setStatus(SessionStatus.SUBMITTED);
         attempt.setSubmittedAt(now);
@@ -154,9 +156,9 @@ public class ExamAttemptService {
      */
     @Transactional
     public ExamAttempt completeAttemptInternal(Long attemptId, Long userId,
-                                               boolean autoSubmitted,
-                                               Integer timeSpentTask1,
-                                               Integer timeSpentTask2) {
+            boolean autoSubmitted,
+            Integer timeSpentTask1,
+            Integer timeSpentTask2) {
         ExamAttempt attempt = attemptRepository.findByAttemptIdAndUserUserId(attemptId, userId)
                 .orElse(null);
 
@@ -171,15 +173,18 @@ public class ExamAttemptService {
 
         LocalDateTime now = LocalDateTime.now();
         long spentSeconds = Duration.between(attempt.getStartedAt(), now).getSeconds();
-        spentSeconds = Math.min(spentSeconds, attempt.getDurationSeconds() + ExamDurationConfig.DEADLINE_BUFFER_SECONDS);
+        spentSeconds = Math.min(spentSeconds,
+                attempt.getDurationSeconds() + ExamDurationConfig.DEADLINE_BUFFER_SECONDS);
 
         attempt.setStatus(SessionStatus.SUBMITTED);
         attempt.setSubmittedAt(now);
         attempt.setTimeSpentSeconds((int) spentSeconds);
         attempt.setAutoSubmitted(autoSubmitted);
 
-        if (timeSpentTask1 != null) attempt.setTimeSpentTask1(timeSpentTask1);
-        if (timeSpentTask2 != null) attempt.setTimeSpentTask2(timeSpentTask2);
+        if (timeSpentTask1 != null)
+            attempt.setTimeSpentTask1(timeSpentTask1);
+        if (timeSpentTask2 != null)
+            attempt.setTimeSpentTask2(timeSpentTask2);
 
         return attemptRepository.save(attempt);
     }

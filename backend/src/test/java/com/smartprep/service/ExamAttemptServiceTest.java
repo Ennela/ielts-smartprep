@@ -32,11 +32,15 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class ExamAttemptServiceTest {
 
-    @Mock private ExamAttemptRepository attemptRepository;
-    @Mock private UserRepository userRepository;
-    @Spy  private ExamDurationConfig durationConfig = new ExamDurationConfig();
+    @Mock
+    private ExamAttemptRepository attemptRepository;
+    @Mock
+    private UserRepository userRepository;
+    @Spy
+    private ExamDurationConfig durationConfig = new ExamDurationConfig();
 
-    @InjectMocks private ExamAttemptService examAttemptService;
+    @InjectMocks
+    private ExamAttemptService examAttemptService;
 
     private User user;
 
@@ -335,8 +339,7 @@ class ExamAttemptServiceTest {
         when(attemptRepository.findByAttemptIdAndUserUserId(999L, 1L))
                 .thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () ->
-                examAttemptService.getAttempt(999L, 1L));
+        assertThrows(ResourceNotFoundException.class, () -> examAttemptService.getAttempt(999L, 1L));
     }
 
     // ── ExamDurationConfig tests ──

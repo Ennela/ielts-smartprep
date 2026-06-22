@@ -52,6 +52,8 @@ public class ReadingPromptBuilder {
             case HISTORY -> "History and Civilization";
             case HEALTH -> "Health and Medicine";
             case EDUCATION -> "Education and Learning";
+            case SCIENCE -> "Science and Research";
+            case SOCIETY -> "Society and Social Studies";
         };
     }
 

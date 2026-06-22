@@ -5,5 +5,7 @@ public enum Topic {
     TECHNOLOGY,
     HISTORY,
     HEALTH,
-    EDUCATION
+    EDUCATION,
+    SCIENCE,
+    SOCIETY
 }
