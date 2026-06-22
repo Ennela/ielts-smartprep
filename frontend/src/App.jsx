@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { ReadingProvider } from './context/ReadingContext';
 import { MockTestProvider } from './context/MockTestContext';
 import ProtectedRoute from './components/common/ProtectedRoute';
@@ -53,6 +54,7 @@ import './index.css';
 export default function App() {
   return (
     <BrowserRouter>
+      <ThemeProvider>
       <ToastProvider>
         <AuthProvider>
           <Suspense fallback={
@@ -154,6 +156,7 @@ export default function App() {
         </Suspense>
       </AuthProvider>
       </ToastProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { useTheme } from '../context/ThemeContext';
 import authService from '../api/authService';
 import axiosClient from '../api/axiosClient';
 import styles from '../styles/Profile.module.css';
@@ -9,6 +10,7 @@ import styles from '../styles/Profile.module.css';
 export default function ProfilePage() {
   const { user, updateUser } = useAuth();
   const { success, error } = useToast();
+  const { theme: currentTheme, setTheme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Tab Control
@@ -43,10 +45,7 @@ export default function ProfilePage() {
   // --- TAB 3: Preferences ---
   const [language, setLanguage] = useState('English (US)');
   const [notifications, setNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(() => {
-    return document.documentElement.classList.contains('dark') || 
-      localStorage.getItem('theme') === 'dark';
-  });
+  const darkMode = currentTheme === 'dark';
   const [savingPrefs, setSavingPrefs] = useState(false);
 
   // --- Initial / Sync States ---
@@ -103,11 +102,9 @@ export default function ProfilePage() {
 
   const initialLang = localStorage.getItem('pref_lang') || 'English (US)';
   const initialNotifs = localStorage.getItem('pref_notifications') !== 'false';
-  const initialDarkMode = localStorage.getItem('theme') === 'dark';
   const isPrefsDirty = 
     language !== initialLang || 
-    notifications !== initialNotifs || 
-    darkMode !== initialDarkMode;
+    notifications !== initialNotifs;
 
   // --- Route Blocker for Unsaved Changes ---
   const isAnyFormDirty = isPersonalDirty || isPasswordDirty || isGoalsDirty || isPrefsDirty;
@@ -268,14 +265,6 @@ export default function ProfilePage() {
       // Save local preferences
       localStorage.setItem('pref_lang', language);
       localStorage.setItem('pref_notifications', notifications.toString());
-      localStorage.setItem('theme', darkMode ? 'dark' : 'light');
-
-      // Sync dark mode class
-      if (darkMode) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
 
       // Simulate a backend update for notifications using optimistic UI state
       await new Promise((resolve) => {
@@ -296,13 +285,8 @@ export default function ProfilePage() {
   };
 
   const handleToggleDarkMode = (checked) => {
-    setDarkMode(checked);
-    // Dynamically toggle class immediately to provide visual feedback
-    if (checked) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    // Immediately apply theme via context (persists to localStorage automatically)
+    setTheme(checked ? 'dark' : 'light');
   };
 
   const avatarSrc = avatarPreview || (user?.avatarUrl

@@ -67,7 +67,7 @@ export default function WritingFullResultPage() {
     <div className="writing-result-page" id="writing-result-page">
       <div className="writing-result-content">
         <button className="btn-back" onClick={() => navigate('/writing')} id="back-to-writing">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
           Go Back to Writing
         </button>
 

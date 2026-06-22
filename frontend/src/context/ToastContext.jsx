@@ -33,10 +33,10 @@ export function ToastProvider({ children }) {
             key={t.id}
             className={`
               pointer-events-auto flex items-start gap-md p-md rounded-xl shadow-ambient border transition-all duration-300 animate-slide-in
-              ${t.type === 'success' ? 'bg-white border-emerald/20 text-on-surface' : ''}
-              ${t.type === 'error' ? 'bg-white border-error/20 text-on-surface' : ''}
-              ${t.type === 'warning' ? 'bg-white border-tertiary/20 text-on-surface' : ''}
-              ${t.type === 'info' ? 'bg-white border-outline-variant/30 text-on-surface' : ''}
+              ${t.type === 'success' ? 'bg-surface-container-lowest border-emerald/20 text-on-surface' : ''}
+              ${t.type === 'error' ? 'bg-surface-container-lowest border-error/20 text-on-surface' : ''}
+              ${t.type === 'warning' ? 'bg-surface-container-lowest border-tertiary/20 text-on-surface' : ''}
+              ${t.type === 'info' ? 'bg-surface-container-lowest border-outline-variant/30 text-on-surface' : ''}
             `}
           >
             {/* Icons matching Google Material Symbols */}

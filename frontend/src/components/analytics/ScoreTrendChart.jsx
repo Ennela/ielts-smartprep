@@ -1,13 +1,17 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 
-const SKILL_COLORS = {
-  READING: '#005faf',   // Reading (Emerald/Secondary)
-  WRITING: '#853100',   // Writing (Burnt Orange/Tertiary)
-  LISTENING: '#003178'  // Listening (Marine/Primary)
+const getThemeColors = () => {
+  const style = getComputedStyle(document.documentElement);
+  return {
+    READING: style.getPropertyValue('--secondary').trim() || '#005faf',
+    WRITING: style.getPropertyValue('--tertiary').trim() || '#853100',
+    LISTENING: style.getPropertyValue('--primary').trim() || '#003178',
+  };
 };
 
 export default function ScoreTrendChart({ dataPoints = [], targetScore, skill = 'READING' }) {
-  const color = SKILL_COLORS[skill] || '#003fb1';
+  const themeColors = getThemeColors();
+  const color = themeColors[skill] || themeColors.LISTENING;
 
   const chartData = dataPoints.map(dp => ({
     period: dp.period,
@@ -77,8 +81,8 @@ export default function ScoreTrendChart({ dataPoints = [], targetScore, skill = 
           dataKey="score"
           stroke={color}
           strokeWidth={3}
-          dot={{ r: 5, fill: color, stroke: 'var(--clr-surface)', strokeWidth: 2 }}
-          activeDot={{ r: 7, fill: color, stroke: '#fff', strokeWidth: 2 }}
+          dot={{ r: 5, fill: color, stroke: 'var(--surface-container-lowest)', strokeWidth: 2 }}
+          activeDot={{ r: 7, fill: color, stroke: 'var(--surface-container-lowest)', strokeWidth: 2 }}
           animationDuration={800}
           animationEasing="ease-out"
         />

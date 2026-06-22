@@ -370,7 +370,7 @@
 }
 
 .history-row:hover {
-  background-color: rgba(18, 28, 40, 0.01);
+  background-color: var(--surface-container-low);
 }
 
 .history-band {
@@ -388,8 +388,8 @@
 }
 
 .status-completed {
-  background: #d4ffdb;
-  color: #004b1c;
+  background: rgba(0, 108, 74, 0.12);
+  color: var(--color-success);
 }
 
 .status-grading {

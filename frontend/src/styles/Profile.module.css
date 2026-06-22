@@ -350,7 +350,7 @@
   width: 18px;
   left: 3px;
   bottom: 3px;
-  background-color: white;
+  background-color: var(--surface-container-lowest);
   transition: .3s;
   border-radius: 50%;
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);
@@ -375,7 +375,7 @@
   height: 44px;
   padding: 0 24px;
   background-color: var(--primary);
-  color: #ffffff;
+  color: var(--on-primary);
   border: none;
   border-radius: 8px;
   font-size: 15px;

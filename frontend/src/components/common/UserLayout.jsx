@@ -74,7 +74,7 @@ export default function UserLayout() {
   return (
     <div className="bg-background min-h-screen flex flex-col font-sans">
       {/* Top Sticky Navbar */}
-      <nav className="sticky top-0 z-50 bg-white border-b border-outline-variant/30 shadow-sm">
+      <nav className="sticky top-0 z-50 bg-surface-container-lowest border-b border-outline-variant/30 shadow-sm">
         <div className="flex items-center max-w-container_max_width mx-auto px-lg py-md w-full relative">
           
           {/* Brand Logo */}
@@ -134,7 +134,7 @@ export default function UserLayout() {
               </button>
 
               {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white border border-outline-variant/50 rounded-xl shadow-lg py-2 z-50">
+                <div className="absolute right-0 mt-2 w-56 bg-surface-container-lowest border border-outline-variant/50 rounded-xl shadow-lg py-2 z-50">
                   <div className="px-4 py-3 border-b border-outline-variant/30">
                     <p className="font-semibold text-on-surface text-sm">{displayName}</p>
                     <p className="text-on-surface-variant text-xs truncate">{user?.email || ''}</p>
@@ -170,7 +170,7 @@ export default function UserLayout() {
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-outline-variant/30 bg-white shadow-inner py-2 px-md">
+          <div className="md:hidden border-t border-outline-variant/30 bg-surface-container-lowest shadow-inner py-2 px-md">
             <div className="flex flex-col gap-xs">
               {navLinks.map((link) => (
                 <NavLink
