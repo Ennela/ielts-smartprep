@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IELTS SmartPrep - Admin Review Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0b0f19;
+            --bg-secondary: #161d30;
+            --bg-card: rgba(22, 29, 48, 0.75);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-primary: #6366f1;
+            --accent-primary-hover: #4f46e5;
+            --accent-success: #10b981;
+            --accent-success-hover: #059669;
+            --accent-warning: #f59e0b;
+            --accent-danger: #ef4444;
+            --highlight-color: rgba(251, 191, 36, 0.35);
+            --highlight-border: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at top left, #1e1b4b, #0f172a 60%);
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        #login-overlay.hidden {
+            display: none !important;
+        }
+
+        .login-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(16px);
+        }
+
+        .login-card h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 28px;
+            margin-bottom: 8px;
+            text-align: center;
+            background: linear-gradient(135deg, #a5b4fc, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .login-card p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--accent-primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            margin-top: 10px;
+        }
+
+        .login-btn:hover {
+            background: var(--accent-primary-hover);
+        }
+
+        .login-error {
+            color: var(--accent-danger);
+            font-size: 13px;
+            margin-top: 12px;
+            text-align: center;
+            display: none;
+        }
+
+        header {
+            height: 70px;
+            background: rgba(15, 23, 42, 0.4);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            backdrop-filter: blur(10px);
+            z-index: 10;
+        }
+
+        .logo-section h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #e0e7ff, #a5b4fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-section span {
+            font-size: 12px;
+            font-weight: 600;
+            background: rgba(99, 102, 241, 0.2);
+            color: #818cf8;
+            padding: 4px 8px;
+            border-radius: 6px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .stats-section {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .stat-item {
+            text-align: right;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+        }
+
+        .stat-val {
+            font-family: 'Outfit', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .stat-progress-bar {
+            width: 150px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+
+        .stat-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-success));
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .logout-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-secondary);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .logout-btn:hover {
+            border-color: var(--accent-danger);
+            color: var(--accent-danger);
+        }
+
+        .app-body {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 320px;
+            background: rgba(15, 23, 42, 0.35);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .test-progress-container {
+            margin-bottom: 16px;
+            background: rgba(255, 255, 255, 0.02);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .test-progress-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            font-size: 11px;
+        }
+
+        .test-progress-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .test-progress-fill-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .test-progress-fill-val {
+            height: 100%;
+            background: var(--accent-primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .filter-tabs {
+            display: flex;
+            background: rgba(15, 23, 42, 0.5);
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .filter-tab {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-tab.active {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .test-list {
+            list-style: none;
+        }
+
+        .test-group {
+            margin-bottom: 1px;
+        }
+
+        .test-title {
+            padding: 14px 20px;
+            background: rgba(255, 255, 255, 0.02);
+            font-family: 'Outfit', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+        }
+
+        .test-title:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .section-list {
+            list-style: none;
+            padding: 6px 0;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .section-item {
+            padding: 10px 20px 10px 32px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+
+        .section-item:hover {
+            background: rgba(99, 102, 241, 0.05);
+            color: var(--text-primary);
+        }
+
+        .section-item.active {
+            background: rgba(99, 102, 241, 0.15);
+            color: #a5b4fc;
+            border-left: 3px solid var(--accent-primary);
+            padding-left: 29px;
+        }
+
+        .badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .badge-draft {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--accent-warning);
+        }
+
+        .badge-verified {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-success);
+        }
+
+        .content-pane {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            background: rgba(15, 23, 42, 0.15);
+        }
+
+        .placeholder-screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-secondary);
+            text-align: center;
+            padding: 40px;
+        }
+
+        .placeholder-screen h3 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 24px;
+            color: var(--text-primary);
+            margin-top: 16px;
+            margin-bottom: 8px;
+        }
+
+        .view-split {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .left-col {
+            flex: 1.1;
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            padding: 30px;
+            background: rgba(15, 23, 42, 0.2);
+        }
+
+        .right-col {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            padding: 30px;
+        }
+
+        .passage-header, .transcript-header {
+            margin-bottom: 24px;
+        }
+
+        .passage-meta, .transcript-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .passage-title, .transcript-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .passage-body, .transcript-body {
+            font-size: 15px;
+            line-height: 1.8;
+            color: #cbd5e1;
+            white-space: pre-wrap;
+        }
+
+        .audio-player-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .audio-player-container audio {
+            width: 100%;
+            outline: none;
+        }
+
+        .right-col-header {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .col-title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .col-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .verify-all-btn {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--accent-success);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .verify-all-btn:hover {
+            background: var(--accent-success);
+            color: white;
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-box {
+            flex: 1;
+            padding: 8px 12px;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 13px;
+        }
+
+        .search-box::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .dropdown-filter {
+            padding: 8px 12px;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 13px;
+        }
+
+        .dropdown-filter:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .question-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .question-card:hover {
+            border-color: rgba(99, 102, 241, 0.3);
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.3);
+        }
+
+        .question-card.verified {
+            border-left: 4px solid var(--accent-success);
+        }
+
+        .question-card.draft {
+            border-left: 4px solid var(--accent-warning);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .question-number {
+            font-family: 'Outfit', sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .options-list {
+            list-style: none;
+            margin-top: 10px;
+            margin-bottom: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .option-item {
+            font-size: 13px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .option-item.correct {
+            background: rgba(16, 185, 129, 0.08);
+            border-color: rgba(16, 185, 129, 0.3);
+            color: #34d399;
+            font-weight: 500;
+        }
+
+        .edit-input {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            padding: 8px 12px;
+            font-family: inherit;
+            font-size: 13px;
+            margin-top: 6px;
+            resize: vertical;
+            transition: all 0.2s ease;
+        }
+
+        .edit-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+        }
+
+        .edit-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .edit-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .edit-col label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .edit-input-small {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            padding: 6px 10px;
+            font-family: inherit;
+            font-size: 12px;
+        }
+
+        .card-actions {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding-top: 14px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            font-family: inherit;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-secondary);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-primary);
+        }
+
+        .btn-success {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--accent-success);
+        }
+
+        .btn-success:hover {
+            background: var(--accent-success);
+            color: white;
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--accent-danger);
+        }
+
+        .btn-danger:hover {
+            background: var(--accent-danger);
+            color: white;
+        }
+
+        .highlight {
+            background-color: var(--highlight-color);
+            border-bottom: 2px solid var(--highlight-border);
+            border-radius: 2px;
+            padding: 1px 0;
+            animation: pulse-highlight 2s infinite alternate;
+        }
+
+        @keyframes pulse-highlight {
+            from { background-color: rgba(251, 191, 36, 0.25); }
+            to { background-color: rgba(251, 191, 36, 0.45); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Login Overlay -->
+    <div id="login-overlay">
+        <div class="login-card">
+            <h2>IELTS SmartPrep</h2>
+            <p>Admin Question Review Portal</p>
+            <div class="form-group">
+                <label for="username">Tài khoản</label>
+                <input type="text" id="username" placeholder="Nhập tên đăng nhập..." value="admin">
+            </div>
+            <div class="form-group">
+                <label for="password">Mật khẩu</label>
+                <input type="password" id="password" placeholder="Nhập mật khẩu..." value="admin123">
+            </div>
+            <button class="login-btn" onclick="handleLogin()">Đăng Nhập</button>
+            <div class="login-error" id="login-error">Tài khoản hoặc mật khẩu không đúng.</div>
+        </div>
+    </div>
+
+    <!-- Header Section -->
+    <header>
+        <div class="logo-section">
+            <h1>IELTS SmartPrep <span>Admin Panel</span></h1>
+        </div>
+        <div class="stats-section">
+            <div class="stat-item">
+                <span class="stat-label">Tiến Độ Review (Reading)</span>
+                <div class="stat-val" id="reading-stat-val">0/0</div>
+                <div class="stat-progress-bar">
+                    <div class="stat-progress-fill" id="reading-progress-fill"></div>
+                </div>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Tiến Độ Review (Listening)</span>
+                <div class="stat-val" id="listening-stat-val">0/0</div>
+                <div class="stat-progress-bar">
+                    <div class="stat-progress-fill" id="listening-progress-fill"></div>
+                </div>
+            </div>
+            <button class="logout-btn" onclick="handleLogout()">Đăng xuất</button>
+        </div>
+    </header>
+
+    <!-- Main Workspace Body -->
+    <div class="app-body">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="test-progress-container">
+                    <div style="font-size: 11px; font-weight: 700; margin-bottom: 8px; color: var(--text-secondary); text-transform: uppercase;">Tiến độ từng Test</div>
+                    <div class="test-progress-row">
+                        <div class="test-progress-item">
+                            <span>Test 1: <strong id="t1-progress-pct">0%</strong></span>
+                            <div class="test-progress-fill-bar"><div class="test-progress-fill-val" id="t1-progress-fill"></div></div>
+                        </div>
+                        <div class="test-progress-item">
+                            <span>Test 2: <strong id="t2-progress-pct">0%</strong></span>
+                            <div class="test-progress-fill-bar"><div class="test-progress-fill-val" id="t2-progress-fill"></div></div>
+                        </div>
+                        <div class="test-progress-item">
+                            <span>Test 3: <strong id="t3-progress-pct">0%</strong></span>
+                            <div class="test-progress-fill-bar"><div class="test-progress-fill-val" id="t3-progress-fill"></div></div>
+                        </div>
+                        <div class="test-progress-item">
+                            <span>Test 4: <strong id="t4-progress-pct">0%</strong></span>
+                            <div class="test-progress-fill-bar"><div class="test-progress-fill-val" id="t4-progress-fill"></div></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="filter-tabs">
+                    <button class="filter-tab active" onclick="setFilter('ALL', this)">Tất cả</button>
+                    <button class="filter-tab" onclick="setFilter('DRAFT', this)">Chờ duyệt</button>
+                    <button class="filter-tab" onclick="setFilter('VERIFIED', this)">Đã duyệt</button>
+                </div>
+            </div>
+            <ul class="test-list" id="sidebar-test-list"></ul>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content-pane" id="content-pane">
+            <div class="placeholder-screen">
+                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <path d="M16 13H8"/>
+                    <path d="M16 17H8"/>
+                    <path d="M10 9H8"/>
+                </svg>
+                <h3>Chọn phần thi để xem nội dung</h3>
+                <p>Hãy chọn một Reading Passage hoặc Listening Part ở thanh bên trái để bắt đầu kiểm duyệt đáp án.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentFilter = 'ALL';
+        let readingQuizzes = [];
+        let listeningParts = [];
+        let selectedItem = null;
+
+        let qSearchQuery = "";
+        let qTypeFilter = "ALL";
+        let qStatusFilter = "ALL";
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const token = localStorage.getItem("admin_token");
+            if (token) {
+                document.getElementById("login-overlay").classList.add("hidden");
+                loadDashboardData();
+            }
+        });
+
+        async function handleLogin() {
+            const usernameInput = document.getElementById("username").value;
+            const passwordInput = document.getElementById("password").value;
+            const errorDiv = document.getElementById("login-error");
+
+            try {
+                const response = await fetch("/api/v1/auth/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username: usernameInput, password: passwordInput })
+                });
+
+                const result = await response.json();
+                if (response.ok && result.status === "SUCCESS") {
+                    localStorage.setItem("admin_token", result.data.token);
+                    document.getElementById("login-overlay").classList.add("hidden");
+                    errorDiv.style.display = "none";
+                    loadDashboardData();
+                } else {
+                    errorDiv.innerText = result.message || "Tài khoản hoặc mật khẩu không chính xác.";
+                    errorDiv.style.display = "block";
+                }
+            } catch (err) {
+                errorDiv.innerText = "Lỗi kết nối đến máy chủ: " + err.message;
+                errorDiv.style.display = "block";
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem("admin_token");
+            document.getElementById("login-overlay").classList.remove("hidden");
+        }
+
+        async function fetchWithAuth(url, options = {}) {
+            const token = localStorage.getItem("admin_token");
+            if (!token) {
+                handleLogout();
+                throw new Error("No admin token found");
+            }
+            options.headers = {
+                ...options.headers,
+                "Authorization": `Bearer ${token}`
+            };
+
+            const res = await fetch(url, options);
+            if (res.status === 401 || res.status === 403) {
+                handleLogout();
+                throw new Error("Token expired or unauthorized");
+            }
+            return res;
+        }
+
+        async function loadDashboardData() {
+            try {
+                const readingRes = await fetchWithAuth("/api/v1/admin/reading-quizzes?size=100");
+                const readingData = await readingRes.json();
+                if (readingData.status === "SUCCESS") {
+                    readingQuizzes = readingData.data.content;
+                }
+
+                const listeningRes = await fetchWithAuth("/api/v1/admin/listening/parts?size=100");
+                const listeningData = await listeningRes.json();
+                if (listeningData.status === "SUCCESS") {
+                    listeningParts = listeningData.data.content;
+                }
+
+                if (readingQuizzes.length === 0 && listeningParts.length === 0) {
+                    console.log("DB returned empty lists, trying to load cam19_import_review.json...");
+                    const fallbackRes = await fetch("/cam19_import_review.json");
+                    if (fallbackRes.ok) {
+                        const fallbackData = await fallbackRes.json();
+                        processFallbackData(fallbackData);
+                    }
+                }
+
+                updateStats();
+                renderSidebar();
+                if (selectedItem) {
+                    renderContentPane();
+                }
+            } catch (err) {
+                console.error("Error loading dashboard data:", err);
+            }
+        }
+
+        function processFallbackData(data) {
+            let quizzesMap = {};
+            let partsMap = {};
+
+            data.forEach(q => {
+                const test = q.test;
+                const sec = q.section;
+                if (sec === 'Reading') {
+                    const pass = q.passage;
+                    const quizId = 42 + (test - 1) * 3 + (pass - 1);
+                    if (!quizzesMap[quizId]) {
+                        quizzesMap[quizId] = {
+                            quizId: quizId,
+                            topic: `Topic ${quizId}`,
+                            difficulty: `PASSAGE_${pass}`,
+                            passageText: `Cambridge 19 Test ${test} Passage ${pass} Text.`,
+                            isTemplate: true,
+                            questions: []
+                        };
+                    }
+                    quizzesMap[quizId].questions.push({
+                        questionId: q.question_id,
+                        orderIndex: q.question_number,
+                        questionType: q.question_type,
+                        questionText: q.question_text,
+                        correctAnswer: q.correct_answer,
+                        explanation: q.explanation,
+                        evidenceText: q.evidence_text,
+                        evidenceOffset: q.evidence_offset,
+                        evidenceLength: q.evidence_length,
+                        options: q.options,
+                        verified: q.verified
+                    });
+                } else {
+                    const partNum = q.part;
+                    const partId = 19 + (test - 1) * 4 + (partNum - 1);
+                    if (!partsMap[partId]) {
+                        partsMap[partId] = {
+                            partId: partId,
+                            partNumber: partNum,
+                            title: `Part ${partNum}`,
+                            topic: `Topic ${partId}`,
+                            audioUrl: `/api/v1/listening/audio/cam19_test${test}_part${partNum}.mp3`,
+                            transcriptText: `Cambridge 19 Test ${test} Part ${partNum} Transcript.`,
+                            questions: []
+                        };
+                    }
+                    partsMap[partId].questions.push({
+                        questionId: q.question_id,
+                        orderIndex: q.question_number,
+                        questionType: q.question_type,
+                        questionText: q.question_text,
+                        correctAnswer: q.correct_answer,
+                        explanation: q.explanation,
+                        options: q.options,
+                        verified: q.verified
+                    });
+                }
+            });
+
+            readingQuizzes = Object.values(quizzesMap);
+            listeningParts = Object.values(partsMap);
+        }
+
+        function updateStats() {
+            let totalReading = 0;
+            let verifiedReading = 0;
+            readingQuizzes.forEach(quiz => {
+                quiz.questions.forEach(q => {
+                    totalReading++;
+                    if (q.verified) verifiedReading++;
+                });
+            });
+
+            document.getElementById("reading-stat-val").innerText = `${verifiedReading}/${totalReading}`;
+            const readingPercent = totalReading > 0 ? (verifiedReading / totalReading) * 100 : 0;
+            document.getElementById("reading-progress-fill").style.width = `${readingPercent}%`;
+
+            let totalListening = 0;
+            let verifiedListening = 0;
+            listeningParts.forEach(part => {
+                part.questions.forEach(q => {
+                    totalListening++;
+                    if (q.verified) verifiedListening++;
+                });
+            });
+
+            document.getElementById("listening-stat-val").innerText = `${verifiedListening}/${totalListening}`;
+            const listeningPercent = totalListening > 0 ? (verifiedListening / totalListening) * 100 : 0;
+            document.getElementById("listening-progress-fill").style.width = `${listeningPercent}%`;
+
+            for (let t = 1; t <= 4; t++) {
+                let totalT = 0;
+                let verifiedT = 0;
+
+                const qStart = 42 + (t - 1) * 3;
+                const qEnd = qStart + 2;
+                readingQuizzes.filter(q => q.quizId >= qStart && q.quizId <= qEnd).forEach(quiz => {
+                    quiz.questions.forEach(q => {
+                        totalT++;
+                        if (q.verified) verifiedT++;
+                    });
+                });
+
+                const pStart = 19 + (t - 1) * 4;
+                const pEnd = pStart + 3;
+                listeningParts.filter(p => p.partId >= pStart && p.partId <= pEnd).forEach(part => {
+                    part.questions.forEach(q => {
+                        totalT++;
+                        if (q.verified) verifiedT++;
+                    });
+                });
+
+                const pct = totalT > 0 ? Math.round((verifiedT / totalT) * 100) : 0;
+                document.getElementById(`t${t}-progress-pct`).innerText = `${pct}%`;
+                document.getElementById(`t${t}-progress-fill`).style.width = `${pct}%`;
+            }
+        }
+
+        function setFilter(filter, element) {
+            currentFilter = filter;
+            document.querySelectorAll(".filter-tab").forEach(tab => tab.classList.remove("active"));
+            element.classList.add("active");
+            renderSidebar();
+        }
+
+        function renderSidebar() {
+            const listContainer = document.getElementById("sidebar-test-list");
+            listContainer.innerHTML = "";
+
+            const tests = {
+                "Test 1": { reading: [], listening: [] },
+                "Test 2": { reading: [], listening: [] },
+                "Test 3": { reading: [], listening: [] },
+                "Test 4": { reading: [], listening: [] }
+            };
+
+            readingQuizzes.forEach(quiz => {
+                const quizId = quiz.quizId;
+                let testName = "Test 1";
+                if (quizId >= 45 && quizId <= 47) testName = "Test 2";
+                else if (quizId >= 48 && quizId <= 50) testName = "Test 3";
+                else if (quizId >= 51 && quizId <= 53) testName = "Test 4";
+
+                let passageNum = ((quizId - 42) % 3) + 1;
+                tests[testName].reading.push({ ...quiz, label: `Passage ${passageNum}`, passageNum });
+            });
+
+            listeningParts.forEach(part => {
+                const partId = part.partId;
+                let testName = "Test 1";
+                if (partId >= 23 && partId <= 26) testName = "Test 2";
+                else if (partId >= 27 && partId <= 30) testName = "Test 3";
+                else if (partId >= 31 && partId <= 34) testName = "Test 4";
+
+                let partNum = ((partId - 19) % 4) + 1;
+                tests[testName].listening.push({ ...part, label: `Part ${partNum}`, partNum });
+            });
+
+            Object.keys(tests).forEach(testKey => {
+                const testData = tests[testKey];
+                const matchReading = testData.reading.filter(q => matchesFilter('reading', q));
+                const matchListening = testData.listening.filter(p => matchesFilter('listening', p));
+
+                if (currentFilter !== 'ALL' && matchReading.length === 0 && matchListening.length === 0) {
+                    return;
+                }
+
+                const testLi = document.createElement("li");
+                testLi.className = "test-group";
+
+                const titleDiv = document.createElement("div");
+                titleDiv.className = "test-title";
+                titleDiv.innerHTML = `<span>${testKey}</span>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="6 9 12 15 18 9"/>
+                    </svg>`;
+
+                const sectionUl = document.createElement("ul");
+                sectionUl.className = "section-list";
+
+                matchReading.sort((a,b) => a.passageNum - b.passageNum).forEach(passage => {
+                    const secLi = document.createElement("li");
+                    const isQuizVerified = passage.questions.every(q => q.verified);
+                    const isQuizActive = selectedItem && selectedItem.type === 'reading' && selectedItem.id === passage.quizId;
+
+                    secLi.className = `section-item ${isQuizActive ? 'active' : ''}`;
+                    secLi.innerHTML = `<span>📖 ${passage.label}</span>
+                        <span class="badge ${isQuizVerified ? 'badge-verified' : 'badge-draft'}">${isQuizVerified ? 'Verified' : 'Draft'}</span>`;
+
+                    secLi.onclick = (e) => {
+                        e.stopPropagation();
+                        selectItem('reading', passage.quizId);
+                    };
+                    sectionUl.appendChild(secLi);
+                });
+
+                matchListening.sort((a,b) => a.partNum - b.partNum).forEach(part => {
+                    const secLi = document.createElement("li");
+                    const isPartVerified = part.questions.every(q => q.verified);
+                    const isPartActive = selectedItem && selectedItem.type === 'listening' && selectedItem.id === part.partId;
+
+                    secLi.className = `section-item ${isPartActive ? 'active' : ''}`;
+                    secLi.innerHTML = `<span>🎧 ${part.label}</span>
+                        <span class="badge ${isPartVerified ? 'badge-verified' : 'badge-draft'}">${isPartVerified ? 'Verified' : 'Draft'}</span>`;
+
+                    secLi.onclick = (e) => {
+                        e.stopPropagation();
+                        selectItem('listening', part.partId);
+                    };
+                    sectionUl.appendChild(secLi);
+                });
+
+                testLi.appendChild(titleDiv);
+                testLi.appendChild(sectionUl);
+                listContainer.appendChild(testLi);
+
+                titleDiv.onclick = () => {
+                    const isHidden = sectionUl.style.display === "none";
+                    sectionUl.style.display = isHidden ? "block" : "none";
+                    titleDiv.querySelector("svg").style.transform = isHidden ? "rotate(0deg)" : "rotate(-90deg)";
+                };
+            });
+        }
+
+        function matchesFilter(type, item) {
+            if (currentFilter === 'ALL') return true;
+            const allQuestionsVerified = item.questions.every(q => q.verified);
+            if (currentFilter === 'VERIFIED') return allQuestionsVerified;
+            if (currentFilter === 'DRAFT') return !allQuestionsVerified;
+            return true;
+        }
+
+        function selectItem(type, id) {
+            selectedItem = { type, id };
+            qSearchQuery = "";
+            qTypeFilter = "ALL";
+            qStatusFilter = "ALL";
+            renderSidebar();
+            renderContentPane();
+        }
+
+        function renderContentPane() {
+            const container = document.getElementById("content-pane");
+            if (!selectedItem) return;
+
+            let questions = [];
+            let typeOptions = new Set();
+
+            if (selectedItem.type === 'reading') {
+                const quiz = readingQuizzes.find(q => q.quizId === selectedItem.id);
+                if (!quiz) return;
+                questions = quiz.questions;
+                questions.forEach(q => typeOptions.add(q.questionType));
+
+                const allVerified = quiz.questions.every(q => q.verified);
+
+                container.innerHTML = `
+                    <div class="view-split">
+                        <div class="left-col">
+                            <div class="passage-header">
+                                <div class="passage-meta">
+                                    <span>READING PASSAGE</span>
+                                    <span>CHỦ ĐỀ: ${quiz.topic}</span>
+                                    <span>ĐỘ KHÓ: ${quiz.difficulty}</span>
+                                </div>
+                                <h2 class="passage-title">${quiz.topic}</h2>
+                            </div>
+                            <div class="passage-body" id="passage-text-container">${escapeHtml(quiz.passageText)}</div>
+                        </div>
+                        <div class="right-col">
+                            <div class="right-col-header">
+                                <div class="col-title-row">
+                                    <span class="col-title">Danh sách câu hỏi (${questions.length})</span>
+                                    ${!allVerified ? `<button class="verify-all-btn" onclick="verifyAllQuestions('reading', ${quiz.quizId})">Duyệt tất cả</button>` : ''}
+                                </div>
+                                <div class="filter-controls">
+                                    <input type="text" class="search-box" placeholder="Tìm câu hỏi..." oninput="handleSearch(this.value)">
+                                    <select class="dropdown-filter" onchange="handleTypeFilter(this.value)">
+                                        <option value="ALL">Tất cả dạng bài</option>
+                                        ${Array.from(typeOptions).map(t => `<option value="${t}">${t}</option>`).join('')}
+                                    </select>
+                                    <select class="dropdown-filter" onchange="handleStatusFilter(this.value)">
+                                        <option value="ALL">Tất cả trạng thái</option>
+                                        <option value="DRAFT">Chờ duyệt</option>
+                                        <option value="VERIFIED">Đã duyệt</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="questions-container"></div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                const part = listeningParts.find(p => p.partId === selectedItem.id);
+                if (!part) return;
+                questions = part.questions;
+                questions.forEach(q => typeOptions.add(q.questionType));
+
+                const allVerified = part.questions.every(q => q.verified);
+
+                container.innerHTML = `
+                    <div class="view-split">
+                        <div class="left-col">
+                            <div class="transcript-header">
+                                <div class="transcript-meta">
+                                    <span>LISTENING PART ${part.partNumber}</span>
+                                    <span>CHỦ ĐỀ: ${part.topic || 'General'}</span>
+                                </div>
+                                <h2 class="transcript-title">${part.title}</h2>
+                            </div>
+                            <div class="audio-player-container">
+                                <span class="stat-label">File Audio</span>
+                                <audio controls src="${part.audioUrl}"></audio>
+                            </div>
+                            <div class="transcript-body">${escapeHtml(part.transcriptText)}</div>
+                        </div>
+                        <div class="right-col">
+                            <div class="right-col-header">
+                                <div class="col-title-row">
+                                    <span class="col-title">Danh sách câu hỏi (${questions.length})</span>
+                                    ${!allVerified ? `<button class="verify-all-btn" onclick="verifyAllQuestions('listening', ${part.partId})">Duyệt tất cả</button>` : ''}
+                                </div>
+                                <div class="filter-controls">
+                                    <input type="text" class="search-box" placeholder="Tìm câu hỏi..." oninput="handleSearch(this.value)">
+                                    <select class="dropdown-filter" onchange="handleTypeFilter(this.value)">
+                                        <option value="ALL">Tất cả dạng bài</option>
+                                        ${Array.from(typeOptions).map(t => `<option value="${t}">${t}</option>`).join('')}
+                                    </select>
+                                    <select class="dropdown-filter" onchange="handleStatusFilter(this.value)">
+                                        <option value="ALL">Tất cả trạng thái</option>
+                                        <option value="DRAFT">Chờ duyệt</option>
+                                        <option value="VERIFIED">Đã duyệt</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div id="questions-container"></div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const textContainer = document.getElementById("passage-text-container");
+            if (textContainer) {
+                textContainer.setAttribute("data-raw-text", textContainer.innerText);
+            }
+
+            applyQuestionFilters();
+        }
+
+        function handleSearch(val) {
+            qSearchQuery = val;
+            applyQuestionFilters();
+        }
+
+        function handleTypeFilter(val) {
+            qTypeFilter = val;
+            applyQuestionFilters();
+        }
+
+        function handleStatusFilter(val) {
+            qStatusFilter = val;
+            applyQuestionFilters();
+        }
+
+        function applyQuestionFilters() {
+            const container = document.getElementById("questions-container");
+            if (!container || !selectedItem) return;
+
+            let questions = [];
+            let category = selectedItem.type;
+            if (category === 'reading') {
+                const quiz = readingQuizzes.find(q => q.quizId === selectedItem.id);
+                if (quiz) questions = quiz.questions;
+            } else {
+                const part = listeningParts.find(p => p.partId === selectedItem.id);
+                if (part) questions = part.questions;
+            }
+
+            const filtered = questions.filter(q => {
+                if (qStatusFilter === 'VERIFIED' && !q.verified) return false;
+                if (qStatusFilter === 'DRAFT' && q.verified) return false;
+                if (qTypeFilter !== 'ALL' && q.questionType !== qTypeFilter) return false;
+
+                if (qSearchQuery) {
+                    const query = qSearchQuery.toLowerCase();
+                    const textMatch = q.questionText && q.questionText.toLowerCase().includes(query);
+                    const ansMatch = q.correctAnswer && q.correctAnswer.toLowerCase().includes(query);
+                    const explMatch = q.explanation && q.explanation.toLowerCase().includes(query);
+                    return textMatch || ansMatch || explMatch;
+                }
+                return true;
+            });
+
+            container.innerHTML = filtered.map(q => renderQuestionCard(category, q)).join('');
+        }
+
+        function renderQuestionCard(category, q) {
+            const isVerified = q.verified;
+            return `
+                <div class="question-card ${isVerified ? 'verified' : 'draft'}" id="q-card-${q.questionId}">
+                    <div class="card-header">
+                        <span class="question-number">Câu ${q.orderIndex} (${q.questionType})</span>
+                        <span class="badge ${isVerified ? 'badge-verified' : 'badge-draft'}">${isVerified ? 'Verified' : 'Draft'}</span>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="stat-label">Nội dung câu hỏi</label>
+                        <textarea class="edit-input" id="q-text-${q.questionId}" rows="2">${escapeHtml(q.questionText)}</textarea>
+                    </div>
+
+                    ${q.options && q.options.length > 0 ? `
+                        <ul class="options-list">
+                            ${q.options.map(opt => `
+                                <li class="option-item ${opt.label === q.correctAnswer ? 'correct' : ''}">
+                                    <strong>${opt.label}.</strong> ${escapeHtml(opt.content)}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    ` : ''}
+
+                    <div class="edit-row">
+                        <div class="edit-col">
+                            <label>Đáp án đúng</label>
+                            <input type="text" class="edit-input-small" id="q-ans-${q.questionId}" value="${escapeHtml(q.correctAnswer)}">
+                        </div>
+                    </div>
+
+                    ${category === 'reading' ? `
+                        <div class="form-group" style="margin-top: 10px;">
+                            <label class="stat-label">Văn bản minh chứng (Evidence)</label>
+                            <textarea class="edit-input" id="q-ev-${q.questionId}" rows="2" placeholder="Nhập văn bản minh chứng..." oninput="detectOffsetLength(${q.questionId})">${escapeHtml(q.evidenceText || '')}</textarea>
+                        </div>
+                        <div class="edit-row">
+                            <div class="edit-col">
+                                <label>Offset</label>
+                                <input type="number" class="edit-input-small" id="q-off-${q.questionId}" value="${q.evidenceOffset || 0}" onchange="triggerHighlight(${q.questionId})">
+                            </div>
+                            <div class="edit-col">
+                                <label>Length</label>
+                                <input type="number" class="edit-input-small" id="q-len-${q.questionId}" value="${q.evidenceLength || 0}" onchange="triggerHighlight(${q.questionId})">
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label class="stat-label">Giải thích chi tiết</label>
+                        <textarea class="edit-input" id="q-expl-${q.questionId}" rows="3" placeholder="Nhập nội dung giải thích...">${escapeHtml(q.explanation || '')}</textarea>
+                    </div>
+
+                    <div class="card-actions">
+                        ${category === 'reading' ? `
+                            <button class="action-btn btn-secondary" onclick="triggerHighlight(${q.questionId})">Xem minh chứng</button>
+                        ` : ''}
+                        <button class="action-btn btn-success" onclick="saveAndVerifyQuestion('${category}', ${q.questionId})">Lưu & Duyệt</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function detectOffsetLength(questionId) {
+            const evInput = document.getElementById(`q-ev-${questionId}`);
+            const offInput = document.getElementById(`q-off-${questionId}`);
+            const lenInput = document.getElementById(`q-len-${questionId}`);
+            const passageContainer = document.getElementById("passage-text-container");
+            
+            if (!evInput || !passageContainer) return;
+            
+            const evText = evInput.value.trim();
+            const rawText = passageContainer.getAttribute("data-raw-text") || passageContainer.innerText;
+            
+            if (!evText) {
+                offInput.value = 0;
+                lenInput.value = 0;
+                triggerHighlight(questionId);
+                return;
+            }
+
+            const idx = rawText.toLowerCase().indexOf(evText.toLowerCase());
+            if (idx !== -1) {
+                offInput.value = idx;
+                lenInput.value = evText.length;
+                triggerHighlight(questionId);
+            }
+        }
+
+        function triggerHighlight(questionId) {
+            const offInput = document.getElementById(`q-off-${questionId}`);
+            const lenInput = document.getElementById(`q-len-${questionId}`);
+            if (!offInput || !lenInput) return;
+
+            const offset = parseInt(offInput.value);
+            const length = parseInt(lenInput.value);
+            
+            const container = document.getElementById("passage-text-container");
+            if (!container) return;
+
+            const rawText = container.getAttribute("data-raw-text") || container.innerText;
+
+            if (isNaN(offset) || isNaN(length) || length === 0 || offset < 0 || offset + length > rawText.length) {
+                container.innerHTML = escapeHtml(rawText);
+                return;
+            }
+
+            const before = rawText.substring(0, offset);
+            const highlighted = rawText.substring(offset, offset + length);
+            const after = rawText.substring(offset + length);
+
+            container.innerHTML = escapeHtml(before) + `<mark class="highlight">${escapeHtml(highlighted)}</mark>` + escapeHtml(after);
+
+            const markElement = container.querySelector("mark");
+            if (markElement) {
+                markElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        async function saveAndVerifyQuestion(category, questionId) {
+            const qText = document.getElementById(`q-text-${questionId}`).value.trim();
+            const qAns = document.getElementById(`q-ans-${questionId}`).value.trim();
+            const qExpl = document.getElementById(`q-expl-${questionId}`).value.trim();
+
+            let payload = {
+                questionText: qText,
+                correctAnswer: qAns,
+                explanation: qExpl
+            };
+
+            if (category === 'reading') {
+                const qEv = document.getElementById(`q-ev-${questionId}`).value.trim();
+                const qOff = parseInt(document.getElementById(`q-off-${questionId}`).value);
+                const qLen = parseInt(document.getElementById(`q-len-${questionId}`).value);
+
+                payload.evidenceText = qEv;
+                payload.evidenceOffset = isNaN(qOff) ? 0 : qOff;
+                payload.evidenceLength = isNaN(qLen) ? 0 : qLen;
+            }
+
+            try {
+                const res = await fetchWithAuth(`/api/v1/admin/questions/${category}/${questionId}/verify`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.status === "SUCCESS") {
+                    if (category === 'reading') {
+                        readingQuizzes.forEach(quiz => {
+                            const q = quiz.questions.find(quest => quest.questionId === questionId);
+                            if (q) {
+                                q.verified = true;
+                                q.questionText = qText;
+                                q.correctAnswer = qAns;
+                                q.explanation = qExpl;
+                                q.evidenceText = payload.evidenceText;
+                                q.evidenceOffset = payload.evidenceOffset;
+                                q.evidenceLength = payload.evidenceLength;
+                            }
+                        });
+                    } else {
+                        listeningParts.forEach(part => {
+                            const q = part.questions.find(quest => quest.questionId === questionId);
+                            if (q) {
+                                q.verified = true;
+                                q.questionText = qText;
+                                q.correctAnswer = qAns;
+                                q.explanation = qExpl;
+                            }
+                        });
+                    }
+                    updateStats();
+                    renderSidebar();
+                    renderContentPane();
+                } else {
+                    alert("Lỗi lưu câu hỏi: " + data.message);
+                }
+            } catch (err) {
+                alert("Lỗi kết nối: " + err.message);
+            }
+        }
+
+        async function verifyAllQuestions(category, id) {
+            let questionsToVerify = [];
+            if (category === 'reading') {
+                const quiz = readingQuizzes.find(q => q.quizId === id);
+                if (quiz) questionsToVerify = quiz.questions.filter(q => !q.verified);
+            } else {
+                const part = listeningParts.find(p => p.partId === id);
+                if (part) questionsToVerify = part.questions.filter(q => !q.verified);
+            }
+
+            if (questionsToVerify.length === 0) return;
+
+            if (!confirm(`Bạn có chắc chắn muốn duyệt tất cả ${questionsToVerify.length} câu hỏi còn lại của phần thi này với các giá trị hiện tại?`)) {
+                return;
+            }
+
+            let successCount = 0;
+            for (const q of questionsToVerify) {
+                try {
+                    let payload = {
+                        questionText: q.questionText,
+                        correctAnswer: q.correctAnswer,
+                        explanation: q.explanation
+                    };
+                    if (category === 'reading') {
+                        payload.evidenceText = q.evidenceText;
+                        payload.evidenceOffset = q.evidenceOffset;
+                        payload.evidenceLength = q.evidenceLength;
+                    }
+
+                    const res = await fetchWithAuth(`/api/v1/admin/questions/${category}/${q.questionId}/verify`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await res.json();
+                    if (data.status === "SUCCESS") {
+                        q.verified = true;
+                        successCount++;
+                    }
+                } catch (err) {
+                    console.error(`Error verifying question ${q.questionId}:`, err);
+                }
+            }
+
+            updateStats();
+            renderSidebar();
+            renderContentPane();
+            alert(`Đã duyệt thành công ${successCount}/${questionsToVerify.length} câu hỏi.`);
+        }
+    </script>
+</body>
+</html>
