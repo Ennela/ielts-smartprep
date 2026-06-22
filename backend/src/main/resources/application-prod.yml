@@ -1,0 +1,14 @@
+# ============================================================
+# Production Profile
+# ============================================================
+# Activate with: SPRING_PROFILES_ACTIVE=prod
+# Flyway remains the sole source of schema migrations.
+# ddl-auto: validate ensures JPA entities stay in sync with
+# the Flyway-managed schema without ever modifying it.
+# ============================================================
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
