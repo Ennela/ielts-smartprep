@@ -31,6 +31,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class AdminListeningService {
 
+    private static final int MAX_PAGE_SIZE = 100;
+
     private final ListeningPartRepository partRepository;
     private final AudioGenerationService audioGenerationService;
     private final StorageService storageService;
@@ -39,8 +41,9 @@ public class AdminListeningService {
      * List all listening parts with pagination and filtering by audioStatus & topic.
      */
     @Transactional(readOnly = true)
-    public Page<AdminListeningPartResponse> listParts(String audioStatusStr, String topic, int page, int size) {
-        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+    public Page<AdminListeningPartResponse> listParts(String audioStatusStr, String topic, int page, int size, String sort) {
+        size = Math.min(size, MAX_PAGE_SIZE);
+        PageRequest pageRequest = PageRequest.of(page, size, parseSort(sort, "createdAt"));
         AudioStatus audioStatus = null;
         if (audioStatusStr != null && !audioStatusStr.isBlank()) {
             audioStatus = AudioStatus.valueOf(audioStatusStr.toUpperCase());
@@ -255,6 +258,7 @@ public class AdminListeningService {
         List<AdminListeningPartResponse.QuestionDto> questionDtos = part.getQuestions().stream()
                 .map(q -> AdminListeningPartResponse.QuestionDto.builder()
                         .questionId(q.getQuestionId())
+                        .verified(q.getVerified())
                         .questionType(q.getQuestionType().name())
                         .questionText(q.getQuestionText())
                         .correctAnswer(q.getCorrectAnswer())
@@ -291,5 +295,21 @@ public class AdminListeningService {
                         .isCorrect(o.getIsCorrect())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Parse a sort string like "createdAt,desc" into a Spring Sort object.
+     */
+    private Sort parseSort(String sortStr, String defaultField) {
+        if (sortStr == null || sortStr.isBlank()) {
+            return Sort.by(Sort.Direction.DESC, defaultField);
+        }
+        String[] parts = sortStr.split(",");
+        String field = parts[0].trim();
+        Sort.Direction direction = Sort.Direction.DESC;
+        if (parts.length > 1 && "asc".equalsIgnoreCase(parts[1].trim())) {
+            direction = Sort.Direction.ASC;
+        }
+        return Sort.by(direction, field);
     }
 }

@@ -6,6 +6,8 @@ import com.smartprep.dto.response.AdminListeningStatsResponse;
 import com.smartprep.dto.response.ApiResponse;
 import com.smartprep.model.entity.User;
 import com.smartprep.service.AdminListeningService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -23,19 +25,29 @@ import java.util.Map;
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminListeningController {
 
+    private static final int MAX_PAGE_SIZE = 100;
+
     private final AdminListeningService adminListeningService;
 
     /**
      * GET /api/v1/admin/listening/parts
      * List all listening parts with pagination and filtering.
      */
+    @Operation(summary = "List listening parts with pagination and filtering")
     @GetMapping("/parts")
     public ResponseEntity<ApiResponse<Page<AdminListeningPartResponse>>> listParts(
+            @Parameter(description = "Filter by audio status: READY, PENDING, FAILED")
             @RequestParam(required = false) String audioStatus,
+            @Parameter(description = "Filter by topic")
             @RequestParam(required = false) String topic,
+            @Parameter(description = "Zero-based page number", example = "0")
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        Page<AdminListeningPartResponse> result = adminListeningService.listParts(audioStatus, topic, page, size);
+            @Parameter(description = "Page size (max 100)", example = "20")
+            @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "Sort field and direction", example = "createdAt,desc")
+            @RequestParam(defaultValue = "createdAt,desc") String sort) {
+        size = Math.min(size, MAX_PAGE_SIZE);
+        Page<AdminListeningPartResponse> result = adminListeningService.listParts(audioStatus, topic, page, size, sort);
         return ResponseEntity.ok(ApiResponse.ok(result));
     }
 

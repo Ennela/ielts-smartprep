@@ -30,6 +30,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AdminService {
 
+    private static final int MAX_PAGE_SIZE = 100;
+
     private final UserRepository userRepository;
     private final ScoreHistoryRepository scoreHistoryRepository;
     private final WritingPromptRepository writingPromptRepository;
@@ -38,10 +40,11 @@ public class AdminService {
     private final ListeningPartRepository listeningPartRepository;
 
     /**
-     * List users with pagination and optional search.
+     * List users with pagination, optional search, and configurable sort.
      */
-    public Page<AdminUserResponse> listUsers(String search, int page, int size) {
-        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+    public Page<AdminUserResponse> listUsers(String search, int page, int size, String sort) {
+        size = Math.min(size, MAX_PAGE_SIZE);
+        PageRequest pageRequest = PageRequest.of(page, size, parseSort(sort, "createdAt"));
 
         Page<User> userPage;
         if (search != null && !search.isBlank()) {
@@ -116,8 +119,9 @@ public class AdminService {
 
     // ===== Writing Prompts CRUD =====
 
-    public Page<WritingPrompt> listWritingPrompts(String essayType, int page, int size) {
-        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+    public Page<WritingPrompt> listWritingPrompts(String essayType, int page, int size, String sort) {
+        size = Math.min(size, MAX_PAGE_SIZE);
+        PageRequest pageRequest = PageRequest.of(page, size, parseSort(sort, "createdAt"));
         if (essayType != null && !essayType.isBlank()) {
             EssayType type = EssayType.valueOf(essayType.toUpperCase());
             return writingPromptRepository.findByEssayTypeOrderByCreatedAtDesc(type, pageRequest);
@@ -181,8 +185,9 @@ public class AdminService {
 
     // ===== Reading Quizzes CRUD =====
 
-    public Page<AdminReadingQuizResponse> listReadingQuizzes(String topicStr, String difficultyStr, String source, int page, int size) {
-        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+    public Page<AdminReadingQuizResponse> listReadingQuizzes(String topicStr, String difficultyStr, String source, int page, int size, String sort) {
+        size = Math.min(size, MAX_PAGE_SIZE);
+        PageRequest pageRequest = PageRequest.of(page, size, parseSort(sort, "createdAt"));
         Topic topic = (topicStr != null && !topicStr.isBlank()) ? Topic.valueOf(topicStr.toUpperCase()) : null;
         Difficulty difficulty = (difficultyStr != null && !difficultyStr.isBlank()) ? Difficulty.valueOf(difficultyStr.toUpperCase()) : null;
         String cleanSource = (source != null && !source.isBlank()) ? source.toUpperCase() : null;
@@ -309,6 +314,7 @@ public class AdminService {
         List<AdminReadingQuizResponse.QuestionDto> questionDtos = quiz.getQuestions().stream()
                 .map(q -> AdminReadingQuizResponse.QuestionDto.builder()
                         .questionId(q.getQuestionId())
+                        .verified(q.getVerified())
                         .questionType(q.getQuestionType().name())
                         .questionText(q.getQuestionText())
                         .options(mapOptions(q.getOptions(), true))
@@ -320,6 +326,9 @@ public class AdminService {
                         .groupLabel(q.getGroupLabel())
                         .groupId(q.getGroupId())
                         .groupContext(q.getGroupContext())
+                        .evidenceText(q.getEvidenceText())
+                        .evidenceOffset(q.getEvidenceOffset())
+                        .evidenceLength(q.getEvidenceLength())
                         .build())
                 .collect(java.util.stream.Collectors.toList());
 
@@ -339,8 +348,9 @@ public class AdminService {
 
     // ===== Mock Tests CRUD =====
 
-    public Page<MockTestResponse> listMockTests(int page, int size) {
-        PageRequest pageRequest = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+    public Page<MockTestResponse> listMockTests(int page, int size, String sort) {
+        size = Math.min(size, MAX_PAGE_SIZE);
+        PageRequest pageRequest = PageRequest.of(page, size, parseSort(sort, "createdAt"));
         return mockTestRepository.findAll(pageRequest).map(this::mapToMockTestResponse);
     }
 
@@ -438,5 +448,22 @@ public class AdminService {
                         .isCorrect(showCorrect ? o.getIsCorrect() : null)
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Parse a sort string like "createdAt,desc" into a Spring Sort object.
+     * Falls back to the given default field descending if the input is invalid.
+     */
+    private Sort parseSort(String sortStr, String defaultField) {
+        if (sortStr == null || sortStr.isBlank()) {
+            return Sort.by(Sort.Direction.DESC, defaultField);
+        }
+        String[] parts = sortStr.split(",");
+        String field = parts[0].trim();
+        Sort.Direction direction = Sort.Direction.DESC;
+        if (parts.length > 1 && "asc".equalsIgnoreCase(parts[1].trim())) {
+            direction = Sort.Direction.ASC;
+        }
+        return Sort.by(direction, field);
     }
 }

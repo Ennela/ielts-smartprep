@@ -6,6 +6,8 @@ import com.smartprep.dto.request.AdminMockTestRequest;
 import com.smartprep.dto.response.*;
 import com.smartprep.model.entity.WritingPrompt;
 import com.smartprep.service.AdminService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -18,6 +20,8 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AdminController {
 
+    private static final int MAX_PAGE_SIZE = 100;
+
     private final AdminService adminService;
 
     // ===== Dashboard =====
@@ -29,12 +33,19 @@ public class AdminController {
 
     // ===== Users =====
 
+    @Operation(summary = "List users with pagination and optional search")
     @GetMapping("/users")
     public ResponseEntity<ApiResponse<Page<AdminUserResponse>>> listUsers(
+            @Parameter(description = "Search by username or email (optional)")
             @RequestParam(required = false) String search,
+            @Parameter(description = "Zero-based page number", example = "0")
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        Page<AdminUserResponse> result = adminService.listUsers(search, page, size);
+            @Parameter(description = "Page size (max 100)", example = "20")
+            @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "Sort field and direction, e.g. 'createdAt,desc'", example = "createdAt,desc")
+            @RequestParam(defaultValue = "createdAt,desc") String sort) {
+        size = Math.min(size, MAX_PAGE_SIZE);
+        Page<AdminUserResponse> result = adminService.listUsers(search, page, size, sort);
         return ResponseEntity.ok(ApiResponse.ok(result));
     }
 
@@ -47,12 +58,19 @@ public class AdminController {
 
     // ===== Writing Prompts =====
 
+    @Operation(summary = "List writing prompts with pagination and optional essay type filter")
     @GetMapping("/writing-prompts")
     public ResponseEntity<ApiResponse<Page<WritingPrompt>>> listWritingPrompts(
+            @Parameter(description = "Filter by essay type, e.g. OPINION, DISCUSSION")
             @RequestParam(required = false) String essayType,
+            @Parameter(description = "Zero-based page number", example = "0")
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(ApiResponse.ok(adminService.listWritingPrompts(essayType, page, size)));
+            @Parameter(description = "Page size (max 100)", example = "20")
+            @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "Sort field and direction", example = "createdAt,desc")
+            @RequestParam(defaultValue = "createdAt,desc") String sort) {
+        size = Math.min(size, MAX_PAGE_SIZE);
+        return ResponseEntity.ok(ApiResponse.ok(adminService.listWritingPrompts(essayType, page, size, sort)));
     }
 
     @PostMapping("/writing-prompts")
@@ -78,14 +96,20 @@ public class AdminController {
 
     // ===== Reading Quizzes =====
 
+    @Operation(summary = "List reading quizzes with pagination and filters")
     @GetMapping("/reading-quizzes")
     public ResponseEntity<ApiResponse<Page<AdminReadingQuizResponse>>> listReadingQuizzes(
-            @RequestParam(required = false) String topic,
-            @RequestParam(required = false) String difficulty,
-            @RequestParam(required = false) String source,
+            @Parameter(description = "Filter by topic") @RequestParam(required = false) String topic,
+            @Parameter(description = "Filter by difficulty") @RequestParam(required = false) String difficulty,
+            @Parameter(description = "Filter by source: ADMIN or AI") @RequestParam(required = false) String source,
+            @Parameter(description = "Zero-based page number", example = "0")
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(ApiResponse.ok(adminService.listReadingQuizzes(topic, difficulty, source, page, size)));
+            @Parameter(description = "Page size (max 100)", example = "20")
+            @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "Sort field and direction", example = "createdAt,desc")
+            @RequestParam(defaultValue = "createdAt,desc") String sort) {
+        size = Math.min(size, MAX_PAGE_SIZE);
+        return ResponseEntity.ok(ApiResponse.ok(adminService.listReadingQuizzes(topic, difficulty, source, page, size, sort)));
     }
 
     @PostMapping("/reading-quizzes")
@@ -111,11 +135,17 @@ public class AdminController {
 
     // ===== Mock Tests =====
 
+    @Operation(summary = "List mock tests with pagination")
     @GetMapping("/mock-tests")
     public ResponseEntity<ApiResponse<Page<MockTestResponse>>> listMockTests(
+            @Parameter(description = "Zero-based page number", example = "0")
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(ApiResponse.ok(adminService.listMockTests(page, size)));
+            @Parameter(description = "Page size (max 100)", example = "20")
+            @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "Sort field and direction", example = "createdAt,desc")
+            @RequestParam(defaultValue = "createdAt,desc") String sort) {
+        size = Math.min(size, MAX_PAGE_SIZE);
+        return ResponseEntity.ok(ApiResponse.ok(adminService.listMockTests(page, size, sort)));
     }
 
     @PostMapping("/mock-tests")
