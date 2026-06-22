@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import adminApi from '../api/adminApi';
+import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
+import Pagination from '../components/Pagination';
 
 const TASK1_TYPES = ['LINE_GRAPH', 'BAR_CHART', 'PIE_CHART', 'TABLE', 'MAP', 'DIAGRAM'];
 const TASK2_TYPES = ['OPINION', 'DISCUSSION', 'CAUSE_AND_EFFECT', 'PROBLEM_AND_SOLUTION', 'ADVANTAGES_DISADVANTAGES', 'TWO_PART_QUESTION'];
@@ -15,16 +18,14 @@ const TYPE_LABELS = {
 
 export default function AdminWritingPromptsPage() {
   const navigate = useNavigate();
-  const [prompts, setPrompts] = useState(null);
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState('');
-  const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState(null); // null = create, object = edit
+  const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ promptText: '', essayType: 'OPINION', imageUrl: '' });
   const [saving, setSaving] = useState(false);
 
@@ -32,17 +33,26 @@ export default function AdminWritingPromptsPage() {
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  const fetchPrompts = (essayType, pageVal) => {
-    setLoading(true);
-    adminApi.listWritingPrompts(essayType || null, pageVal, 10)
-      .then(res => setPrompts(res.data?.data))
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
-  };
+  const {
+    content,
+    totalPages,
+    totalElements,
+    page,
+    size,
+    setPage,
+    resetPage,
+    isLoading,
+    isFetching,
+    isPlaceholderData,
+  } = usePaginatedQuery({
+    queryKey: ['admin', 'writing-prompts'],
+    queryFn: (pg, sz) => adminApi.listWritingPrompts(filter || null, pg, sz),
+    filters: { filter },
+  });
 
-  useEffect(() => {
-    fetchPrompts(filter, page);
-  }, [filter, page]);
+  const invalidateList = () => {
+    queryClient.invalidateQueries({ queryKey: ['admin', 'writing-prompts'] });
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -84,7 +94,7 @@ export default function AdminWritingPromptsPage() {
         setSuccessMsg('Prompt created successfully!');
       }
       closeModal();
-      fetchPrompts(filter, page);
+      invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
       setError(err.message);
@@ -100,7 +110,7 @@ export default function AdminWritingPromptsPage() {
       await adminApi.deleteWritingPrompt(deleteId);
       setDeleteId(null);
       setSuccessMsg('Prompt deleted successfully!');
-      fetchPrompts(filter, page);
+      invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
       setError(err.message);
@@ -108,10 +118,6 @@ export default function AdminWritingPromptsPage() {
       setDeleting(false);
     }
   };
-
-  const content = prompts?.content || [];
-  const totalPages = prompts?.totalPages || 0;
-  const totalElements = prompts?.totalElements || 0;
 
   const isTask1 = (type) => TASK1_TYPES.includes(type);
 
@@ -138,17 +144,17 @@ export default function AdminWritingPromptsPage() {
 
       {/* Filter */}
       <div className="writing-filter reveal reveal-delay-1">
-        <button className={`filter-btn ${filter === '' ? 'active' : ''}`} onClick={() => { setFilter(''); setPage(0); }}>All</button>
+        <button className={`filter-btn ${filter === '' ? 'active' : ''}`} onClick={() => { setFilter(''); resetPage(); }}>All</button>
         {ALL_TYPES.map(t => (
-          <button key={t} className={`filter-btn ${filter === t ? 'active' : ''}`} onClick={() => { setFilter(t); setPage(0); }}>
+          <button key={t} className={`filter-btn ${filter === t ? 'active' : ''}`} onClick={() => { setFilter(t); resetPage(); }}>
             {TYPE_LABELS[t]}
           </button>
         ))}
       </div>
 
       {/* Table */}
-      <div className="admin-table-section reveal reveal-delay-2">
-        {loading ? (
+      <div className={`admin-table-section reveal reveal-delay-2${isFetching && isPlaceholderData ? ' is-fetching' : ''}`}>
+        {isLoading ? (
           <div className="loading-spinner"><div className="spinner" /></div>
         ) : content.length === 0 ? (
           <div className="empty-state">
@@ -171,7 +177,7 @@ export default function AdminWritingPromptsPage() {
                 <tbody>
                   {content.map((p, idx) => (
                     <tr key={p.promptId}>
-                      <td>{page * 10 + idx + 1}</td>
+                      <td>{page * size + idx + 1}</td>
                       <td>
                         <span className={`essay-type-badge ${isTask1(p.essayType) ? 'badge-line-graph' : 'badge-opinion'}`}>
                           {isTask1(p.essayType) ? 'Task 1' : 'Task 2'}
@@ -208,13 +214,15 @@ export default function AdminWritingPromptsPage() {
               </table>
             </div>
 
-            {totalPages > 1 && (
-              <div className="ht-pagination">
-                <button className="btn btn-sm btn-outline" disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))}>Prev</button>
-                <span className="ht-page-info">Page {page + 1} / {totalPages}</span>
-                <button className="btn btn-sm btn-outline" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Next</button>
-              </div>
-            )}
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalElements={totalElements}
+              size={size}
+              onPageChange={setPage}
+              isFetching={isFetching}
+              isPlaceholderData={isPlaceholderData}
+            />
           </>
         )}
       </div>

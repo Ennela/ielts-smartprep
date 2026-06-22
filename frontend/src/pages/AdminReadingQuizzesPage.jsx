@@ -1,6 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import adminApi from '../api/adminApi';
+import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
+import Pagination from '../components/Pagination';
 
 const TOPICS = [
   { value: 'ENVIRONMENT', label: 'Environment' },
@@ -44,12 +47,10 @@ const DIFFICULTY_LABELS = {
 
 export default function AdminReadingQuizzesPage() {
   const navigate = useNavigate();
-  const [quizzes, setQuizzes] = useState(null);
+  const queryClient = useQueryClient();
   const [filterTopic, setFilterTopic] = useState('');
   const [filterDifficulty, setFilterDifficulty] = useState('');
   const [filterSource, setFilterSource] = useState('');
-  const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
@@ -69,17 +70,28 @@ export default function AdminReadingQuizzesPage() {
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  const fetchQuizzes = (topic, difficulty, source, pageVal) => {
-    setLoading(true);
-    adminApi.listReadingQuizzes(topic || null, difficulty || null, source || null, pageVal, 10)
-      .then(res => setQuizzes(res.data?.data))
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
-  };
+  const {
+    content,
+    totalPages,
+    totalElements,
+    page,
+    size,
+    setPage,
+    resetPage,
+    isLoading,
+    isFetching,
+    isPlaceholderData,
+  } = usePaginatedQuery({
+    queryKey: ['admin', 'reading-quizzes'],
+    queryFn: (pg, sz) => adminApi.listReadingQuizzes(
+      filterTopic || null, filterDifficulty || null, filterSource || null, pg, sz
+    ),
+    filters: { filterTopic, filterDifficulty, filterSource },
+  });
 
-  useEffect(() => {
-    fetchQuizzes(filterTopic, filterDifficulty, filterSource, page);
-  }, [filterTopic, filterDifficulty, filterSource, page]);
+  const invalidateList = () => {
+    queryClient.invalidateQueries({ queryKey: ['admin', 'reading-quizzes'] });
+  };
 
   const openCreate = () => {
     setEditing(null);
@@ -232,7 +244,7 @@ export default function AdminReadingQuizzesPage() {
         setSuccessMsg('Reading passage created successfully!');
       }
       closeModal();
-      fetchQuizzes(filterTopic, filterDifficulty, page);
+      invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to save quiz');
@@ -248,7 +260,7 @@ export default function AdminReadingQuizzesPage() {
       await adminApi.deleteReadingQuiz(deleteId);
       setDeleteId(null);
       setSuccessMsg('Reading passage deleted successfully!');
-      fetchQuizzes(filterTopic, filterDifficulty, page);
+      invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to delete quiz');
@@ -257,9 +269,6 @@ export default function AdminReadingQuizzesPage() {
     }
   };
 
-  const content = quizzes?.content || [];
-  const totalPages = quizzes?.totalPages || 0;
-  const totalElements = quizzes?.totalElements || 0;
 
   return (
     <div className="admin-dashboard-content">
@@ -286,7 +295,7 @@ export default function AdminReadingQuizzesPage() {
       <div className="writing-filter reveal reveal-delay-1" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <select
           value={filterTopic}
-          onChange={(e) => { setFilterTopic(e.target.value); setPage(0); }}
+          onChange={(e) => { setFilterTopic(e.target.value); resetPage(); }}
           className="matching-select"
           style={{ minWidth: '180px', width: 'auto' }}
         >
@@ -298,7 +307,7 @@ export default function AdminReadingQuizzesPage() {
 
         <select
           value={filterDifficulty}
-          onChange={(e) => { setFilterDifficulty(e.target.value); setPage(0); }}
+          onChange={(e) => { setFilterDifficulty(e.target.value); resetPage(); }}
           className="matching-select"
           style={{ minWidth: '180px', width: 'auto' }}
         >
@@ -310,7 +319,7 @@ export default function AdminReadingQuizzesPage() {
 
         <select
           value={filterSource}
-          onChange={(e) => { setFilterSource(e.target.value); setPage(0); }}
+          onChange={(e) => { setFilterSource(e.target.value); resetPage(); }}
           className="matching-select"
           style={{ minWidth: '180px', width: 'auto' }}
         >
@@ -321,8 +330,8 @@ export default function AdminReadingQuizzesPage() {
       </div>
 
       {/* Table */}
-      <div className="admin-table-section reveal reveal-delay-2" style={{ marginTop: '1.5rem' }}>
-        {loading ? (
+      <div className={`admin-table-section reveal reveal-delay-2${isFetching && isPlaceholderData ? ' is-fetching' : ''}`} style={{ marginTop: '1.5rem' }}>
+        {isLoading ? (
           <div className="loading-spinner"><div className="spinner" /></div>
         ) : content.length === 0 ? (
           <div className="empty-state">
@@ -347,7 +356,7 @@ export default function AdminReadingQuizzesPage() {
                 <tbody>
                   {content.map((quiz, idx) => (
                     <tr key={quiz.quizId}>
-                      <td>{page * 10 + idx + 1}</td>
+                      <td>{page * size + idx + 1}</td>
                       <td>
                         <span className="essay-type-badge badge-opinion">
                           {TOPIC_LABELS[quiz.topic] || quiz.topic}
@@ -390,13 +399,15 @@ export default function AdminReadingQuizzesPage() {
               </table>
             </div>
 
-            {totalPages > 1 && (
-              <div className="ht-pagination">
-                <button className="btn btn-sm btn-outline" disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))}>Prev</button>
-                <span className="ht-page-info">Page {page + 1} / {totalPages}</span>
-                <button className="btn btn-sm btn-outline" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Next</button>
-              </div>
-            )}
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalElements={totalElements}
+              size={size}
+              onPageChange={setPage}
+              isFetching={isFetching}
+              isPlaceholderData={isPlaceholderData}
+            />
           </>
         )}
       </div>

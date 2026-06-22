@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import adminApi from '../api/adminApi';
 import listeningApi from '../api/listeningApi';
+import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
+import Pagination from '../components/Pagination';
 
 export default function AdminMockTestsPage() {
   const navigate = useNavigate();
-  const [mockTests, setMockTests] = useState(null);
-  const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
@@ -40,12 +41,23 @@ export default function AdminMockTestsPage() {
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  const fetchMockTests = (pageVal) => {
-    setLoading(true);
-    adminApi.listMockTests(pageVal, 10)
-      .then(res => setMockTests(res.data?.data))
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
+  const {
+    content,
+    totalPages,
+    totalElements,
+    page,
+    size,
+    setPage,
+    isLoading,
+    isFetching,
+    isPlaceholderData,
+  } = usePaginatedQuery({
+    queryKey: ['admin', 'mock-tests'],
+    queryFn: (pg, sz) => adminApi.listMockTests(pg, sz),
+  });
+
+  const invalidateList = () => {
+    queryClient.invalidateQueries({ queryKey: ['admin', 'mock-tests'] });
   };
 
   const fetchComponents = async () => {
@@ -67,9 +79,8 @@ export default function AdminMockTestsPage() {
   };
 
   useEffect(() => {
-    fetchMockTests(page);
     fetchComponents();
-  }, [page]);
+  }, []);
 
   const openCreate = () => {
     setEditing(null);
@@ -147,7 +158,7 @@ export default function AdminMockTestsPage() {
         setSuccessMsg('Mock test created successfully!');
       }
       closeModal();
-      fetchMockTests(page);
+      invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
       setError(err.message);
@@ -163,7 +174,7 @@ export default function AdminMockTestsPage() {
       await adminApi.deleteMockTest(deleteId);
       setDeleteId(null);
       setSuccessMsg('Mock test deleted successfully!');
-      fetchMockTests(page);
+      invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
       setError(err.message);
@@ -172,9 +183,6 @@ export default function AdminMockTestsPage() {
     }
   };
 
-  const content = mockTests?.content || [];
-  const totalPages = mockTests?.totalPages || 0;
-  const totalElements = mockTests?.totalElements || 0;
 
   return (
     <div className="admin-dashboard-content">
@@ -210,8 +218,8 @@ export default function AdminMockTestsPage() {
       {error && !modalOpen && <div className="error-msg">{error}</div>}
 
       {/* Main Table */}
-      <div className="admin-table-section reveal reveal-delay-1" style={{ marginTop: 24 }}>
-        {loading ? (
+      <div className={`admin-table-section reveal reveal-delay-1${isFetching && isPlaceholderData ? ' is-fetching' : ''}`} style={{ marginTop: 24 }}>
+        {isLoading ? (
           <div className="loading-spinner"><div className="spinner" /></div>
         ) : content.length === 0 ? (
           <div className="empty-state">
@@ -235,7 +243,7 @@ export default function AdminMockTestsPage() {
                 <tbody>
                   {content.map((t, idx) => (
                     <tr key={t.mockTestId}>
-                      <td>{page * 10 + idx + 1}</td>
+                      <td>{page * size + idx + 1}</td>
                       <td>
                         <div style={{ fontWeight: 600 }}>{t.title}</div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>{t.description || 'No description provided'}</div>
@@ -268,13 +276,15 @@ export default function AdminMockTestsPage() {
               </table>
             </div>
 
-            {totalPages > 1 && (
-              <div className="ht-pagination">
-                <button className="btn btn-sm btn-outline" disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))}>Prev</button>
-                <span className="ht-page-info">Page {page + 1} / {totalPages}</span>
-                <button className="btn btn-sm btn-outline" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Next</button>
-              </div>
-            )}
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalElements={totalElements}
+              size={size}
+              onPageChange={setPage}
+              isFetching={isFetching}
+              isPlaceholderData={isPlaceholderData}
+            />
           </>
         )}
       </div>

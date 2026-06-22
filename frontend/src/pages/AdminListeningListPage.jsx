@@ -1,6 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import adminApi from '../api/adminApi';
+import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
+import Pagination from '../components/Pagination';
 
 const TOPICS = [
   { value: 'ACCOMMODATION', label: 'Accommodation / Booking' },
@@ -12,11 +15,9 @@ const TOPICS = [
 
 export default function AdminListeningListPage() {
   const navigate = useNavigate();
-  const [partsData, setPartsData] = useState(null);
+  const queryClient = useQueryClient();
   const [filterTopic, setFilterTopic] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
@@ -29,46 +30,51 @@ export default function AdminListeningListPage() {
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Stats state
-  const [stats, setStats] = useState(null);
+  // Detect if any PENDING parts exist for auto-polling
+  const {
+    content,
+    totalPages,
+    totalElements,
+    page,
+    size,
+    setPage,
+    resetPage,
+    isLoading,
+    isFetching,
+    isPlaceholderData,
+    refetch: refetchParts,
+  } = usePaginatedQuery({
+    queryKey: ['admin', 'listening-parts'],
+    queryFn: (pg, sz) => adminApi.listListeningParts(
+      filterStatus || null, filterTopic || null, pg, sz
+    ),
+    filters: { filterStatus, filterTopic },
+    refetchInterval: undefined, // Polling handled below
+  });
 
-  const fetchParts = (status, topic, pageVal, showLoading = true) => {
-    if (showLoading) setLoading(true);
-    adminApi.listListeningParts(status || null, topic || null, pageVal, 10)
-      .then(res => {
-        setPartsData(res.data?.data);
-        setError(null);
-      })
-      .catch(err => setError(err.message))
-      .finally(() => {
-        if (showLoading) setLoading(false);
-      });
-  };
+  // Stats query
+  const { data: stats, refetch: refetchStats } = useQuery({
+    queryKey: ['admin', 'listening-stats'],
+    queryFn: () => adminApi.getListeningStats().then(res => res.data?.data),
+  });
 
-  const fetchStats = () => {
-    adminApi.getListeningStats()
-      .then(res => setStats(res.data?.data))
-      .catch(err => console.error('Failed to fetch stats', err));
-  };
-
+  // Polling for PENDING parts — auto refetch every 3s when any part is pending
   useEffect(() => {
-    fetchParts(filterStatus, filterTopic, page, true);
-    fetchStats();
-  }, [filterStatus, filterTopic, page]);
-
-  // Polling for PENDING parts
-  useEffect(() => {
-    const hasPending = partsData?.content?.some(part => part.audioStatus === 'PENDING');
+    const hasPending = content?.some(part => part.audioStatus === 'PENDING');
     if (!hasPending) return;
 
     const interval = setInterval(() => {
-      // Fetch silently (without spinner) to update statuses
-      fetchParts(filterStatus, filterTopic, page, false);
-      fetchStats();
+      refetchParts();
+      refetchStats();
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [partsData, filterStatus, filterTopic, page]);
+  }, [content, refetchParts, refetchStats]);
+
+  const invalidateList = () => {
+    queryClient.invalidateQueries({ queryKey: ['admin', 'listening-parts'] });
+    refetchStats();
+  };
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -77,8 +83,7 @@ export default function AdminListeningListPage() {
       await adminApi.deleteListeningPart(deleteId);
       setDeleteId(null);
       setSuccessMsg('Listening part deleted successfully!');
-      fetchParts(filterStatus, filterTopic, page, true);
-      fetchStats();
+      invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to delete listening part');
@@ -91,7 +96,7 @@ export default function AdminListeningListPage() {
     try {
       setSuccessMsg('Audio generation queued...');
       await adminApi.regenerateListeningAudio(id);
-      fetchParts(filterStatus, filterTopic, page, false);
+      invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to regenerate audio');
@@ -102,7 +107,7 @@ export default function AdminListeningListPage() {
     try {
       setSuccessMsg('Retrying audio generation for failed parts...');
       await adminApi.retryFailedListeningAudio();
-      fetchParts(filterStatus, filterTopic, page, false);
+      invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to retry audio generation');
@@ -119,10 +124,6 @@ export default function AdminListeningListPage() {
       audioRef.current.play().catch(e => console.log('Audio autoplay blocked', e));
     }
   };
-
-  const content = partsData?.content || [];
-  const totalPages = partsData?.totalPages || 0;
-  const totalElements = partsData?.totalElements || 0;
 
   return (
     <div className="admin-dashboard-content">
@@ -178,7 +179,7 @@ export default function AdminListeningListPage() {
       <div className="writing-filter reveal reveal-delay-1" style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
         <select
           value={filterTopic}
-          onChange={(e) => { setFilterTopic(e.target.value); setPage(0); }}
+          onChange={(e) => { setFilterTopic(e.target.value); resetPage(); }}
           className="matching-select"
           style={{ minWidth: '180px', width: 'auto' }}
         >
@@ -190,7 +191,7 @@ export default function AdminListeningListPage() {
 
         <select
           value={filterStatus}
-          onChange={(e) => { setFilterStatus(e.target.value); setPage(0); }}
+          onChange={(e) => { setFilterStatus(e.target.value); resetPage(); }}
           className="matching-select"
           style={{ minWidth: '180px', width: 'auto' }}
         >
@@ -202,8 +203,8 @@ export default function AdminListeningListPage() {
       </div>
 
       {/* Table */}
-      <div className="admin-table-section reveal reveal-delay-2" style={{ marginTop: '1.5rem' }}>
-        {loading ? (
+      <div className={`admin-table-section reveal reveal-delay-2${isFetching && isPlaceholderData ? ' is-fetching' : ''}`} style={{ marginTop: '1.5rem' }}>
+        {isLoading ? (
           <div className="loading-spinner"><div className="spinner" /></div>
         ) : content.length === 0 ? (
           <div className="empty-state">
@@ -284,13 +285,15 @@ export default function AdminListeningListPage() {
               </table>
             </div>
 
-            {totalPages > 1 && (
-              <div className="ht-pagination">
-                <button className="btn btn-sm btn-outline" disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))}>Prev</button>
-                <span className="ht-page-info">Page {page + 1} / {totalPages}</span>
-                <button className="btn btn-sm btn-outline" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>Next</button>
-              </div>
-            )}
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalElements={totalElements}
+              size={size}
+              onPageChange={setPage}
+              isFetching={isFetching}
+              isPlaceholderData={isPlaceholderData}
+            />
           </>
         )}
       </div>

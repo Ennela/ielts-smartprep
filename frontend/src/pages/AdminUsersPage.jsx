@@ -1,37 +1,41 @@
-import { useEffect, useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import adminApi from '../api/adminApi';
+import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
+import Pagination from '../components/Pagination';
 
 export default function AdminUsersPage() {
   const navigate = useNavigate();
-  const [users, setUsers] = useState(null);
   const [search, setSearch] = useState('');
-  const [page, setPage] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [error, setError] = useState(null);
   const debounceRef = useRef(null);
 
-  const fetchUsers = (searchVal, pageVal) => {
-    setLoading(true);
-    adminApi.listUsers(searchVal || null, pageVal, 10)
-      .then(res => setUsers(res.data?.data))
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    fetchUsers(search, page);
-  }, [page]);
+  const {
+    content,
+    totalPages,
+    totalElements,
+    page,
+    size,
+    setPage,
+    isLoading,
+    isFetching,
+    isPlaceholderData,
+  } = usePaginatedQuery({
+    queryKey: ['admin', 'users'],
+    queryFn: (pg, sz) => adminApi.listUsers(debouncedSearch || null, pg, sz),
+    filters: { search: debouncedSearch },
+  });
 
   // Debounced search
   const handleSearch = (val) => {
     setSearch(val);
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(val);
       setPage(0);
-      fetchUsers(val, 0);
     }, 400);
   };
 
@@ -45,10 +49,6 @@ export default function AdminUsersPage() {
   };
 
   const closeDetail = () => setDetail(null);
-
-  const content = users?.content || [];
-  const totalPages = users?.totalPages || 0;
-  const totalElements = users?.totalElements || 0;
 
   return (
     <div className="admin-dashboard-content">
@@ -81,8 +81,8 @@ export default function AdminUsersPage() {
       </div>
 
       {/* Users Table */}
-      <div className="admin-table-section reveal reveal-delay-2">
-        {loading ? (
+      <div className={`admin-table-section reveal reveal-delay-2${isFetching && isPlaceholderData ? ' is-fetching' : ''}`}>
+        {isLoading ? (
           <div className="loading-spinner"><div className="spinner" /></div>
         ) : content.length === 0 ? (
           <div className="empty-state">
@@ -106,7 +106,7 @@ export default function AdminUsersPage() {
                 <tbody>
                   {content.map((u, idx) => (
                     <tr key={u.userId}>
-                      <td>{page * 10 + idx + 1}</td>
+                      <td>{page * size + idx + 1}</td>
                       <td>
                         <div className="admin-user-cell">
                           <div className="admin-user-avatar">
@@ -141,21 +141,15 @@ export default function AdminUsersPage() {
               </table>
             </div>
 
-            {totalPages > 1 && (
-              <div className="ht-pagination">
-                <button
-                  className="btn btn-sm btn-outline"
-                  disabled={page === 0}
-                  onClick={() => setPage(p => Math.max(0, p - 1))}
-                >Prev</button>
-                <span className="ht-page-info">Page {page + 1} / {totalPages}</span>
-                <button
-                  className="btn btn-sm btn-outline"
-                  disabled={page >= totalPages - 1}
-                  onClick={() => setPage(p => p + 1)}
-                >Next</button>
-              </div>
-            )}
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              totalElements={totalElements}
+              size={size}
+              onPageChange={setPage}
+              isFetching={isFetching}
+              isPlaceholderData={isPlaceholderData}
+            />
           </>
         )}
       </div>
