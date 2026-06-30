@@ -3,6 +3,7 @@ package com.smartprep.exception;
 import com.smartprep.dto.response.ApiResponse;
 import io.sentry.Sentry;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -81,6 +82,20 @@ public class GlobalExceptionHandler {
                 .orElse("Validation failed");
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(message, "VALIDATION_ERROR"));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(DataIntegrityViolationException ex) {
+        log.error("Data integrity violation", ex);
+        String message = "Cannot complete operation due to data constraint. ";
+        String rootMsg = ex.getMostSpecificCause().getMessage();
+        if (rootMsg != null && rootMsg.contains("foreign key constraint")) {
+            message += "This record is referenced by other data. Please remove dependent records first.";
+        } else {
+            message += rootMsg != null ? rootMsg : ex.getMessage();
+        }
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(message, "DATA_INTEGRITY_VIOLATION"));
     }
 
     @ExceptionHandler(Exception.class)
