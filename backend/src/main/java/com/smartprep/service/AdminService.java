@@ -147,6 +147,7 @@ public class AdminService {
         return writingPromptRepository.save(prompt);
     }
 
+    @Transactional
     public void deleteWritingPrompt(Long promptId) {
         if (!writingPromptRepository.existsById(promptId)) {
             throw new ResourceNotFoundException("Writing prompt not found: " + promptId);
