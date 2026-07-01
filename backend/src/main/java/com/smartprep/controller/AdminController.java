@@ -170,4 +170,14 @@ public class AdminController {
         adminService.deleteMockTest(mockTestId);
         return ResponseEntity.ok(ApiResponse.ok(null, "Mock test deleted successfully"));
     }
+
+    @GetMapping("/reading/{quizId}/preview")
+    public ResponseEntity<ApiResponse<AdminReadingQuizResponse>> getReadingPreview(@PathVariable Long quizId) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getReadingQuizForPreview(quizId)));
+    }
+
+    @GetMapping("/writing/{promptId}/preview")
+    public ResponseEntity<ApiResponse<WritingPrompt>> getWritingPreview(@PathVariable Long promptId) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.getWritingPromptForPreview(promptId)));
+    }
 }
