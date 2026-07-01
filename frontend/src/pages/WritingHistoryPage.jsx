@@ -116,6 +116,14 @@ export default function WritingHistoryPage() {
                                 <p className="history-prompt-preview">{item.promptTextPreview}</p>
                                 <div className="history-card-bottom">
                                     <span className="history-words">{item.wordCount} words</span>
+                                    {item.timeSpentSeconds != null && (
+                                        <span style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                            {Math.floor(item.timeSpentSeconds / 60)}:{(item.timeSpentSeconds % 60).toString().padStart(2, '0')}
+                                            {item.autoSubmitted && (
+                                                <span style={{ fontSize: '0.65rem', padding: '1px 5px', borderRadius: 'var(--radius-full)', background: 'rgba(186,26,26,0.08)', color: 'var(--error)', fontWeight: 600 }}>Auto</span>
+                                            )}
+                                        </span>
+                                    )}
                                     <span
                                         className="history-score"
                                         style={{ color: getScoreColor(item.overallBand) }}
@@ -146,7 +154,23 @@ export default function WritingHistoryPage() {
                                     Task 2: {formatType(item.task2Result?.essayType)} (Band {item.task2Result?.overallBand})
                                 </p>
                                 <div className="history-card-bottom">
-                                    <span className="history-words">Two Tasks</span>
+                                    <span className="history-words" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                        <span>Two Tasks</span>
+                                        {item.timeSpentSeconds != null && (
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>
+                                                {Math.floor(item.timeSpentSeconds / 60)}:{(item.timeSpentSeconds % 60).toString().padStart(2, '0')}
+                                                {item.timeSpentTask1 != null && (
+                                                    <> · T1: {Math.floor(item.timeSpentTask1 / 60)}:{(item.timeSpentTask1 % 60).toString().padStart(2, '0')}</>
+                                                )}
+                                                {item.timeSpentTask2 != null && (
+                                                    <> · T2: {Math.floor(item.timeSpentTask2 / 60)}:{(item.timeSpentTask2 % 60).toString().padStart(2, '0')}</>
+                                                )}
+                                                {item.autoSubmitted && (
+                                                    <span style={{ fontSize: '0.65rem', padding: '1px 5px', borderRadius: 'var(--radius-full)', background: 'rgba(186,26,26,0.08)', color: 'var(--error)', fontWeight: 600, marginLeft: 4 }}>Auto</span>
+                                                )}
+                                            </span>
+                                        )}
+                                    </span>
                                     <span
                                         className="history-score"
                                         style={{ color: getScoreColor(item.overallWritingBand), fontWeight: 700 }}

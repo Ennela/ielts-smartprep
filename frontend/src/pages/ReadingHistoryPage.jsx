@@ -61,6 +61,7 @@ export default function ReadingHistoryPage() {
                   <th>Difficulty</th>
                   <th>Score</th>
                   <th>Band</th>
+                  <th>Time</th>
                   <th>Date</th>
                   <th>Actions</th>
                 </tr>
@@ -74,6 +75,16 @@ export default function ReadingHistoryPage() {
                     <td><span className="meta-badge diff">{item.difficulty?.replace('_', ' ')}</span></td>
                     <td>{item.correctAnswers}/{item.totalQuestions}</td>
                     <td><span className={`band-score band-${getBandClass(item.bandScore)}`}>{item.bandScore}</span></td>
+                    <td>
+                      {item.timeSpentSeconds != null ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          {formatTimeSpent(item.timeSpentSeconds)}
+                          {item.autoSubmitted && (
+                            <span title="Auto-submitted (time expired)" style={{ color: 'var(--error)', fontSize: '0.75rem' }}>⏰</span>
+                          )}
+                        </span>
+                      ) : '—'}
+                    </td>
                     <td>{formatDate(item.submittedAt || item.createdAt)}</td>
                     <td>
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -124,4 +135,11 @@ function formatDate(dateStr) {
   if (!dateStr) return '-';
   const d = new Date(dateStr);
   return d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function formatTimeSpent(seconds) {
+  if (seconds == null) return '—';
+  const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+  const s = (seconds % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
 }

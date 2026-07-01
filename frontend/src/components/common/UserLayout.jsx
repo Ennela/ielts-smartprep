@@ -185,8 +185,12 @@ export default function UserLayout() {
                     }
                   `}
                 >
-                  <span>{link.label}</span>
-                  {isActive && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                  {({ isActive }) => (
+                    <>
+                      <span>{link.label}</span>
+                      {isActive && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
+                    </>
+                  )}
                 </NavLink>
               ))}
             </div>

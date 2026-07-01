@@ -6,11 +6,14 @@ import { ReadingContext } from '../context/ReadingContext';
 import PassageViewer from '../components/reading/PassageViewer';
 import QuestionPanel from '../components/reading/QuestionPanel';
 import useExamTimer from '../hooks/useExamTimer';
+import useExamWarnings from '../hooks/useExamWarnings';
+import { useToast } from '../context/ToastContext';
 
 const SESSION_KEY = 'reading_full_attemptId';
 
 export default function ReadingFullExamPage() {
   const navigate = useNavigate();
+  const { warning: triggerWarningToast } = useToast();
   const [quizzes, setQuizzes] = useState([]);
   const [activeIdx, setActiveIdx] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -47,10 +50,17 @@ export default function ReadingFullExamPage() {
   }, [quizzes, answers, attemptId, navigate]);
 
   // Server-authoritative timer
-  const { timeLeft: _timeLeft, isWarning, isCritical, formattedTime, stopTimer } = useExamTimer({
+  const { timeLeft, isWarning, isCritical, formattedTime, stopTimer } = useExamTimer({
     deadline,
     onTimeUp: handleAutoSubmit,
     enabled: !loading && !submitting && !error && quizzes.length > 0,
+  });
+
+  // Centralized 5min/1min audio-visual warnings
+  useExamWarnings({
+    timeLeft,
+    enabled: !loading && !submitting && !error && quizzes.length > 0,
+    showWarning: triggerWarningToast,
   });
 
   // Fetch quizzes and start/resume attempt

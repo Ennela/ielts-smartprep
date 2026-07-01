@@ -78,12 +78,24 @@ public class ReadingGradingService {
         quiz.setSubmittedAt(LocalDateTime.now());
         quizRepository.save(quiz);
 
+        // Complete exam attempt if provided
+        ExamAttempt completedAttempt = null;
+        boolean autoSubmitted = request.getAutoSubmitted() != null && request.getAutoSubmitted();
+        if (request.getAttemptId() != null) {
+            completedAttempt = examAttemptService.completeAttemptInternal(
+                    request.getAttemptId(), userId, autoSubmitted, null, null);
+        }
+
+        Integer timeSpentSeconds = completedAttempt != null ? completedAttempt.getTimeSpentSeconds() : null;
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         ScoreHistory history = ScoreHistory.builder()
                 .user(user).skillType(SkillType.READING).score(bandScore)
                 .difficulty(quiz.getDifficulty().name())
                 .moduleType(quiz.getModuleType() != null ? quiz.getModuleType() : "ACADEMIC")
+                .timeSpentSeconds(timeSpentSeconds)
+                .autoSubmitted(autoSubmitted)
                 .build();
         List<UserAnswer> userAnswerList = new ArrayList<>();
         for (ReadingQuestion question : quiz.getQuestions()) {

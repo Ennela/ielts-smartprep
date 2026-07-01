@@ -76,6 +76,13 @@ public class ReadingQueryService {
                             .findFirst()
                             .orElse(null);
 
+                    // Extract timer data from matched ScoreHistory
+                    ScoreHistory matchedHistory = readingHistories.stream()
+                            .filter(sh -> sh.getScore().compareTo(q.getScore()) == 0)
+                            .filter(sh -> !sh.getRecordedAt().isBefore(q.getSubmittedAt().minusSeconds(5)))
+                            .filter(sh -> !sh.getRecordedAt().isAfter(q.getSubmittedAt().plusSeconds(5)))
+                            .findFirst().orElse(null);
+
                     return ReadingHistoryResponse.builder()
                             .quizId(q.getQuizId())
                             .historyId(historyId)
@@ -86,6 +93,8 @@ public class ReadingQueryService {
                             .totalQuestions(q.getTotalQuestions())
                             .createdAt(q.getCreatedAt())
                             .submittedAt(q.getSubmittedAt())
+                            .timeSpentSeconds(matchedHistory != null ? matchedHistory.getTimeSpentSeconds() : null)
+                            .autoSubmitted(matchedHistory != null ? matchedHistory.getAutoSubmitted() : null)
                             .build();
                 })
                 .collect(Collectors.toList());

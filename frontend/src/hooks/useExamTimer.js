@@ -28,7 +28,12 @@ export default function useExamTimer({ deadline, onTimeUp, enabled = true }) {
   // Calculate remaining seconds from server deadline
   function calcRemaining(dl) {
     if (!dl) return null;
+    // If deadline string has no timezone info, parse as local time
     const deadlineMs = new Date(dl).getTime();
+    if (isNaN(deadlineMs)) {
+      console.warn('[useExamTimer] Invalid deadline format:', dl);
+      return null;
+    }
     const nowMs = Date.now();
     return Math.max(0, Math.floor((deadlineMs - nowMs) / 1000));
   }
@@ -43,10 +48,24 @@ export default function useExamTimer({ deadline, onTimeUp, enabled = true }) {
     const initial = calcRemaining(deadline);
     setTimeLeft(initial);
 
+    // Safety: if initial is null (invalid deadline), skip
+    if (initial == null) return;
+
+    // If initial is already 0, check if this looks like a timezone mismatch:
+    // A freshly created attempt should never be immediately expired.
+    // Only fire onTimeUp if deadline is genuinely in the past (>= 5 seconds ago)
     if (initial <= 0) {
-      if (!timeUpCalledRef.current) {
-        timeUpCalledRef.current = true;
-        onTimeUpRef.current?.();
+      const deadlineMs = new Date(deadline).getTime();
+      const pastSeconds = Math.floor((Date.now() - deadlineMs) / 1000);
+      if (pastSeconds > 5) {
+        // Genuinely expired (e.g., resumed a stale attempt)
+        if (!timeUpCalledRef.current) {
+          timeUpCalledRef.current = true;
+          onTimeUpRef.current?.();
+        }
+      } else {
+        // Likely timezone mismatch — don't auto-submit, log warning
+        console.warn('[useExamTimer] Deadline appears immediately expired (possible timezone mismatch). Deadline:', deadline, 'Past by:', pastSeconds, 'seconds');
       }
       return;
     }

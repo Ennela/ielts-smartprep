@@ -103,15 +103,7 @@ public class WritingAssemblyService {
         WritingSubmission sub2 = writingSubmissionRepository.findById(res2.getSubmissionId())
                 .orElseThrow(() -> new ResourceNotFoundException("Task 2 submission not found after creation"));
 
-        WritingFullSubmission fullSub = WritingFullSubmission.builder()
-                .user(user)
-                .task1Submission(sub1)
-                .task2Submission(sub2)
-                .overallBand(overallWritingBand)
-                .build();
-        fullSub = writingFullSubmissionRepository.save(fullSub);
-
-        // Complete exam attempt if provided
+        // Complete exam attempt if provided (must happen BEFORE building fullSub)
         ExamAttempt completedAttempt = null;
         boolean autoSubmitted = request.getAutoSubmitted() != null && request.getAutoSubmitted();
         if (request.getAttemptId() != null) {
@@ -123,6 +115,18 @@ public class WritingAssemblyService {
         Integer timeSpentSeconds = completedAttempt != null ? completedAttempt.getTimeSpentSeconds() : null;
         Integer timeSpentTask1 = request.getTimeSpentTask1();
         Integer timeSpentTask2 = request.getTimeSpentTask2();
+
+        WritingFullSubmission fullSub = WritingFullSubmission.builder()
+                .user(user)
+                .task1Submission(sub1)
+                .task2Submission(sub2)
+                .overallBand(overallWritingBand)
+                .timeSpentSeconds(timeSpentSeconds)
+                .timeSpentTask1(timeSpentTask1)
+                .timeSpentTask2(timeSpentTask2)
+                .autoSubmitted(autoSubmitted)
+                .build();
+        fullSub = writingFullSubmissionRepository.save(fullSub);
 
         ScoreHistory history = ScoreHistory.builder()
                 .user(user).skillType(SkillType.WRITING).score(overallWritingBand)
@@ -167,6 +171,10 @@ public class WritingAssemblyService {
                 .task1Result(writingQueryService.getSubmission(fullSub.getUser().getUserId(), fullSub.getTask1Submission().getSubmissionId()))
                 .task2Result(writingQueryService.getSubmission(fullSub.getUser().getUserId(), fullSub.getTask2Submission().getSubmissionId()))
                 .submittedAt(fullSub.getSubmittedAt())
+                .timeSpentSeconds(fullSub.getTimeSpentSeconds())
+                .timeSpentTask1(fullSub.getTimeSpentTask1())
+                .timeSpentTask2(fullSub.getTimeSpentTask2())
+                .autoSubmitted(fullSub.getAutoSubmitted())
                 .build();
     }
 

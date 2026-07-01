@@ -14,4 +14,10 @@ public class ReadingSubmitRequest {
 
     @NotEmpty(message = "Answers cannot be empty")
     private Map<Long, String> answers; // questionId -> userAnswer
+
+    /** Optional: links to ExamAttempt for timer tracking */
+    private Long attemptId;
+
+    /** True if auto-submitted when time expired */
+    private Boolean autoSubmitted;
 }

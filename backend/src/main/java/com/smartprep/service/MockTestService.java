@@ -353,6 +353,7 @@ public class MockTestService {
         final Map<String, String> finalAnswersMap = answersMap;
 
         List<ReadingResultResponse> readingResults = sub.getMockTest().getReadingQuizzes().stream()
+                .filter(java.util.Objects::nonNull)
                 .map(quiz -> {
                     List<ReadingResultResponse.QuestionResultDto> questionResults = quiz.getQuestions().stream()
                             .map(q -> {
@@ -450,17 +451,36 @@ public class MockTestService {
     // ========== Mapper Methods ==========
 
     private MockTestResponse mapToResponse(MockTest test) {
+        List<ListeningPart> listeningParts = test.getListeningParts();
+        List<ReadingQuiz> readingQuizzes = test.getReadingQuizzes();
+        List<WritingPrompt> writingPrompts = test.getWritingPrompts();
+
+        List<Long> listeningPartIds = listeningParts == null ? List.of() : listeningParts.stream()
+                .filter(java.util.Objects::nonNull)
+                .map(ListeningPart::getPartId)
+                .collect(Collectors.toList());
+
+        List<Long> readingQuizIds = readingQuizzes == null ? List.of() : readingQuizzes.stream()
+                .filter(java.util.Objects::nonNull)
+                .map(ReadingQuiz::getQuizId)
+                .collect(Collectors.toList());
+
+        List<Long> writingPromptIds = writingPrompts == null ? List.of() : writingPrompts.stream()
+                .filter(java.util.Objects::nonNull)
+                .map(WritingPrompt::getPromptId)
+                .collect(Collectors.toList());
+
         return MockTestResponse.builder()
                 .mockTestId(test.getMockTestId())
                 .title(test.getTitle())
                 .description(test.getDescription())
                 .difficulty(test.getDifficulty())
-                .listeningPartsCount(test.getListeningParts().size())
-                .readingQuizzesCount(test.getReadingQuizzes().size())
-                .writingPromptsCount(test.getWritingPrompts().size())
-                .listeningPartIds(test.getListeningParts().stream().map(ListeningPart::getPartId).collect(Collectors.toList()))
-                .readingQuizIds(test.getReadingQuizzes().stream().map(ReadingQuiz::getQuizId).collect(Collectors.toList()))
-                .writingPromptIds(test.getWritingPrompts().stream().map(WritingPrompt::getPromptId).collect(Collectors.toList()))
+                .listeningPartsCount(listeningPartIds.size())
+                .readingQuizzesCount(readingQuizIds.size())
+                .writingPromptsCount(writingPromptIds.size())
+                .listeningPartIds(listeningPartIds)
+                .readingQuizIds(readingQuizIds)
+                .writingPromptIds(writingPromptIds)
                 .build();
     }
 
@@ -480,14 +500,17 @@ public class MockTestService {
         // Load section details selectively to minimize JSON payload size
         if (session.getCurrentSection() == SkillType.LISTENING) {
             builder.listeningParts(session.getMockTest().getListeningParts().stream()
+                    .filter(java.util.Objects::nonNull)
                     .map(this::mapToListeningPartResponse)
                     .collect(Collectors.toList()));
         } else if (session.getCurrentSection() == SkillType.READING) {
             builder.readingQuizzes(session.getMockTest().getReadingQuizzes().stream()
+                    .filter(java.util.Objects::nonNull)
                     .map(this::mapToReadingQuizResponse)
                     .collect(Collectors.toList()));
         } else if (session.getCurrentSection() == SkillType.WRITING) {
             builder.writingPrompts(session.getMockTest().getWritingPrompts().stream()
+                    .filter(java.util.Objects::nonNull)
                     .map(this::mapToWritingPromptResponse)
                     .collect(Collectors.toList()));
         }

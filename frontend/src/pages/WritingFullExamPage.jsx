@@ -5,12 +5,15 @@ import attemptApi from '../api/attemptApi';
 import VisualDataRenderer from '../components/writing/VisualDataRenderer';
 import useExamTimer from '../hooks/useExamTimer';
 import useWritingTaskTimer from '../hooks/useWritingTaskTimer';
+import useExamWarnings from '../hooks/useExamWarnings';
+import { useToast } from '../context/ToastContext';
 
 const SESSION_KEY = 'writing_full_attemptId';
 
 export default function WritingFullExamPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { warning: triggerWarningToast } = useToast();
 
   const [task1, setTask1] = useState(null);
   const [task2, setTask2] = useState(null);
@@ -79,10 +82,17 @@ export default function WritingFullExamPage() {
   }, [attemptId, task1, task2, navigate]);
 
   // Server-authoritative timer
-  const { timeLeft: _timeLeft, isWarning, isCritical, formattedTime, stopTimer, formatTime: _formatTime } = useExamTimer({
+  const { timeLeft, isWarning, isCritical, formattedTime, stopTimer } = useExamTimer({
     deadline,
     onTimeUp: handleAutoSubmit,
     enabled: !loading && !submitting && !error && !!deadline,
+  });
+
+  // Centralized 5min/1min audio-visual warnings
+  useExamWarnings({
+    timeLeft,
+    enabled: !loading && !submitting && !error && !!deadline,
+    showWarning: triggerWarningToast,
   });
 
   // Load prompts + start/resume attempt

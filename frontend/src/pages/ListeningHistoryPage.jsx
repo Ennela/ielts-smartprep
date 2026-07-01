@@ -78,6 +78,18 @@ export default function ListeningHistoryPage() {
                   <p style={{ fontSize: '0.85rem', color: 'var(--outline)', marginTop: '4px', marginBottom: 0 }}>
                     Accuracy: {item.totalQuestions ? Math.round((item.correctAnswers / item.totalQuestions) * 100) : 0}%
                   </p>
+                  {item.timeSpentSeconds != null && (
+                    <p style={{ fontSize: '0.82rem', color: 'var(--on-surface-variant)', marginTop: '6px', marginBottom: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span className="material-symbols-outlined" style={{ fontSize: 14, color: 'var(--outline)' }}>timer</span>
+                      {Math.floor(item.timeSpentSeconds / 60)}:{(item.timeSpentSeconds % 60).toString().padStart(2, '0')}
+                      {item.autoSubmitted && (
+                        <span style={{
+                          fontSize: '0.7rem', padding: '1px 6px', borderRadius: 'var(--radius-full)',
+                          background: 'rgba(186,26,26,0.08)', color: 'var(--error)', fontWeight: 600,
+                        }}>Auto</span>
+                      )}
+                    </p>
+                  )}
                 </div>
               </div>
               

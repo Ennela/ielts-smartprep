@@ -11,4 +11,8 @@ FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Set timezone to match client timezone (Vietnam UTC+7)
+# LocalDateTime.now() must produce local time matching the frontend's Date parsing
+ENV TZ=Asia/Ho_Chi_Minh
+RUN apk add --no-cache tzdata
+ENTRYPOINT ["java", "-Duser.timezone=Asia/Ho_Chi_Minh", "-jar", "app.jar"]

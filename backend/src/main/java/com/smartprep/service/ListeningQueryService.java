@@ -85,11 +85,21 @@ public class ListeningQueryService {
                             .map(ScoreHistory::getHistoryId)
                             .findFirst().orElse(null);
 
+                    // Extract timer data from matched ScoreHistory
+                    ScoreHistory matchedHistory = listeningHistories.stream()
+                            .filter(sh -> sh.getScore().compareTo(t.getScore()) == 0)
+                            .filter(sh -> !sh.getRecordedAt().isBefore(t.getSubmittedAt().minusSeconds(5)))
+                            .filter(sh -> !sh.getRecordedAt().isAfter(t.getSubmittedAt().plusSeconds(5)))
+                            .findFirst().orElse(null);
+
                     return ListeningHistoryResponse.builder()
                             .testId(t.getTestId()).historyId(historyId)
                             .testMode(t.getTestMode().name()).score(t.getScore())
                             .totalQuestions(t.getTotalQuestions()).correctAnswers(t.getCorrectAnswers())
-                            .submittedAt(t.getSubmittedAt()).build();
+                            .submittedAt(t.getSubmittedAt())
+                            .timeSpentSeconds(matchedHistory != null ? matchedHistory.getTimeSpentSeconds() : null)
+                            .autoSubmitted(matchedHistory != null ? matchedHistory.getAutoSubmitted() : null)
+                            .build();
                 })
                 .collect(Collectors.toList());
     }

@@ -19,8 +19,8 @@ const readingApi = {
     getResult: (quizId: number | string): Promise<AxiosResponse<ApiResponse<QuizSubmissionResult>>> =>
         axiosClient.get(`/reading/${quizId}/result`),
 
-    submitQuiz: (quizId: number | string, answers: Record<number, string>): Promise<AxiosResponse<ApiResponse<QuizSubmissionResult>>> =>
-        axiosClient.post(`/reading/${quizId}/submit`, { answers }),
+    submitQuiz: (quizId: number | string, answers: Record<number, string>, attemptId?: number | null, autoSubmitted?: boolean): Promise<AxiosResponse<ApiResponse<QuizSubmissionResult>>> =>
+        axiosClient.post(`/reading/${quizId}/submit`, { answers, attemptId: attemptId || undefined, autoSubmitted: autoSubmitted || false }),
 
     getHistory: (page = 0, size = 10): Promise<AxiosResponse<ApiResponse<PaginatedResult<any>>>> =>
         axiosClient.get('/reading/history', { params: { page, size } }),

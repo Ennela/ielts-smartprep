@@ -32,6 +32,19 @@ public class WritingFullSubmission {
     @Column(name = "overall_band", precision = 2, scale = 1, nullable = false)
     private BigDecimal overallBand;
 
+    /** Total time spent in seconds */
+    private Integer timeSpentSeconds;
+
+    /** Writing: time spent on Task 1 in seconds */
+    private Integer timeSpentTask1;
+
+    /** Writing: time spent on Task 2 in seconds */
+    private Integer timeSpentTask2;
+
+    /** True if auto-submitted when time expired */
+    @Builder.Default
+    private Boolean autoSubmitted = false;
+
     @Column(name = "submitted_at", nullable = false, updatable = false)
     private LocalDateTime submittedAt;
 
