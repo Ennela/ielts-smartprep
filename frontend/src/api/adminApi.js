@@ -86,6 +86,15 @@ const adminApi = {
 
     getListeningStats: () =>
         axiosClient.get('/admin/listening/stats'),
+
+    getReadingQuizPreview: (quizId) =>
+        axiosClient.get(`/admin/reading/${quizId}/preview`),
+
+    getWritingPromptPreview: (promptId) =>
+        axiosClient.get(`/admin/writing/${promptId}/preview`),
+
+    getListeningPartPreview: (partId) =>
+        axiosClient.get(`/admin/listening/${partId}/preview`),
 };
 
 export default adminApi;
