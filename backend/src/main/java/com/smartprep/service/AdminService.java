@@ -155,6 +155,12 @@ public class AdminService {
         writingPromptRepository.deleteById(promptId);
     }
 
+    @Transactional(readOnly = true)
+    public WritingPrompt getWritingPromptForPreview(Long promptId) {
+        return writingPromptRepository.findById(promptId)
+                .orElseThrow(() -> new ResourceNotFoundException("Writing prompt not found: " + promptId));
+    }
+
     private AdminUserResponse toAdminUserResponse(User user) {
         List<Object[]> avgs = scoreHistoryRepository.getSkillAverages(user.getUserId());
         long totalTests = 0;
@@ -309,6 +315,13 @@ public class AdminService {
             throw new ResourceNotFoundException("Reading quiz not found: " + quizId);
         }
         readingQuizRepository.deleteById(quizId);
+    }
+
+    @Transactional(readOnly = true)
+    public AdminReadingQuizResponse getReadingQuizForPreview(Long quizId) {
+        ReadingQuiz quiz = readingQuizRepository.findById(quizId)
+                .orElseThrow(() -> new ResourceNotFoundException("Reading quiz not found: " + quizId));
+        return toAdminReadingQuizResponse(quiz);
     }
 
     public AdminReadingQuizResponse toAdminReadingQuizResponse(ReadingQuiz quiz) {
