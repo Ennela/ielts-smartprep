@@ -12,7 +12,7 @@ export default function UserRoute({ children }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (isAdmin) {
+  if (isAdmin && !window.location.search.includes('preview=true')) {
     return <Navigate to="/admin" replace />;
   }
 
