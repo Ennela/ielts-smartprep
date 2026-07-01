@@ -1,126 +1,170 @@
-import { useEffect, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useReading } from '../context/ReadingContext';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import readingApi from '../api/readingApi';
+import attemptApi from '../api/attemptApi';
+import adminApi from '../api/adminApi';
 import PassageViewer from '../components/reading/PassageViewer';
+import useExamWarnings from '../hooks/useExamWarnings';
 import QuestionPanel from '../components/reading/QuestionPanel';
-import CountdownTimer from '../components/reading/CountdownTimer';
+import useExamTimer from '../hooks/useExamTimer';
 
-// Dynamic chimes generator using Web Audio API to prevent audio asset loading failures.
-const playAlertSound = (freq = 440, duration = 0.5) => {
-  try {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
+const SESSION_KEY_PREFIX = 'reading_single_attemptId_';
 
-    oscillator.type = 'sine';
-    oscillator.frequency.value = freq;
-    gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
 
-    oscillator.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
-
-    oscillator.start();
-    oscillator.stop(audioCtx.currentTime + duration);
-  } catch (e) {
-    console.error("Audio error", e);
-  }
-};
 
 export default function ReadingExamPage() {
   const { quizId } = useParams();
   const navigate = useNavigate();
-  const { quiz, answers, loading, error, isSubmitted, timeRemaining, setQuiz, setLoading, setError, submitStart, setResult } = useReading();
+  const [searchParams] = useSearchParams();
+  const { user } = useAuth();
+  const { quiz, answers, loading, error, isSubmitted, setQuiz, setLoading, setError, submitStart, setResult } = useReading();
   const { warning: triggerWarningToast } = useToast();
-  
-  const warningPlayedRef = useRef({ fiveMin: false, oneMin: false });
 
-  // Fallback direct submission helper
-  const handleSubmitForce = async (qId, currentAnswers) => {
+  const isPreviewParam = searchParams.get('preview') === 'true';
+  const isPreview = isPreviewParam && user?.role === 'ADMIN';
+
+  // Server-authoritative attempt state
+  const [attemptId, setAttemptId] = useState(null);
+  const [deadline, setDeadline] = useState(null);
+  const submittingRef = useRef(false);
+
+  const answersRef = useRef(answers);
+
+  // Keep answers ref current for auto-submit
+  useEffect(() => { answersRef.current = answers; }, [answers]);
+
+  // Auto-submit handler (called by useExamTimer when deadline is reached)
+  const handleAutoSubmit = useCallback(() => {
+    if (isPreview || submittingRef.current || isSubmitted) return;
+    submittingRef.current = true;
     submitStart();
-    try {
-      let finalAnswers = currentAnswers;
-      if (!finalAnswers || Object.keys(finalAnswers).length === 0) {
-        try {
-          const draft = localStorage.getItem(`reading_quiz_draft_${qId}`);
-          if (draft) finalAnswers = JSON.parse(draft);
-        } catch {}
-      }
-      const res = await readingApi.submitQuiz(qId, finalAnswers || {});
-      setResult(res.data.data);
-      navigate(`/reading/result/${qId}`, { replace: true });
-    } catch (err) {
-      setError(err.response?.data?.message || 'Submission failed');
-    }
-  };
 
+    const sessionKey = SESSION_KEY_PREFIX + quizId;
+    const storedAttemptId = attemptId || sessionStorage.getItem(sessionKey);
+
+    // Gather current answers (prefer ref for freshest state)
+    let finalAnswers = answersRef.current;
+    if (!finalAnswers || Object.keys(finalAnswers).length === 0) {
+      try {
+        const draft = localStorage.getItem(`reading_quiz_draft_${quizId}`);
+        if (draft) finalAnswers = JSON.parse(draft);
+      } catch { /* ignore */ }
+    }
+
+    readingApi.submitQuiz(quizId, finalAnswers || {}, storedAttemptId ? Number(storedAttemptId) : null, true)
+      .then(res => {
+        sessionStorage.removeItem(sessionKey);
+        try { localStorage.removeItem(`reading_quiz_draft_${quizId}`); } catch (_e) { /* ignore */ }
+        setResult(res.data.data);
+        navigate(`/reading/result/${quizId}`, { replace: true });
+      })
+      .catch(() => {
+        setError('Auto-submit failed. Please try submitting manually.');
+        submittingRef.current = false;
+      });
+  }, [attemptId, quizId, isSubmitted, submitStart, setResult, setError, navigate, isPreview]);
+
+  // Server-authoritative countdown timer
+  const { timeLeft, isWarning, isCritical, formattedTime, stopTimer } = useExamTimer({
+    deadline,
+    onTimeUp: handleAutoSubmit,
+    enabled: !loading && !isSubmitted && !!quiz && !!deadline && !isPreview,
+  });
+
+  // Centralized 5min/1min audio-visual warnings
+  useExamWarnings({
+    timeLeft,
+    enabled: !loading && !isSubmitted && !!quiz && !!deadline && !isPreview,
+    showWarning: triggerWarningToast,
+  });
+
+  // Load quiz + start/resume server attempt
   useEffect(() => {
+    const sessionKey = SESSION_KEY_PREFIX + quizId;
+
     const fetchQuiz = async () => {
       setLoading(true);
       try {
-        const res = await readingApi.getQuiz(quizId);
-        const quizData = res.data.data;
-        if (quizData.submitted) {
-          navigate(`/reading/result/${quizId}`, { replace: true });
-          return;
+        let quizData;
+        if (isPreview) {
+          const res = await adminApi.getReadingQuizPreview(quizId);
+          quizData = res.data.data;
+        } else {
+          const res = await readingApi.getQuiz(quizId);
+          quizData = res.data.data;
+          if (quizData.submitted) {
+            navigate(`/reading/result/${quizId}`, { replace: true });
+            return;
+          }
         }
 
-        // Server authoritative timer calculation
-        const now = new Date();
-        const created = new Date(quizData.createdAt);
-        const elapsed = Math.floor((now.getTime() - created.getTime()) / 1000);
-        const remaining = Math.max(0, quizData.timeLimitSeconds - elapsed);
-
-        if (remaining <= 0) {
-          // Auto-submit immediately if expired on load
-          handleSubmitForce(quizData.quizId, {});
-          return;
-        }
-
-        // Override timeLimitSeconds with computed remaining time
-        quizData.timeLimitSeconds = remaining;
         setQuiz(quizData);
+
+        if (isPreview) {
+          // Skip attempts in preview mode
+          setAttemptId(null);
+          setDeadline(null);
+        } else {
+          // Start or resume server-authoritative attempt
+          const storedAttemptId = sessionStorage.getItem(sessionKey);
+          let attempt;
+
+          if (storedAttemptId) {
+            try {
+              const attemptRes = await attemptApi.getAttempt(storedAttemptId);
+              attempt = attemptRes.data.data;
+              if (attempt.status !== 'IN_PROGRESS') attempt = null;
+            } catch (_e) {
+              attempt = null;
+            }
+          }
+
+          if (!attempt) {
+            const attemptRes = await attemptApi.startAttempt({
+              skillType: 'READING',
+              examReferenceIds: JSON.stringify([Number(quizId)]),
+            });
+            attempt = attemptRes.data.data;
+          }
+
+          setAttemptId(attempt.attemptId);
+          setDeadline(attempt.deadline);
+          sessionStorage.setItem(sessionKey, String(attempt.attemptId));
+        }
       } catch (err) {
         setError(err.response?.data?.message || 'Unable to load test');
       }
     };
     fetchQuiz();
-  }, [quizId]);
+  }, [quizId, isPreview]);
 
-  // Handle manual/automatic standard submission
+
+
+  // Handle manual submission
   const handleSubmit = useCallback(async () => {
-    if (isSubmitted) return;
+    if (isSubmitted || submittingRef.current) return;
+    submittingRef.current = true;
     submitStart();
+    stopTimer();
+
+    const sessionKey = SESSION_KEY_PREFIX + quizId;
+
     try {
-      const res = await readingApi.submitQuiz(quizId, answers);
+      const storedAttemptId = attemptId || sessionStorage.getItem(sessionKey);
+      const res = await readingApi.submitQuiz(quizId, answers, storedAttemptId ? Number(storedAttemptId) : null, false);
+
+      sessionStorage.removeItem(sessionKey);
+      try { localStorage.removeItem(`reading_quiz_draft_${quizId}`); } catch (_e) { /* ignore */ }
       setResult(res.data.data);
       navigate(`/reading/result/${quizId}`, { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || 'Submission failed');
+      submittingRef.current = false;
     }
-  }, [quizId, answers, isSubmitted, submitStart, setResult, setError, navigate]);
-
-  // Audio-visual warnings at 5 minutes and 1 minute
-  useEffect(() => {
-    if (!quiz || isSubmitted) return;
-
-    if (timeRemaining === 300 && !warningPlayedRef.current.fiveMin) {
-      warningPlayedRef.current.fiveMin = true;
-      triggerWarningToast("5 minutes remaining! Please review and finalize your answers.");
-      playAlertSound(523.25, 0.15); // C5 chime
-      setTimeout(() => playAlertSound(659.25, 0.3), 150); // E5 chime
-    }
-
-    if (timeRemaining === 60 && !warningPlayedRef.current.oneMin) {
-      warningPlayedRef.current.oneMin = true;
-      triggerWarningToast("1 minute remaining! Your exam will be submitted automatically.");
-      playAlertSound(880, 0.12);
-      setTimeout(() => playAlertSound(880, 0.12), 150);
-      setTimeout(() => playAlertSound(880, 0.25), 300);
-    }
-  }, [timeRemaining, quiz, isSubmitted]);
+  }, [quizId, answers, isSubmitted, attemptId, submitStart, stopTimer, setResult, setError, navigate]);
 
   if (loading && !quiz) return <div className="loading-screen">Loading test...</div>;
 
@@ -142,8 +186,32 @@ export default function ReadingExamPage() {
   const answeredCount = Object.keys(answers).length;
   const totalQuestions = quiz.questions?.length || 5;
 
+  // Timer visual states (matching ReadingFullExamPage style)
+  const timerColor = isCritical ? 'var(--error)' : isWarning ? 'var(--error)' : 'var(--on-surface)';
+  const timerBg = isCritical ? 'rgba(186,26,26,0.12)' : 'var(--surface-container-high)';
+
   return (
     <div className="reading-exam-page" id="reading-exam-page">
+      {isPreview && (
+        <div style={{
+          background: '#fff9c4',
+          color: '#5d4037',
+          padding: '8px 24px',
+          textAlign: 'center',
+          fontWeight: 600,
+          fontSize: '0.9rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          borderBottom: '1px solid #fbc02d',
+          zIndex: 1100,
+          position: 'relative'
+        }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#f57c00' }}>warning</span>
+          <span>⚠️ PREVIEW MODE — Bạn đang xem với tư cách Admin. Bài làm sẽ không được lưu.</span>
+        </div>
+      )}
 
       {/* ── Exam Header ── */}
       <header className="exam-topbar">
@@ -163,7 +231,20 @@ export default function ReadingExamPage() {
 
         {/* Right: Timer + help + submit */}
         <div className="exam-topbar-right">
-          <CountdownTimer onTimeUp={handleSubmit} />
+          {/* Server-authoritative countdown timer */}
+          {deadline && !isPreview && (
+            <div className="exam-timer" style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '6px 12px', background: timerBg,
+              borderRadius: 'var(--radius-md)', color: timerColor,
+              fontWeight: 700, fontSize: '1.1rem',
+              border: isCritical ? '1px solid var(--error)' : 'none',
+              animation: isCritical ? 'pulse 1s ease-in-out infinite' : 'none',
+            }}>
+              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>timer</span>
+              {formattedTime}
+            </div>
+          )}
           <button className="btn-exam-help">
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>help_outline</span>
             Help
@@ -171,7 +252,8 @@ export default function ReadingExamPage() {
           <button
             className="btn btn-primary btn-submit-exam"
             onClick={handleSubmit}
-            disabled={isSubmitted || loading}
+            disabled={isPreview || isSubmitted || loading}
+            title={isPreview ? "Không thể nộp ở chế độ preview" : undefined}
             id="submit-exam-btn"
           >
             {loading ? 'Submitting...' : 'Submit'}
@@ -185,7 +267,7 @@ export default function ReadingExamPage() {
           <PassageViewer passage={quiz.passageText} />
         </div>
         <div className="exam-right">
-          <QuestionPanel questions={quiz.questions} />
+          <QuestionPanel questions={quiz.questions} showCorrectAnswers={isPreview} />
         </div>
       </div>
 
@@ -196,13 +278,17 @@ export default function ReadingExamPage() {
           <span>Answered <strong>{answeredCount}</strong> / {totalQuestions} questions</span>
         </div>
         <div className="exam-action-bar-right">
-          <button className="btn btn-outline" onClick={() => navigate('/reading')}>
-            Exit
+          <button
+            className="btn btn-outline"
+            onClick={() => navigate(isPreview ? '/admin/reading-quizzes' : '/reading')}
+          >
+            {isPreview ? '← Quay lại Admin' : 'Exit'}
           </button>
           <button
             className="btn btn-primary btn-submit-exam"
             onClick={handleSubmit}
-            disabled={isSubmitted || loading}
+            disabled={isPreview || isSubmitted || loading}
+            title={isPreview ? "Không thể nộp ở chế độ preview" : undefined}
           >
             {loading ? 'Submitting...' : 'Complete & Submit'}
           </button>
