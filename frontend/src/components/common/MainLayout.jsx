@@ -3,17 +3,8 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import styles from './MainLayout.module.css';
 
-const MENU_ITEMS = [
-  { path: '/dashboard', label: 'Dashboard',  icon: 'dashboard',  end: true },
-  { path: '/mock-tests', label: 'Mock Test',  icon: 'quiz',       end: false },
-  { path: '/reading',   label: 'Reading',    icon: 'menu_book',  end: false },
-  { path: '/writing',   label: 'Writing',    icon: 'edit_note',  end: false },
-  { path: '/listening', label: 'Listening',  icon: 'headphones', end: false },
-  { path: '/vocabulary', label: 'Vocabulary', icon: 'school',     end: false },
-];
-
 const ADMIN_MENU_ITEMS = [
-  { path: '/admin',                  label: 'Overview', icon: 'bar_chart',    end: true },
+  { path: '/admin',                  label: 'Dashboard', icon: 'dashboard',    end: true },
   { path: '/admin/users',            label: 'Students',  icon: 'group',        end: false },
   { path: '/admin/mock-tests',       label: 'Mock Tests', icon: 'quiz',         end: false },
   { path: '/admin/writing-prompts',  label: 'Writing Prompts',   icon: 'description',  end: false },
@@ -76,14 +67,14 @@ export default function MainLayout() {
 
         {/* Main Navigation */}
         <nav className={styles['sidebar-nav']}>
-          {MENU_ITEMS.map((item) => (
+          {ADMIN_MENU_ITEMS.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               end={item.end}
               className={({ isActive }) => `${styles['sidebar-item']} ${isActive ? styles.active : ''}`}
               onClick={() => setSidebarOpen(false)}
-              id={`nav-${item.label.toLowerCase().replace(/\s/g, '-')}`}
+              id={`nav-admin-${item.label.toLowerCase().replace(/\s/g, '-')}`}
             >
               <span className={styles['sidebar-icon']}>
                 <span className="material-symbols-outlined">{item.icon}</span>
@@ -91,35 +82,10 @@ export default function MainLayout() {
               <span className={styles['sidebar-label']}>{item.label}</span>
             </NavLink>
           ))}
-
-          {isAdmin && (
-            <>
-              <div className={styles['sidebar-divider']} />
-              <span className={styles['sidebar-section-label']}>Administration</span>
-              {ADMIN_MENU_ITEMS.map((item) => (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
-                  end={item.end}
-                  className={({ isActive }) => `${styles['sidebar-item']} ${isActive ? styles.active : ''}`}
-                  onClick={() => setSidebarOpen(false)}
-                  id={`nav-admin-${item.label.toLowerCase().replace(/\s/g, '-')}`}
-                >
-                  <span className={styles['sidebar-icon']}>
-                    <span className="material-symbols-outlined">{item.icon}</span>
-                  </span>
-                  <span className={styles['sidebar-label']}>{item.label}</span>
-                </NavLink>
-              ))}
-            </>
-          )}
         </nav>
 
-        {/* Footer: CTA + links */}
+        {/* Footer: links only */}
         <div className={styles['sidebar-footer']}>
-          <button className={styles['sidebar-cta']} onClick={() => navigate('/mock-tests')}>
-            Start Mock Test
-          </button>
           <div className={styles['sidebar-footer-links']}>
             <button className={styles['sidebar-footer-link']} onClick={() => navigate('/profile')}>
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>settings</span>
@@ -145,7 +111,7 @@ export default function MainLayout() {
           </button>
 
           <div className={styles['topbar-brand']}>
-            <span className={styles['topbar-brand-text']} onClick={() => navigate('/dashboard')}>
+            <span className={styles['topbar-brand-text']} onClick={() => navigate('/admin')}>
               SmartPrep
             </span>
           </div>
