@@ -1,19 +1,28 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import listeningApi from '../api/listeningApi';
 import attemptApi from '../api/attemptApi';
+import adminApi from '../api/adminApi';
 import AudioPlayer from '../components/listening/AudioPlayer';
 import useExamTimer from '../hooks/useExamTimer';
+import useExamWarnings from '../hooks/useExamWarnings';
+import { useToast } from '../context/ToastContext';
 
 const SESSION_KEY = 'listening_attemptId';
 
 export default function ListeningExamPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const mode = searchParams.get('mode') || 'practice';
+  const { warning: triggerWarningToast } = useToast();
   const partIds = useMemo(() =>
     (searchParams.get('parts') || '').split(',').map(Number).filter(Boolean),
   [searchParams]);
+
+  const isPreviewParam = searchParams.get('preview') === 'true';
+  const isPreview = isPreviewParam && user?.role === 'ADMIN';
 
   const [parts, setParts] = useState([]);
   const [answers, setAnswers] = useState({});
@@ -25,7 +34,6 @@ export default function ListeningExamPage() {
   // Server-authoritative attempt state
   const [attemptId, setAttemptId] = useState(null);
   const [deadline, setDeadline] = useState(null);
-  const isMockTest = mode === 'mock-test';
   const submittingRef = useRef(false);
   const answersRef = useRef(answers);
 
@@ -34,7 +42,7 @@ export default function ListeningExamPage() {
 
   // Auto-submit handler
   const handleAutoSubmit = useCallback(() => {
-    if (submittingRef.current) return;
+    if (isPreview || submittingRef.current) return;
     submittingRef.current = true;
     setSubmitting(true);
 
@@ -55,13 +63,20 @@ export default function ListeningExamPage() {
       setSubmitting(false);
       submittingRef.current = false;
     });
-  }, [attemptId, mode, partIds, navigate]);
+  }, [attemptId, mode, partIds, navigate, isPreview]);
 
-  // Server-authoritative timer (only for mock-test mode)
-  const { timeLeft: _timeLeft, isWarning, isCritical, formattedTime, stopTimer } = useExamTimer({
+  // Server-authoritative timer (active for ALL modes)
+  const { timeLeft, isWarning, isCritical, formattedTime, stopTimer } = useExamTimer({
     deadline,
     onTimeUp: handleAutoSubmit,
-    enabled: isMockTest && !loading && !polling && !submitting && parts.length > 0,
+    enabled: !loading && !polling && !submitting && parts.length > 0 && !!deadline && !isPreview,
+  });
+
+  // Centralized 5min/1min audio-visual warnings
+  useExamWarnings({
+    timeLeft,
+    enabled: !loading && !polling && !submitting && parts.length > 0 && !!deadline && !isPreview,
+    showWarning: triggerWarningToast,
   });
 
   // Load parts + start/resume attempt
@@ -73,7 +88,9 @@ export default function ListeningExamPage() {
       try {
         const loaded = [];
         for (const id of partIds) {
-          const res = await listeningApi.getPartById(id);
+          const res = isPreview
+            ? await adminApi.getListeningPartPreview(id)
+            : await listeningApi.getPartById(id);
           if (res.data?.data) loaded.push(res.data.data);
         }
 
@@ -93,7 +110,9 @@ export default function ListeningExamPage() {
               let allReady = true;
               for (const p of loaded) {
                 if (p.audioStatus === 'PENDING') {
-                  const res = await listeningApi.getPartById(p.partId);
+                  const res = isPreview
+                    ? await adminApi.getListeningPartPreview(p.partId)
+                    : await listeningApi.getPartById(p.partId);
                   const latest = res.data?.data;
                   if (latest) {
                     updated.push(latest);
@@ -115,7 +134,12 @@ export default function ListeningExamPage() {
               if (allReady) {
                 setPolling(false);
                 // Start attempt after audio is ready
-                if (isMockTest) await initAttempt();
+                if (!isPreview) {
+                  await initAttempt();
+                } else {
+                  setAttemptId(null);
+                  setDeadline(null);
+                }
               } else {
                 timerId = setTimeout(poll, 3000);
               }
@@ -131,8 +155,13 @@ export default function ListeningExamPage() {
           setPolling(false);
           setLoading(false);
 
-          // Start/resume attempt for mock-test mode
-          if (isMockTest) await initAttempt();
+          // Start/resume attempt for all modes
+          if (!isPreview) {
+            await initAttempt();
+          } else {
+            setAttemptId(null);
+            setDeadline(null);
+          }
         }
       } catch (err) {
         console.error(err);
@@ -180,7 +209,7 @@ export default function ListeningExamPage() {
       active = false;
       if (timerId) clearTimeout(timerId);
     };
-  }, [partIds]);
+  }, [partIds, isPreview]);
 
   const handleAnswer = (questionId, value) =>
     setAnswers(prev => ({ ...prev, [questionId]: value }));
@@ -244,6 +273,26 @@ export default function ListeningExamPage() {
 
   return (
     <div className="listening-page" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      {isPreview && (
+        <div style={{
+          background: '#fff9c4',
+          color: '#5d4037',
+          padding: '8px 24px',
+          textAlign: 'center',
+          fontWeight: 600,
+          fontSize: '0.9rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          borderBottom: '1px solid #fbc02d',
+          zIndex: 1100,
+          position: 'relative'
+        }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#f57c00' }}>warning</span>
+          <span>⚠️ PREVIEW MODE — Bạn đang xem với tư cách Admin. Bài làm sẽ không được lưu.</span>
+        </div>
+      )}
 
       {/* ── Header ── */}
       <header style={{
@@ -253,7 +302,7 @@ export default function ListeningExamPage() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
-              onClick={() => navigate('/listening')}>
+              onClick={() => navigate(isPreview ? '/admin/listening' : '/listening')}>
               <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '1.1rem', color: 'var(--primary)' }}>
                 SmartPrep
               </span>
@@ -275,7 +324,7 @@ export default function ListeningExamPage() {
             )}
           </div>
           <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '16px' }}>
-            {isMockTest && deadline && (
+            {deadline && !isPreview && (
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -344,6 +393,26 @@ export default function ListeningExamPage() {
               />
             </div>
 
+            {/* Transcript Card (Admin Preview only) */}
+            {isPreview && currentPart.transcriptText && (
+              <div style={{
+                background: 'var(--surface-container-lowest)', border: '1px solid var(--outline-variant)',
+                borderRadius: 'var(--radius-xl)', padding: 24, marginBottom: 32,
+              }}>
+                <h4 style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, color: 'var(--primary)', fontFamily: 'var(--font-heading)' }}>
+                  <span className="material-symbols-outlined">description</span>
+                  Transcript (Preview Mode)
+                </h4>
+                <div style={{
+                  maxHeight: '200px', overflowY: 'auto', fontSize: '0.9rem', lineHeight: 1.6,
+                  color: 'var(--on-surface-variant)', background: 'var(--surface-container-low)',
+                  padding: 16, borderRadius: 'var(--radius-md)', whiteSpace: 'pre-line'
+                }}>
+                  {currentPart.transcriptText}
+                </div>
+              </div>
+            )}
+
             {/* Questions */}
             <div className="listening-questions">
               {(currentPart.questions || [])
@@ -363,6 +432,22 @@ export default function ListeningExamPage() {
                       ) : (
                         <FillBlankQuestion question={q} value={answers[q.questionId] || ''} onChange={v => handleAnswer(q.questionId, v)} />
                       )}
+
+                      {isPreview && q.correctAnswer && (
+                        <div style={{
+                          marginTop: '12px',
+                          padding: '6px 12px',
+                          backgroundColor: 'rgba(0,108,74,0.06)',
+                          color: '#006c4a',
+                          borderRadius: '4px',
+                          fontSize: '0.85rem',
+                          fontWeight: 600,
+                          border: '1px solid rgba(0,108,74,0.15)',
+                          display: 'inline-block'
+                        }}>
+                          Đáp án đúng: {q.correctAnswer}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -377,11 +462,17 @@ export default function ListeningExamPage() {
         background: 'var(--surface-container-lowest)', borderTop: '1px solid var(--outline-variant)',
         display: 'flex', justifyContent: 'flex-end', gap: 12,
       }}>
-        <button className="btn btn-outline" onClick={() => navigate('/listening')}>Exit</button>
+        <button
+          className="btn btn-outline"
+          onClick={() => navigate(isPreview ? '/admin/listening' : '/listening')}
+        >
+          {isPreview ? '← Quay lại Admin' : 'Exit'}
+        </button>
         <button
           className="btn btn-primary btn-lg"
           onClick={handleSubmit}
-          disabled={submitting || answeredCount === 0}
+          disabled={isPreview || submitting || answeredCount === 0}
+          title={isPreview ? "Không thể nộp ở chế độ preview" : undefined}
           id="submit-listening-btn"
         >
           {submitting ? 'Grading...' : `Submit (${answeredCount}/${totalQuestions})`}
