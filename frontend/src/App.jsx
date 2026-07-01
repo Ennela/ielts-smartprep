@@ -95,7 +95,6 @@ export default function App() {
 
               {/* Writing */}
               <Route path="/writing" element={<WritingPromptListPage />} />
-              <Route path="/writing/editor/:promptId" element={<WritingEditorPage />} />
               <Route path="/writing/result/:submissionId" element={<WritingResultPage />} />
               <Route path="/writing/full-result" element={<WritingFullResultPage />} />
               <Route path="/writing/history" element={<WritingHistoryPage />} />
@@ -129,6 +128,13 @@ export default function App() {
               <ProtectedRoute>
                 <UserRoute>
                   <ReadingProvider><ReadingExamPage /></ReadingProvider>
+                </UserRoute>
+              </ProtectedRoute>
+            } />
+            <Route path="/writing/editor/:promptId" element={
+              <ProtectedRoute>
+                <UserRoute>
+                  <WritingEditorPage />
                 </UserRoute>
               </ProtectedRoute>
             } />
