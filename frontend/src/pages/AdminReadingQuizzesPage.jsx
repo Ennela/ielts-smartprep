@@ -383,6 +383,11 @@ export default function AdminReadingQuizzesPage() {
                         <div className="admin-action-btns">
                           <button
                             className="btn btn-sm btn-outline"
+                            onClick={() => navigate(`/reading/exam/${quiz.quizId}?preview=true&adminView=true`)}
+                            id={`preview-quiz-${quiz.quizId}`}
+                          >👁 Xem thử</button>
+                          <button
+                            className="btn btn-sm btn-outline"
                             onClick={() => openEdit(quiz)}
                             id={`edit-quiz-${quiz.quizId}`}
                           >Edit</button>
