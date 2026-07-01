@@ -4,7 +4,7 @@ import { useReading } from '../../context/ReadingContext';
 // ============================================================
 // Main QuestionPanel — groups questions by groupId
 // ============================================================
-export default function QuestionPanel({ questions }) {
+export default function QuestionPanel({ questions, showCorrectAnswers }) {
   const { answers, setAnswer, isSubmitted } = useReading();
 
   if (!questions || questions.length === 0) return null;
@@ -40,6 +40,7 @@ export default function QuestionPanel({ questions }) {
           answers={answers}
           setAnswer={setAnswer}
           disabled={isSubmitted}
+          showCorrectAnswers={showCorrectAnswers}
         />
       ))}
     </div>
@@ -49,7 +50,7 @@ export default function QuestionPanel({ questions }) {
 // ============================================================
 // QuestionGroup — renders a group label + context + questions
 // ============================================================
-function QuestionGroup({ group, answers, setAnswer, disabled }) {
+function QuestionGroup({ group, answers, setAnswer, disabled, showCorrectAnswers }) {
   // Parse group-level options once
   const groupOptions = useMemo(() => {
     if (!group.optionsJson) return null;
@@ -75,14 +76,38 @@ function QuestionGroup({ group, answers, setAnswer, disabled }) {
 
       {/* Summary/Note context block with inline blanks */}
       {group.groupContext && group.groupType === 'SUMMARY_COMPLETION' && (
-        <SummaryBlock
-          context={group.groupContext}
-          questions={group.questions}
-          answers={answers}
-          setAnswer={setAnswer}
-          disabled={disabled}
-          groupOptions={groupOptions}
-        />
+        <>
+          <SummaryBlock
+            context={group.groupContext}
+            questions={group.questions}
+            answers={answers}
+            setAnswer={setAnswer}
+            disabled={disabled}
+            groupOptions={groupOptions}
+          />
+          {showCorrectAnswers && (
+            <div style={{
+              marginTop: '12px',
+              padding: '12px',
+              backgroundColor: 'rgba(0,108,74,0.06)',
+              borderRadius: '8px',
+              border: '1px solid rgba(0,108,74,0.15)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px'
+            }}>
+              <h5 style={{ margin: '0 0 4px 0', fontSize: '0.85rem', color: '#006c4a' }}>Đáp án đúng:</h5>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px' }}>
+                {group.questions.map((q) => (
+                  <div key={q.questionId} style={{ fontSize: '0.8rem', color: '#006c4a', display: 'flex', gap: '4px' }}>
+                    <strong>Q{q.orderIndex}:</strong>
+                    <span>{q.correctAnswer}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Render individual questions */}
@@ -104,6 +129,22 @@ function QuestionGroup({ group, answers, setAnswer, disabled }) {
               disabled={disabled}
               groupOptions={groupOptions}
             />
+
+            {showCorrectAnswers && q.correctAnswer && (
+              <div style={{
+                marginTop: '8px',
+                padding: '6px 12px',
+                backgroundColor: 'rgba(0,108,74,0.06)',
+                color: '#006c4a',
+                borderRadius: '4px',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                border: '1px solid rgba(0,108,74,0.15)',
+                display: 'inline-block'
+              }}>
+                Đáp án đúng: {q.correctAnswer} {q.explanation ? `(${q.explanation})` : ''}
+              </div>
+            )}
           </div>
         );
       })}
