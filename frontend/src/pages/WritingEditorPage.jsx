@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import writingApi from '../api/writingApi';
 import attemptApi from '../api/attemptApi';
+import adminApi from '../api/adminApi';
 import useExamTimer from '../hooks/useExamTimer';
+import useExamWarnings from '../hooks/useExamWarnings';
+import { useToast } from '../context/ToastContext';
 
 const TASK1_TYPES = ['LINE_GRAPH', 'BAR_CHART', 'PIE_CHART', 'TABLE', 'MAP', 'DIAGRAM'];
 
@@ -44,12 +48,18 @@ const FORMAT_TYPE = (type) => {
 export default function WritingEditorPage() {
   const { promptId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { user } = useAuth();
+  const { warning: triggerWarningToast } = useToast();
   const [prompt, setPrompt] = useState(null);
   const [essayText, setEssayText] = useState('');
   const [wordCount, setWordCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [grading, setGrading] = useState(false);
   const [error, setError] = useState('');
+
+  const isPreviewParam = searchParams.get('preview') === 'true';
+  const isPreview = isPreviewParam && user?.role === 'ADMIN';
 
   // Attempt / timer state
   const [attemptId, setAttemptId] = useState(null);
@@ -64,15 +74,29 @@ export default function WritingEditorPage() {
 
   // ── Load prompt ──
   useEffect(() => {
-    writingApi.getPromptById(promptId)
-      .then(res => setPrompt(res.data.data))
-      .catch(() => setError('Failed to load prompt.'))
-      .finally(() => setLoading(false));
-  }, [promptId]);
+    const fetchPrompt = async () => {
+      try {
+        let promptData;
+        if (isPreview) {
+          const res = await adminApi.getWritingPromptPreview(promptId);
+          promptData = res.data.data;
+        } else {
+          const res = await writingApi.getPromptById(promptId);
+          promptData = res.data.data;
+        }
+        setPrompt(promptData);
+      } catch (err) {
+        setError('Failed to load prompt.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPrompt();
+  }, [promptId, isPreview]);
 
   // ── Start / resume attempt after prompt loads ──
   useEffect(() => {
-    if (!prompt) return;
+    if (!prompt || isPreview) return;
 
     const sessionKey = SESSION_KEY_PREFIX + promptId;
 
@@ -117,7 +141,7 @@ export default function WritingEditorPage() {
     };
 
     initAttempt();
-  }, [prompt, promptId]);
+  }, [prompt, promptId, isPreview]);
 
   // ── Auto-submit when timer expires ──
   const handleAutoSubmit = useCallback(() => {
@@ -162,10 +186,17 @@ export default function WritingEditorPage() {
   }, [attemptId, promptId, isTask1, navigate]);
 
   // ── Server-authoritative countdown timer ──
-  const { timeLeft: _timeLeft, isWarning, isCritical, formattedTime, stopTimer } = useExamTimer({
+  const { timeLeft, isWarning, isCritical, formattedTime, stopTimer } = useExamTimer({
     deadline,
     onTimeUp: handleAutoSubmit,
     enabled: !loading && !grading && !!deadline,
+  });
+
+  // Centralized 5min/1min audio-visual warnings
+  useExamWarnings({
+    timeLeft,
+    enabled: !loading && !grading && !!deadline,
+    showWarning: triggerWarningToast,
   });
 
   // ── Word count ──
@@ -218,6 +249,27 @@ export default function WritingEditorPage() {
 
   return (
     <div className="writing-editor-page" style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
+      {isPreview && (
+        <div style={{
+          background: '#fff9c4',
+          color: '#5d4037',
+          padding: '8px 24px',
+          textAlign: 'center',
+          fontWeight: 600,
+          fontSize: '0.9rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          borderBottom: '1px solid #fbc02d',
+          zIndex: 1100,
+          position: 'relative',
+          flexShrink: 0
+        }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#f57c00' }}>warning</span>
+          <span>⚠️ PREVIEW MODE — Bạn đang xem với tư cách Admin. Bài làm sẽ không được lưu.</span>
+        </div>
+      )}
 
       {/* ── Header ── */}
       <header style={{
@@ -229,12 +281,12 @@ export default function WritingEditorPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <button
             className="btn-back"
-            onClick={() => navigate('/writing')}
+            onClick={() => navigate(isPreview ? '/admin/writing-prompts' : '/writing')}
             id="back-to-prompts"
             style={{ margin: 0 }}
           >
             <span className="material-symbols-outlined" style={{ fontSize: 20 }}>arrow_back</span>
-            Prompts
+            {isPreview ? '← Quay lại Admin' : 'Prompts'}
           </button>
           <div style={{ width: 1, height: 24, background: 'var(--outline-variant)' }} />
           <span style={{
@@ -250,7 +302,7 @@ export default function WritingEditorPage() {
           {error && <span style={{ color: 'var(--error)', fontSize: '0.875rem' }}>{error}</span>}
 
           {/* Countdown timer pill */}
-          {deadline && (
+          {deadline && !isPreview && (
             <div
               className={`exam-timer-pill ${isCritical ? 'warning' : isWarning ? 'warning' : ''}`}
               id="writing-countdown-timer"
@@ -273,7 +325,8 @@ export default function WritingEditorPage() {
           <button
             className="btn btn-primary btn-grade"
             onClick={handleGrade}
-            disabled={!isOk || grading}
+            disabled={isPreview || !isOk || grading}
+            title={isPreview ? "Không thể nộp ở chế độ preview" : undefined}
             id="grade-essay-btn"
           >
             {grading ? <><span className="spinner" />AI is grading...</> : 'Submit for Grading'}
@@ -282,7 +335,7 @@ export default function WritingEditorPage() {
       </header>
 
       {/* ── Suggested time indicator ── */}
-      {deadline && (
+      {deadline && !isPreview && (
         <div className="writing-suggested-time" id="writing-suggested-time">
           <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--primary)' }}>info</span>
           <span>
