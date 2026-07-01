@@ -133,4 +133,14 @@ public class AdminListeningController {
         AdminListeningStatsResponse stats = adminListeningService.getStats();
         return ResponseEntity.ok(ApiResponse.ok(stats));
     }
+
+    /**
+     * GET /api/v1/admin/listening/{partId}/preview
+     * Get detailed transcript and answers for preview.
+     */
+    @GetMapping("/{partId}/preview")
+    public ResponseEntity<ApiResponse<AdminListeningPartResponse>> getListeningPreview(@PathVariable Long partId) {
+        AdminListeningPartResponse detail = adminListeningService.getPartById(partId);
+        return ResponseEntity.ok(ApiResponse.ok(detail));
+    }
 }
