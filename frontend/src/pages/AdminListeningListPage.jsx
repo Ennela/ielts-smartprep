@@ -254,6 +254,11 @@ export default function AdminListeningListPage() {
                       <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{part.createdBy}</td>
                       <td>
                         <div className="admin-action-btns">
+                          <button
+                            className="btn btn-sm btn-outline"
+                            onClick={() => navigate(`/listening/exam?parts=${part.partId}&preview=true&adminView=true`)}
+                            id={`preview-part-${part.partId}`}
+                          >👁 Xem thử</button>
                           {part.audioStatus === 'READY' && (
                             <button
                               className="btn btn-sm btn-outline"
