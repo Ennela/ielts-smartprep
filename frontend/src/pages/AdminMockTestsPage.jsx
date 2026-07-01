@@ -24,7 +24,7 @@ export default function AdminMockTestsPage() {
   const [form, setForm] = useState({
     title: '',
     description: '',
-    difficulty: 'MEDIUM',
+    difficulty: 'PASSAGE_2',
     listeningPart1: '',
     listeningPart2: '',
     listeningPart3: '',
@@ -87,7 +87,7 @@ export default function AdminMockTestsPage() {
     setForm({
       title: '',
       description: '',
-      difficulty: 'MEDIUM',
+      difficulty: 'PASSAGE_2',
       listeningPart1: allListeningParts[0]?.partId || '',
       listeningPart2: allListeningParts[1]?.partId || '',
       listeningPart3: allListeningParts[2]?.partId || '',
@@ -106,7 +106,7 @@ export default function AdminMockTestsPage() {
     setForm({
       title: test.title || '',
       description: test.description || '',
-      difficulty: test.difficulty || 'MEDIUM',
+      difficulty: test.difficulty || 'PASSAGE_2',
       listeningPart1: test.listeningPartIds?.[0] || '',
       listeningPart2: test.listeningPartIds?.[1] || '',
       listeningPart3: test.listeningPartIds?.[2] || '',
@@ -250,7 +250,7 @@ export default function AdminMockTestsPage() {
                       </td>
                       <td>
                         <span className={`difficulty-badge diff-${t.difficulty?.toLowerCase()}`}>
-                          {t.difficulty}
+                          {t.difficulty === 'PASSAGE_1' ? 'Passage 1 (Easy)' : t.difficulty === 'PASSAGE_2' ? 'Passage 2 (Medium)' : t.difficulty === 'PASSAGE_3' ? 'Passage 3 (Hard)' : t.difficulty}
                         </span>
                       </td>
                       <td>{t.listeningPartsCount} Parts</td>
@@ -324,9 +324,9 @@ export default function AdminMockTestsPage() {
                   onChange={e => setForm(f => ({ ...f, difficulty: e.target.value }))}
                   style={{ maxWidth: '100%' }}
                 >
-                  <option value="EASY">EASY</option>
-                  <option value="MEDIUM">MEDIUM</option>
-                  <option value="HARD">HARD</option>
+                  <option value="PASSAGE_1">Passage 1 (Easy)</option>
+                  <option value="PASSAGE_2">Passage 2 (Medium)</option>
+                  <option value="PASSAGE_3">Passage 3 (Hard)</option>
                 </select>
               </div>
             </div>
