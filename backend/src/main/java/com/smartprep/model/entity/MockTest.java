@@ -29,6 +29,16 @@ public class MockTest {
     @Column(nullable = false, length = 20)
     private Difficulty difficulty;
 
+    @Column(name = "source", length = 100)
+    private String source;
+
+    @Column(name = "created_by", nullable = false, length = 100)
+    @Builder.Default
+    private String createdBy = "SYSTEM";
+
+    @Column(name = "imported_at")
+    private LocalDateTime importedAt;
+
     @ManyToMany
     @JoinTable(
         name = "mock_test_listening_parts",

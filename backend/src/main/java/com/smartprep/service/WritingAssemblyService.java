@@ -88,6 +88,8 @@ public class WritingAssemblyService {
 
         int w1 = countWords(request.getTask1EssayText());
         int w2 = countWords(request.getTask2EssayText());
+        validateMinimumWordCount(w1, MIN_WORD_COUNT_TASK1, "Task 1");
+        validateMinimumWordCount(w2, MIN_WORD_COUNT_TASK2, "Task 2");
 
         // Delegate individual grading to WritingService
         WritingGradeResponse res1 = writingService.evaluateAndSaveSubmission(user, request.getTask1PromptId(), request.getTask1EssayText(), w1);
@@ -181,5 +183,12 @@ public class WritingAssemblyService {
     private int countWords(String text) {
         if (text == null || text.isBlank()) return 0;
         return text.trim().split("\\s+").length;
+    }
+
+    private void validateMinimumWordCount(int wordCount, int minWordCount, String taskLabel) {
+        if (wordCount < minWordCount) {
+            throw new WordCountTooLowException(
+                    taskLabel + " requires at least " + minWordCount + " words. Current word count: " + wordCount + ".");
+        }
     }
 }

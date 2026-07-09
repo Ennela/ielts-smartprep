@@ -36,6 +36,12 @@ public class ListeningPart {
 
     private Integer durationSeconds;
 
+    @Column(name = "source", length = 100)
+    private String source;
+
+    @Column(name = "imported_at")
+    private java.time.LocalDateTime importedAt;
+
     @OneToMany(mappedBy = "part", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<ListeningQuestion> questions = new ArrayList<>();

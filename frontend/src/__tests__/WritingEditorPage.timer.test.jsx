@@ -19,6 +19,23 @@ vi.mock('../api/attemptApi', () => ({
   },
 }));
 
+vi.mock('../context/AuthContext', () => ({
+  useAuth: () => ({
+    user: { userId: 1, username: 'student' },
+    isAuthenticated: true,
+    isAdmin: false,
+  }),
+}));
+
+vi.mock('../context/ToastContext', () => ({
+  useToast: () => ({
+    success: () => {},
+    error: () => {},
+    info: () => {},
+    warning: () => {},
+  }),
+}));
+
 import writingApi from '../api/writingApi';
 import attemptApi from '../api/attemptApi';
 

@@ -88,6 +88,12 @@ class WritingGradingServiceTest {
             }
             """;
 
+    private static final String TASK2_ESSAY =
+            "Although he try hard, he failed because the task was extremely difficult today.";
+
+    private static final String TASK1_REPORT =
+            "The graph show increase over time in several categories during the recorded period.";
+
     // ===================================================================
     //  Word Count Tests
     // ===================================================================
@@ -136,7 +142,7 @@ class WritingGradingServiceTest {
 
             GradingResult result = writingGradingService.evaluateEssay(
                     "Write about technology",
-                    "Although he try hard, he failed.",
+                    TASK2_ESSAY,
                     false
             );
 
@@ -150,7 +156,7 @@ class WritingGradingServiceTest {
             assertThat(result.getErrorsJson()).contains("GRAMMAR");
             assertThat(result.getRewrittenEssay()).contains("tried hard");
             assertThat(result.getImprovementNotes()).hasSize(2);
-            assertThat(result.getWordCount()).isEqualTo(6);
+            assertThat(result.getWordCount()).isEqualTo(13);
 
             verify(geminiClient, times(2)).generateAndParse(anyString(), anyString(), any());
         }
@@ -162,7 +168,7 @@ class WritingGradingServiceTest {
 
             GradingResult result = writingGradingService.evaluateEssay(
                     "Describe the graph",
-                    "The graph show increase over time in several categories.",
+                    TASK1_REPORT,
                     true
             );
 
@@ -180,7 +186,9 @@ class WritingGradingServiceTest {
             stubGeminiCalls(GRADING_JSON, REWRITE_JSON);
 
             GradingResult result = writingGradingService.evaluateEssay(
-                    "Test prompt", "Some test essay with enough words.", false);
+                    "Test prompt",
+                    "Some test essay with enough words for the grading pipeline to execute.",
+                    false);
 
             // The service recalculates overall band from components
             assertThat(result.getOverallBand()).isEqualByComparingTo(new BigDecimal("7.0"));
@@ -202,7 +210,9 @@ class WritingGradingServiceTest {
             stubGeminiCalls(extremeScoreJson, REWRITE_JSON);
 
             GradingResult result = writingGradingService.evaluateEssay(
-                    "Test", "Short essay text for testing.", false);
+                    "Test",
+                    "Short essay text for testing the score parser with enough words.",
+                    false);
 
             // 10 clamped to 9 → 9.0
             assertThat(result.getTaskResponse()).isEqualByComparingTo(new BigDecimal("9.0"));
@@ -212,6 +222,22 @@ class WritingGradingServiceTest {
             assertThat(result.getLexical()).isEqualByComparingTo(new BigDecimal("6.5"));
             // 7.8 rounded to nearest 0.5 → 8.0
             assertThat(result.getGrammar()).isEqualByComparingTo(new BigDecimal("8.0"));
+        }
+
+        @Test
+        @DisplayName("extremely short response returns fallback band without calling AI")
+        void extremelyShortResponse_returnsFallbackBand() {
+            GradingResult result = writingGradingService.evaluateEssay(
+                    "Test prompt",
+                    "Too short.",
+                    false);
+
+            assertThat(result).isNotNull();
+            assertThat(result.getOverallBand()).isEqualByComparingTo(new BigDecimal("1.0"));
+            assertThat(result.getTaskResponse()).isEqualByComparingTo(new BigDecimal("1.0"));
+            assertThat(result.getWordCount()).isEqualTo(2);
+            assertThat(result.getGeneralFeedback()).contains("too short");
+            verify(geminiClient, never()).generateAndParse(anyString(), anyString(), any());
         }
     }
 
