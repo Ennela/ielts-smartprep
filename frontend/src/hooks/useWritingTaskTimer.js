@@ -21,6 +21,7 @@ export default function useWritingTaskTimer({
 }) {
   const [task1TimeSpent, setTask1TimeSpent] = useState(0);
   const [task2TimeSpent, setTask2TimeSpent] = useState(0);
+  const [, setTick] = useState(0);
 
   // Track when the current task tab became active
   const taskStartRef = useRef(Date.now());
@@ -48,24 +49,27 @@ export default function useWritingTaskTimer({
     if (!enabled) return;
 
     const interval = setInterval(() => {
-      // Force a state update to trigger re-render for live time display
-      if (activeTask === 1) {
-        setTask1TimeSpent(prev => prev);
-      } else {
-        setTask2TimeSpent(prev => prev);
-      }
+      // Force a re-render so Date.now()-based live values refresh.
+      setTick(prev => prev + 1);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [activeTask, enabled]);
+  }, [enabled]);
 
   // Get live time spent (base + current session)
   const getLiveTimeSpent = useCallback((task) => {
     const elapsed = Math.floor((Date.now() - taskStartRef.current) / 1000);
-    if (task === 1) {
-      return task1TimeSpent + (activeTask === 1 ? elapsed : 0);
-    }
-    return task2TimeSpent + (activeTask === 2 ? elapsed : 0);
+    const liveTask1 = task1TimeSpent + (activeTask === 1 ? elapsed : 0);
+    const liveTask2 = task2TimeSpent + (activeTask === 2 ? elapsed : 0);
+
+    if (task === 1) return liveTask1;
+    if (task === 2) return liveTask2;
+    return {
+      task1: liveTask1,
+      task2: liveTask2,
+      timeSpentTask1: liveTask1,
+      timeSpentTask2: liveTask2,
+    };
   }, [task1TimeSpent, task2TimeSpent, activeTask]);
 
   // Get final accumulated times (call before submit)
@@ -79,7 +83,7 @@ export default function useWritingTaskTimer({
     if (activeTask === 1) t1 += elapsed;
     else if (activeTask === 2) t2 += elapsed;
 
-    return { timeSpentTask1: t1, timeSpentTask2: t2 };
+    return { timeSpentTask1: t1, timeSpentTask2: t2, task1: t1, task2: t2 };
   }, [task1TimeSpent, task2TimeSpent, activeTask]);
 
   // Calculate suggestion remaining
@@ -89,10 +93,15 @@ export default function useWritingTaskTimer({
   return {
     task1TimeSpent: liveT1,
     task2TimeSpent: liveT2,
+    task1Elapsed: liveT1,
+    task2Elapsed: liveT2,
     task1SuggestionRemaining: Math.max(0, suggestedTask1 - liveT1),
     task2SuggestionRemaining: Math.max(0, suggestedTask2 - liveT2),
+    suggestedTask1Remaining: Math.max(0, suggestedTask1 - liveT1),
+    suggestedTask2Remaining: Math.max(0, suggestedTask2 - liveT2),
     isTask1OverSuggested: liveT1 > suggestedTask1,
     isTask2OverSuggested: liveT2 > suggestedTask2,
+    getLiveTimeSpent,
     getFinalTimes,
   };
 }

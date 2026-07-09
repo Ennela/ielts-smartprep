@@ -62,6 +62,7 @@ public class WritingService {
         boolean isTask1 = prompt.getEssayType().isTask1();
         int minWordCount = isTask1 ? MIN_WORD_COUNT_TASK1 : MIN_WORD_COUNT_TASK2;
         int wordCount = writingGradingService.countWords(request.getEssayText());
+        validateMinimumWordCount(wordCount, minWordCount, isTask1 ? "Task 1" : "Task 2");
 
         WritingGradeResponse result = evaluateAndSaveSubmission(user, prompt, request.getEssayText(), wordCount);
 
@@ -127,6 +128,13 @@ public class WritingService {
         } catch (Exception e) {
             log.warn("Failed to parse errors JSON from AI grading result: {}", e.getMessage());
             return new ArrayList<>();
+        }
+    }
+
+    private void validateMinimumWordCount(int wordCount, int minWordCount, String taskLabel) {
+        if (wordCount < minWordCount) {
+            throw new WordCountTooLowException(
+                    taskLabel + " requires at least " + minWordCount + " words. Current word count: " + wordCount + ".");
         }
     }
 }

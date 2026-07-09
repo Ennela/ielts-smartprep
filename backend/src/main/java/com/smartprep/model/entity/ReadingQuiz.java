@@ -54,6 +54,16 @@ public class ReadingQuiz {
     @Builder.Default
     private String moduleType = "ACADEMIC";
 
+    @Column(name = "source", length = 100)
+    private String source;
+
+    @Column(name = "created_by", nullable = false, length = 100)
+    @Builder.Default
+    private String createdBy = "SYSTEM";
+
+    @Column(name = "imported_at")
+    private LocalDateTime importedAt;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
