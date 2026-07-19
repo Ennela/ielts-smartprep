@@ -31,7 +31,7 @@ public class GlobalExceptionHandler {
         log.error("AI service error", ex);
         Sentry.captureException(ex);
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(ApiResponse.error("AI service unavailable: " + ex.getMessage(), "AI_SERVICE_ERROR"));
+                .body(ApiResponse.error("AI service is unavailable", "AI_SERVICE_ERROR"));
     }
 
     @ExceptionHandler(InvalidAiResponseException.class)
@@ -39,7 +39,7 @@ public class GlobalExceptionHandler {
         log.error("Invalid AI response", ex);
         Sentry.captureException(ex);
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-                .body(ApiResponse.error("AI returned invalid response: " + ex.getMessage(), "INVALID_AI_RESPONSE"));
+                .body(ApiResponse.error("AI returned an invalid response", "INVALID_AI_RESPONSE"));
     }
 
     @ExceptionHandler(AccountLockedException.class)
@@ -65,7 +65,7 @@ public class GlobalExceptionHandler {
         log.error("Service unavailable", ex);
         Sentry.captureException(ex);
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(ApiResponse.error(ex.getMessage(), "SERVICE_UNAVAILABLE"));
+                .body(ApiResponse.error("Service is temporarily unavailable", "SERVICE_UNAVAILABLE"));
     }
 
     @ExceptionHandler(RateLimitExceededException.class)
@@ -86,14 +86,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(DataIntegrityViolationException ex) {
-        log.error("Data integrity violation", ex);
-        String message = "Cannot complete operation due to data constraint. ";
-        String rootMsg = ex.getMostSpecificCause().getMessage();
-        if (rootMsg != null && rootMsg.contains("foreign key constraint")) {
-            message += "This record is referenced by other data. Please remove dependent records first.";
-        } else {
-            message += rootMsg != null ? rootMsg : ex.getMessage();
-        }
+        log.warn("Data integrity violation ({})", ex.getMostSpecificCause().getClass().getSimpleName());
+        String message = "Cannot complete operation due to a data constraint.";
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(ApiResponse.error(message, "DATA_INTEGRITY_VIOLATION"));
     }
