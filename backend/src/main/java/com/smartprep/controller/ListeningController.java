@@ -97,8 +97,10 @@ public class ListeningController {
      */
     @PostMapping("/ai-analyze/{questionId}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> analyzeQuestion(
+            @AuthenticationPrincipal User user,
             @PathVariable Long questionId) {
-        return ResponseEntity.ok(ApiResponse.ok(listeningGenerationService.analyzeQuestion(questionId)));
+        return ResponseEntity.ok(ApiResponse.ok(
+                listeningGenerationService.analyzeQuestion(user.getUserId(), questionId)));
     }
 
     /**
@@ -107,8 +109,10 @@ public class ListeningController {
      */
     @PostMapping("/vocabulary/{partId}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> extractVocabulary(
+            @AuthenticationPrincipal User user,
             @PathVariable Long partId) {
-        return ResponseEntity.ok(ApiResponse.ok(listeningGenerationService.extractVocabulary(partId)));
+        return ResponseEntity.ok(ApiResponse.ok(
+                listeningGenerationService.extractVocabulary(user.getUserId(), partId)));
     }
 
     /**

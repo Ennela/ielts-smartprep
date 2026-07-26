@@ -118,6 +118,7 @@ public class VocabularyService {
 
         if (skillTypeStr.equalsIgnoreCase("MOCK")) {
             MockTestSubmission submission = mockTestSubmissionRepository.findById(sourceId)
+                    .filter(s -> s.getUser() != null && s.getUser().getUserId().equals(userId))
                     .orElseThrow(() -> new ResourceNotFoundException("Mock test submission not found with ID: " + sourceId));
             
             List<String> sectionsTexts = new java.util.ArrayList<>();
@@ -189,7 +190,7 @@ public class VocabularyService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("No source resolver found for skill: " + skillType));
 
-        String text = resolver.resolveSourceText(sourceId);
+        String text = resolver.resolveSourceText(userId, sourceId);
         List<VocabAiService.SuggestedVocab> rawSuggestions = vocabAiService.suggestVocabulary(text);
         return filterAndDeduplicate(rawSuggestions, existingWords);
     }

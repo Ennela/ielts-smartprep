@@ -21,8 +21,8 @@ public class ListeningSourceResolver implements VocabSourceResolver {
     }
 
     @Override
-    public String resolveSourceText(Long sourceId) {
-        ListeningTest test = listeningTestRepository.findById(sourceId)
+    public String resolveSourceText(Long userId, Long sourceId) {
+        ListeningTest test = listeningTestRepository.findByTestIdAndUserUserId(sourceId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Listening test not found with ID: " + sourceId));
 
         if (test.getTestParts() == null || test.getTestParts().isEmpty()) {

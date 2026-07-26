@@ -316,7 +316,7 @@ class VocabularyServiceTest {
 
             VocabSourceResolver mockResolver = mock(VocabSourceResolver.class);
             when(mockResolver.getSkillType()).thenReturn(SkillType.READING);
-            when(mockResolver.resolveSourceText(100L)).thenReturn("Test passage text with some words");
+            when(mockResolver.resolveSourceText(1L, 100L)).thenReturn("Test passage text with some words");
             
             when(resolvers.stream()).thenAnswer(inv -> java.util.stream.Stream.of(mockResolver));
 

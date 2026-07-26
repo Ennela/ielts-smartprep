@@ -9,6 +9,8 @@ import com.smartprep.model.entity.*;
 import com.smartprep.model.enums.QuestionType;
 import com.smartprep.model.enums.SkillType;
 import com.smartprep.repository.ListeningPartRepository;
+import com.smartprep.repository.ListeningQuestionRepository;
+import com.smartprep.repository.ListeningTestRepository;
 import com.smartprep.repository.UserRepository;
 import com.smartprep.service.AdaptiveService;
 import com.smartprep.service.ListeningQueryService;
@@ -35,6 +37,8 @@ public class ListeningGenerationService {
     public static final String PROMPT_VERSION = "v1.0";
 
     private final ListeningPartRepository partRepository;
+    private final ListeningQuestionRepository questionRepository;
+    private final ListeningTestRepository testRepository;
     private final UserRepository userRepository;
     private final GeminiClient geminiClient;
     private final ListeningPromptBuilder promptBuilder;
@@ -349,16 +353,16 @@ public class ListeningGenerationService {
     // ========== AI Post-Analysis ==========
 
     @Transactional(readOnly = true)
-    public Map<String, Object> analyzeQuestion(Long questionId) {
-        ListeningPart part = partRepository.findAll().stream()
-                .filter(p -> p.getQuestions().stream().anyMatch(q -> q.getQuestionId().equals(questionId)))
-                .findFirst()
+    public Map<String, Object> analyzeQuestion(Long userId, Long questionId) {
+        ListeningQuestion question = questionRepository.findById(questionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Question not found"));
 
-        ListeningQuestion question = part.getQuestions().stream()
-                .filter(q -> q.getQuestionId().equals(questionId))
-                .findFirst()
-                .orElseThrow(() -> new ResourceNotFoundException("Question not found"));
+        ListeningPart part = question.getPart();
+        // The response quotes the sentence holding the answer, so it may only be
+        // served once this user has actually submitted a test containing the part.
+        if (!testRepository.existsSubmittedPart(userId, part.getPartId())) {
+            throw new ResourceNotFoundException("Question not found");
+        }
 
         String prompt = String.format(
                 "Analyze this IELTS Listening question. The correct answer is '%s'.\n\n"
@@ -379,7 +383,13 @@ public class ListeningGenerationService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Object> extractVocabulary(Long partId) {
+    public Map<String, Object> extractVocabulary(Long userId, Long partId) {
+        // contextExample quotes whole sentences from the transcript, so the same
+        // already-submitted rule as analyzeQuestion applies here.
+        if (!testRepository.existsSubmittedPart(userId, partId)) {
+            throw new ResourceNotFoundException("Part not found");
+        }
+
         ListeningPart part = partRepository.findById(partId)
                 .orElseThrow(() -> new ResourceNotFoundException("Part not found"));
 
