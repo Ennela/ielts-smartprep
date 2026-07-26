@@ -22,6 +22,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Profile;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -116,7 +117,10 @@ class AdminContentControllerTest {
                     .contentStatus(ContentStatus.PUBLISHED)
                     .createdBy("SYSTEM").createdAt(LocalDateTime.now())
                     .build();
-            Page<ContentItemResponse> page = new PageImpl<>(List.of(item));
+            // Must be a *paged* Page: an unpaged PageImpl exposes Pageable.unpaged(),
+            // whose getPageNumber() throws UnsupportedOperationException during Jackson
+            // serialization. ContentModerationService always builds one via PageRequest.of.
+            Page<ContentItemResponse> page = new PageImpl<>(List.of(item), PageRequest.of(0, 20), 1);
             when(mock.listContent(any(), any(), anyInt(), anyInt(), any())).thenReturn(page);
             when(mock.updateStatus(any(), anyLong(), any())).thenReturn(item);
             return mock;
