@@ -11,6 +11,7 @@ import com.smartprep.model.enums.*;
 import com.smartprep.repository.*;
 import com.smartprep.service.ai.MockTestAsyncGrader;
 import com.smartprep.service.util.IeltsScoringUtils;
+import com.smartprep.service.util.QuestionOptionMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -363,7 +364,7 @@ public class MockTestService {
                                         .questionId(q.getQuestionId())
                                         .questionType(q.getQuestionType().name())
                                         .questionText(q.getQuestionText())
-                                        .options(mapOptions(q.getOptions(), true))
+                                        .options(QuestionOptionMapper.mapForReview(q.getOptions()))
                                         .orderIndex(q.getOrderIndex())
                                         .correctAnswer(q.getCorrectAnswer())
                                         .userAnswer(userAnswer)
@@ -532,7 +533,7 @@ public class MockTestService {
                                 .questionId(q.getQuestionId())
                                 .questionType(q.getQuestionType().name())
                                 .questionText(q.getQuestionText())
-                                .options(mapOptions(q.getOptions(), false))
+                                .options(QuestionOptionMapper.mapForExam(q.getOptions()))
                                 .orderIndex(q.getOrderIndex())
                                 .build())
                         .collect(Collectors.toList()))
@@ -553,7 +554,7 @@ public class MockTestService {
                                 .questionId(q.getQuestionId())
                                 .questionType(q.getQuestionType().name())
                                 .questionText(q.getQuestionText())
-                                .options(mapOptions(q.getOptions(), false))
+                                .options(QuestionOptionMapper.mapForExam(q.getOptions()))
                                 .orderIndex(q.getOrderIndex())
                                 .optionsJson(q.getOptionsJson())
                                 .wordLimit(q.getWordLimit())
@@ -563,18 +564,6 @@ public class MockTestService {
                                 .build())
                         .collect(Collectors.toList()))
                 .build();
-    }
-
-    private List<QuestionOptionResponse> mapOptions(List<QuestionOption> options, boolean showCorrect) {
-        if (options == null) return null;
-        return options.stream()
-                .map(o -> QuestionOptionResponse.builder()
-                        .optionId(o.getOptionId())
-                        .label(o.getLabel())
-                        .content(o.getContent())
-                        .isCorrect(showCorrect ? o.getIsCorrect() : null)
-                        .build())
-                .collect(Collectors.toList());
     }
 
     private WritingPromptResponse mapToWritingPromptResponse(WritingPrompt prompt) {

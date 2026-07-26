@@ -11,6 +11,7 @@ import com.smartprep.model.enums.QuestionType;
 import com.smartprep.model.enums.Topic;
 import com.smartprep.model.enums.EssayType;
 import com.smartprep.repository.*;
+import com.smartprep.service.util.QuestionOptionMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -331,7 +332,7 @@ public class AdminService {
                         .verified(q.getVerified())
                         .questionType(q.getQuestionType().name())
                         .questionText(q.getQuestionText())
-                        .options(mapOptions(q.getOptions(), true))
+                        .options(QuestionOptionMapper.mapForReview(q.getOptions()))
                         .correctAnswer(q.getCorrectAnswer())
                         .explanation(q.getExplanation())
                         .orderIndex(q.getOrderIndex())
@@ -469,18 +470,6 @@ public class AdminService {
                 .readingQuizIds(readingQuizIds)
                 .writingPromptIds(writingPromptIds)
                 .build();
-    }
-
-    private List<QuestionOptionResponse> mapOptions(List<QuestionOption> options, boolean showCorrect) {
-        if (options == null) return null;
-        return options.stream()
-                .map(o -> QuestionOptionResponse.builder()
-                        .optionId(o.getOptionId())
-                        .label(o.getLabel())
-                        .content(o.getContent())
-                        .isCorrect(showCorrect ? o.getIsCorrect() : null)
-                        .build())
-                .collect(Collectors.toList());
     }
 
     /**

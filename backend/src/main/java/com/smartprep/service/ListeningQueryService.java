@@ -3,7 +3,6 @@ package com.smartprep.service;
 import com.smartprep.dto.response.ListeningHistoryResponse;
 import com.smartprep.dto.response.ListeningPartResponse;
 import com.smartprep.dto.response.ListeningTestResponse;
-import com.smartprep.dto.response.QuestionOptionResponse;
 import com.smartprep.exception.ResourceNotFoundException;
 import com.smartprep.model.entity.*;
 import com.smartprep.model.enums.AudioStatus;
@@ -11,6 +10,7 @@ import com.smartprep.model.enums.SkillType;
 import com.smartprep.repository.ListeningPartRepository;
 import com.smartprep.repository.ListeningTestRepository;
 import com.smartprep.repository.ScoreHistoryRepository;
+import com.smartprep.service.util.QuestionOptionMapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -115,7 +115,7 @@ public class ListeningQueryService {
                         .questionId(q.getQuestionId())
                         .questionType(q.getQuestionType().name())
                         .questionText(q.getQuestionText())
-                        .options(mapOptions(q.getOptions(), false))
+                        .options(QuestionOptionMapper.mapForExam(q.getOptions()))
                         .orderIndex(q.getOrderIndex())
                         .build())
                 .collect(Collectors.toList());
@@ -127,17 +127,6 @@ public class ListeningQueryService {
                 .audioStatus(part.getAudioStatus() != null ? part.getAudioStatus().name() : AudioStatus.PENDING.name())
                 .durationSeconds(part.getDurationSeconds())
                 .questionCount(questions.size()).questions(questions).build();
-    }
-
-    public List<QuestionOptionResponse> mapOptions(List<QuestionOption> options, boolean showCorrect) {
-        if (options == null) return null;
-        return options.stream()
-                .map(o -> QuestionOptionResponse.builder()
-                        .optionId(o.getOptionId()).label(o.getLabel())
-                        .content(o.getContent())
-                        .isCorrect(showCorrect ? o.getIsCorrect() : null)
-                        .build())
-                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -174,7 +163,7 @@ public class ListeningQueryService {
                 questionResults.add(ListeningTestResponse.QuestionResult.builder()
                         .questionId(q.getQuestionId()).questionType(q.getQuestionType().name())
                         .questionText(q.getQuestionText())
-                        .options(mapOptions(q.getOptions(), true))
+                        .options(QuestionOptionMapper.mapForReview(q.getOptions()))
                         .correctAnswer(q.getCorrectAnswer()).userAnswer(userAnswer)
                         .isCorrect(isCorrect).orderIndex(q.getOrderIndex()).build());
             }

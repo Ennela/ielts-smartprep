@@ -3,7 +3,6 @@ package com.smartprep.service;
 import com.smartprep.dto.request.AdminListeningPartRequest;
 import com.smartprep.dto.response.AdminListeningPartResponse;
 import com.smartprep.dto.response.AdminListeningStatsResponse;
-import com.smartprep.dto.response.QuestionOptionResponse;
 import com.smartprep.exception.ResourceNotFoundException;
 import com.smartprep.model.entity.ListeningPart;
 import com.smartprep.model.entity.ListeningQuestion;
@@ -11,6 +10,7 @@ import com.smartprep.model.entity.QuestionOption;
 import com.smartprep.model.enums.AudioStatus;
 import com.smartprep.model.enums.QuestionType;
 import com.smartprep.repository.ListeningPartRepository;
+import com.smartprep.service.util.QuestionOptionMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -263,7 +263,7 @@ public class AdminListeningService {
                         .questionText(q.getQuestionText())
                         .correctAnswer(q.getCorrectAnswer())
                         .orderIndex(q.getOrderIndex())
-                        .options(mapOptions(q.getOptions()))
+                        .options(QuestionOptionMapper.mapForReview(q.getOptions()))
                         .build())
                 .collect(Collectors.toList());
 
@@ -282,19 +282,6 @@ public class AdminListeningService {
                 .questionCount(questionDtos.size())
                 .questions(questionDtos)
                 .build();
-    }
-
-    // Helper: Map options list to response list
-    private List<QuestionOptionResponse> mapOptions(List<QuestionOption> options) {
-        if (options == null) return null;
-        return options.stream()
-                .map(o -> QuestionOptionResponse.builder()
-                        .optionId(o.getOptionId())
-                        .label(o.getLabel())
-                        .content(o.getContent())
-                        .isCorrect(o.getIsCorrect())
-                        .build())
-                .collect(Collectors.toList());
     }
 
     /**

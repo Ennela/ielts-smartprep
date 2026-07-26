@@ -12,6 +12,7 @@ import com.smartprep.repository.ListeningPartRepository;
 import com.smartprep.repository.ListeningTestRepository;
 import com.smartprep.repository.ScoreHistoryRepository;
 import com.smartprep.repository.UserRepository;
+import com.smartprep.service.util.QuestionOptionMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,7 +36,6 @@ public class ListeningGradingService {
     private final ScoreHistoryRepository scoreHistoryRepository;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
-    private final ListeningQueryService listeningQueryService;
     private final ExamAttemptService examAttemptService;
 
     // IELTS Listening band score map (out of 40 questions)
@@ -90,7 +90,7 @@ public class ListeningGradingService {
                 questionResults.add(ListeningTestResponse.QuestionResult.builder()
                         .questionId(q.getQuestionId()).questionType(q.getQuestionType().name())
                         .questionText(q.getQuestionText())
-                        .options(listeningQueryService.mapOptions(q.getOptions(), true))
+                        .options(QuestionOptionMapper.mapForReview(q.getOptions()))
                         .correctAnswer(q.getCorrectAnswer()).userAnswer(userAnswer)
                         .isCorrect(isCorrect).orderIndex(q.getOrderIndex()).build());
             }

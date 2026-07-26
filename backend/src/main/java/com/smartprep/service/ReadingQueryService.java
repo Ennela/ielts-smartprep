@@ -9,6 +9,7 @@ import com.smartprep.model.enums.Topic;
 import com.smartprep.repository.ReadingQuizRepository;
 import com.smartprep.repository.ScoreHistoryRepository;
 import com.smartprep.service.util.IeltsScoringUtils;
+import com.smartprep.service.util.QuestionOptionMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -110,7 +111,7 @@ public class ReadingQueryService {
                         .questionId(q.getQuestionId())
                         .questionType(q.getQuestionType().name())
                         .questionText(q.getQuestionText())
-                        .options(mapOptions(q.getOptions(), false))
+                        .options(QuestionOptionMapper.mapForExam(q.getOptions()))
                         .orderIndex(q.getOrderIndex())
                         .optionsJson(q.getOptionsJson())
                         .wordLimit(q.getWordLimit())
@@ -139,7 +140,7 @@ public class ReadingQueryService {
                         .questionId(q.getQuestionId())
                         .questionType(q.getQuestionType().name())
                         .questionText(q.getQuestionText())
-                        .options(mapOptions(q.getOptions(), true))
+                        .options(QuestionOptionMapper.mapForReview(q.getOptions()))
                         .orderIndex(q.getOrderIndex())
                         .correctAnswer(q.getCorrectAnswer())
                         .userAnswer(q.getUserAnswer())
@@ -169,18 +170,6 @@ public class ReadingQueryService {
                 .submittedAt(quiz.getSubmittedAt())
                 .questions(questionDtos)
                 .build();
-    }
-
-    List<QuestionOptionResponse> mapOptions(List<QuestionOption> options, boolean showCorrect) {
-        if (options == null) return null;
-        return options.stream()
-                .map(o -> QuestionOptionResponse.builder()
-                        .optionId(o.getOptionId())
-                        .label(o.getLabel())
-                        .content(o.getContent())
-                        .isCorrect(showCorrect ? o.getIsCorrect() : null)
-                        .build())
-                .collect(Collectors.toList());
     }
 
     public static <E extends Enum<E>> E parseEnum(Class<E> enumClass, String value, String errorMsg) {
