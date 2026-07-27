@@ -59,7 +59,12 @@ class GeminiClientTest {
         String result = geminiClient.generate("system prompt", "user prompt");
 
         assertEquals("{\"quiz\": \"data\"}", result);
-        verify(restTemplate, times(1)).exchange(anyString(), any(), any(), eq(String.class));
+        verify(restTemplate, times(1)).exchange(
+                eq("https://api.example.com/model:generateContent"),
+                eq(HttpMethod.POST),
+                argThat(entity -> "test-api-key".equals(
+                        ((HttpEntity<?>) entity).getHeaders().getFirst("x-goog-api-key"))),
+                eq(String.class));
     }
 
     @Test

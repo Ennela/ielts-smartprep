@@ -5,8 +5,10 @@ import requests
 import pymysql
 import time
 
-api_key = "AIzaSyDbeZlxqjdZfzeyyAfLwdora77n5CdLSp0"
-gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
+from runtime_config import mysql_connection_config, require_env
+
+api_key = require_env("GEMINI_API_KEY")
+gemini_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
 
 cache_path = r"d:\sources\repos\proj\IELST\ielts-smartprep\scripts\cam19_ocr_cache.json"
 review_path = r"d:\sources\repos\proj\IELST\ielts-smartprep\scripts\cam19_import_review.json"
@@ -17,10 +19,7 @@ with open(cache_path, "r", encoding="utf-8") as f:
 
 # Connect to database
 db_conn = pymysql.connect(
-    host='localhost',
-    user='root',
-    password='smartprep_root_2024',
-    database='ielts_smartprep',
+    **mysql_connection_config(),
     cursorclass=pymysql.cursors.DictCursor
 )
 
@@ -32,7 +31,7 @@ def clean_json_text(text):
     return text
 
 def call_gemini(system_prompt, user_prompt, response_json=False):
-    headers = {"Content-Type": "application/json"}
+    headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
     payload = {
         "system_instruction": {
             "parts": [{"text": system_prompt}]

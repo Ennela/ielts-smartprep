@@ -1,5 +1,6 @@
 package com.smartprep.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import com.smartprep.model.enums.Role;
@@ -25,6 +26,8 @@ public class User {
     private String username;
 
     @Column(nullable = false)
+    @JsonIgnore
+    @ToString.Exclude
     private String passwordHash;
 
     @Column(length = 100)

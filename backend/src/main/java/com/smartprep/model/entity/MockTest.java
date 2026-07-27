@@ -1,5 +1,6 @@
 package com.smartprep.model.entity;
 
+import com.smartprep.model.enums.ContentStatus;
 import com.smartprep.model.enums.Difficulty;
 import jakarta.persistence.*;
 import lombok.*;
@@ -28,6 +29,11 @@ public class MockTest {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Difficulty difficulty;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "content_status", nullable = false, length = 20)
+    @Builder.Default
+    private ContentStatus contentStatus = ContentStatus.DRAFT;
 
     @Column(name = "source", length = 100)
     private String source;

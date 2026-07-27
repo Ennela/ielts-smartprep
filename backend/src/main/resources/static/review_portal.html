@@ -147,6 +147,24 @@
             display: none;
         }
 
+        .app-status {
+            padding: 10px 30px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 13px;
+            color: var(--text-primary);
+            background: rgba(99, 102, 241, 0.12);
+        }
+
+        .app-status-success {
+            color: var(--accent-success);
+            background: rgba(16, 185, 129, 0.12);
+        }
+
+        .app-status-error {
+            color: var(--accent-danger);
+            background: rgba(239, 68, 68, 0.12);
+        }
+
         header {
             height: 70px;
             background: rgba(15, 23, 42, 0.4);
@@ -753,11 +771,11 @@
             <p>Admin Question Review Portal</p>
             <div class="form-group">
                 <label for="username">Tài khoản</label>
-                <input type="text" id="username" placeholder="Nhập tên đăng nhập..." value="admin">
+                <input type="text" id="username" placeholder="Nhập tên đăng nhập...">
             </div>
             <div class="form-group">
                 <label for="password">Mật khẩu</label>
-                <input type="password" id="password" placeholder="Nhập mật khẩu..." value="admin123">
+                <input type="password" id="password" placeholder="Nhập mật khẩu...">
             </div>
             <button class="login-btn" onclick="handleLogin()">Đăng Nhập</button>
             <div class="login-error" id="login-error">Tài khoản hoặc mật khẩu không đúng.</div>
@@ -787,6 +805,7 @@
             <button class="logout-btn" onclick="handleLogout()">Đăng xuất</button>
         </div>
     </header>
+    <div class="app-status" id="app-status" role="status" aria-live="polite" hidden></div>
 
     <!-- Main Workspace Body -->
     <div class="app-body">
@@ -843,18 +862,53 @@
         let readingQuizzes = [];
         let listeningParts = [];
         let selectedItem = null;
+        let adminToken = null;
+        const ADMIN_TOKEN_KEY = "admin_token";
 
         let qSearchQuery = "";
         let qTypeFilter = "ALL";
         let qStatusFilter = "ALL";
 
         document.addEventListener("DOMContentLoaded", () => {
-            const token = localStorage.getItem("admin_token");
-            if (token) {
+            localStorage.removeItem(ADMIN_TOKEN_KEY);
+            adminToken = sessionStorage.getItem(ADMIN_TOKEN_KEY);
+            if (adminToken) {
                 document.getElementById("login-overlay").classList.add("hidden");
                 loadDashboardData();
             }
         });
+
+        function setAppStatus(message, type = "info") {
+            const statusEl = document.getElementById("app-status");
+            if (!statusEl) return;
+
+            statusEl.textContent = message || "";
+            statusEl.hidden = !message;
+            statusEl.className = `app-status app-status-${type}`;
+        }
+
+        function clearAppStatus() {
+            setAppStatus("");
+        }
+
+        function storeAdminToken(token) {
+            adminToken = token;
+            sessionStorage.setItem(ADMIN_TOKEN_KEY, token);
+            localStorage.removeItem(ADMIN_TOKEN_KEY);
+        }
+
+        function clearAdminToken() {
+            adminToken = null;
+            sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+            localStorage.removeItem(ADMIN_TOKEN_KEY);
+        }
+
+        function createElement(tagName, className, text) {
+            const element = document.createElement(tagName);
+            if (className) element.className = className;
+            if (text !== undefined && text !== null) element.textContent = text;
+            return element;
+        }
 
         async function handleLogin() {
             const usernameInput = document.getElementById("username").value;
@@ -869,35 +923,37 @@
                 });
 
                 const result = await response.json();
-                if (response.ok && result.status === "SUCCESS") {
-                    localStorage.setItem("admin_token", result.data.token);
+                const token = result.data && result.data.token;
+                if (response.ok && result.status === "SUCCESS" && token) {
+                    storeAdminToken(token);
                     document.getElementById("login-overlay").classList.add("hidden");
                     errorDiv.style.display = "none";
+                    clearAppStatus();
                     loadDashboardData();
                 } else {
-                    errorDiv.innerText = result.message || "Tài khoản hoặc mật khẩu không chính xác.";
+                    errorDiv.textContent = result.message || "Tài khoản hoặc mật khẩu không chính xác.";
                     errorDiv.style.display = "block";
                 }
             } catch (err) {
-                errorDiv.innerText = "Lỗi kết nối đến máy chủ: " + err.message;
+                errorDiv.textContent = "Lỗi kết nối đến máy chủ: " + err.message;
                 errorDiv.style.display = "block";
             }
         }
 
         function handleLogout() {
-            localStorage.removeItem("admin_token");
+            clearAdminToken();
+            clearReviewState();
             document.getElementById("login-overlay").classList.remove("hidden");
         }
 
         async function fetchWithAuth(url, options = {}) {
-            const token = localStorage.getItem("admin_token");
-            if (!token) {
+            if (!adminToken) {
                 handleLogout();
                 throw new Error("No admin token found");
             }
             options.headers = {
                 ...options.headers,
-                "Authorization": `Bearer ${token}`
+                "Authorization": `Bearer ${adminToken}`
             };
 
             const res = await fetch(url, options);
@@ -910,6 +966,7 @@
 
         async function loadDashboardData() {
             try {
+                setAppStatus("Đang tải dữ liệu review...");
                 const readingRes = await fetchWithAuth("/api/v1/admin/reading-quizzes?size=100");
                 const readingData = await readingRes.json();
                 if (readingData.status === "SUCCESS") {
@@ -923,8 +980,8 @@
                 }
 
                 if (readingQuizzes.length === 0 && listeningParts.length === 0) {
-                    console.log("DB returned empty lists, trying to load cam19_import_review.json...");
-                    const fallbackRes = await fetch("/cam19_import_review.json");
+                    setAppStatus("Chưa có dữ liệu trong DB, đang thử tải dữ liệu review dự phòng...");
+                    const fallbackRes = await fetchWithAuth("/cam19_import_review.json");
                     if (fallbackRes.ok) {
                         const fallbackData = await fallbackRes.json();
                         processFallbackData(fallbackData);
@@ -936,8 +993,28 @@
                 if (selectedItem) {
                     renderContentPane();
                 }
+                clearAppStatus();
             } catch (err) {
-                console.error("Error loading dashboard data:", err);
+                clearReviewState();
+                setAppStatus("Không thể tải dữ liệu admin. Vui lòng đăng nhập lại hoặc kiểm tra quyền truy cập.", "error");
+            }
+        }
+
+        function clearReviewState() {
+            readingQuizzes = [];
+            listeningParts = [];
+            selectedItem = null;
+            qSearchQuery = "";
+            qTypeFilter = "ALL";
+            qStatusFilter = "ALL";
+            updateStats();
+
+            const listContainer = document.getElementById("sidebar-test-list");
+            if (listContainer) listContainer.replaceChildren();
+
+            const contentPane = document.getElementById("content-pane");
+            if (contentPane) {
+                contentPane.replaceChildren(createPlaceholderScreen());
             }
         }
 
@@ -1015,7 +1092,7 @@
                 });
             });
 
-            document.getElementById("reading-stat-val").innerText = `${verifiedReading}/${totalReading}`;
+            document.getElementById("reading-stat-val").textContent = `${verifiedReading}/${totalReading}`;
             const readingPercent = totalReading > 0 ? (verifiedReading / totalReading) * 100 : 0;
             document.getElementById("reading-progress-fill").style.width = `${readingPercent}%`;
 
@@ -1028,7 +1105,7 @@
                 });
             });
 
-            document.getElementById("listening-stat-val").innerText = `${verifiedListening}/${totalListening}`;
+            document.getElementById("listening-stat-val").textContent = `${verifiedListening}/${totalListening}`;
             const listeningPercent = totalListening > 0 ? (verifiedListening / totalListening) * 100 : 0;
             document.getElementById("listening-progress-fill").style.width = `${listeningPercent}%`;
 
@@ -1055,7 +1132,7 @@
                 });
 
                 const pct = totalT > 0 ? Math.round((verifiedT / totalT) * 100) : 0;
-                document.getElementById(`t${t}-progress-pct`).innerText = `${pct}%`;
+                document.getElementById(`t${t}-progress-pct`).textContent = `${pct}%`;
                 document.getElementById(`t${t}-progress-fill`).style.width = `${pct}%`;
             }
         }
@@ -1069,7 +1146,7 @@
 
         function renderSidebar() {
             const listContainer = document.getElementById("sidebar-test-list");
-            listContainer.innerHTML = "";
+            listContainer.replaceChildren();
 
             const tests = {
                 "Test 1": { reading: [], listening: [] },
@@ -1114,10 +1191,8 @@
 
                 const titleDiv = document.createElement("div");
                 titleDiv.className = "test-title";
-                titleDiv.innerHTML = `<span>${testKey}</span>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="6 9 12 15 18 9"/>
-                    </svg>`;
+                titleDiv.appendChild(createElement("span", null, testKey));
+                titleDiv.appendChild(createChevronIcon());
 
                 const sectionUl = document.createElement("ul");
                 sectionUl.className = "section-list";
@@ -1128,8 +1203,8 @@
                     const isQuizActive = selectedItem && selectedItem.type === 'reading' && selectedItem.id === passage.quizId;
 
                     secLi.className = `section-item ${isQuizActive ? 'active' : ''}`;
-                    secLi.innerHTML = `<span>📖 ${passage.label}</span>
-                        <span class="badge ${isQuizVerified ? 'badge-verified' : 'badge-draft'}">${isQuizVerified ? 'Verified' : 'Draft'}</span>`;
+                    secLi.appendChild(createElement("span", null, `\uD83D\uDCD6 ${passage.label}`));
+                    secLi.appendChild(createStatusBadge(isQuizVerified));
 
                     secLi.onclick = (e) => {
                         e.stopPropagation();
@@ -1144,8 +1219,8 @@
                     const isPartActive = selectedItem && selectedItem.type === 'listening' && selectedItem.id === part.partId;
 
                     secLi.className = `section-item ${isPartActive ? 'active' : ''}`;
-                    secLi.innerHTML = `<span>🎧 ${part.label}</span>
-                        <span class="badge ${isPartVerified ? 'badge-verified' : 'badge-draft'}">${isPartVerified ? 'Verified' : 'Draft'}</span>`;
+                    secLi.appendChild(createElement("span", null, `\uD83C\uDFA7 ${part.label}`));
+                    secLi.appendChild(createStatusBadge(isPartVerified));
 
                     secLi.onclick = (e) => {
                         e.stopPropagation();
@@ -1164,6 +1239,32 @@
                     titleDiv.querySelector("svg").style.transform = isHidden ? "rotate(0deg)" : "rotate(-90deg)";
                 };
             });
+        }
+
+        function createChevronIcon() {
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.setAttribute("width", "16");
+            svg.setAttribute("height", "16");
+            svg.setAttribute("viewBox", "0 0 24 24");
+            svg.setAttribute("fill", "none");
+            svg.setAttribute("stroke", "currentColor");
+            svg.setAttribute("stroke-width", "2");
+            svg.setAttribute("stroke-linecap", "round");
+            svg.setAttribute("stroke-linejoin", "round");
+
+            const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+            polyline.setAttribute("points", "6 9 12 15 18 9");
+            svg.appendChild(polyline);
+
+            return svg;
+        }
+
+        function createStatusBadge(isVerified) {
+            return createElement(
+                "span",
+                `badge ${isVerified ? 'badge-verified' : 'badge-draft'}`,
+                isVerified ? "Verified" : "Draft"
+            );
         }
 
         function matchesFilter(type, item) {
@@ -1189,6 +1290,7 @@
 
             let questions = [];
             let typeOptions = new Set();
+            let viewSplit;
 
             if (selectedItem.type === 'reading') {
                 const quiz = readingQuizzes.find(q => q.quizId === selectedItem.id);
@@ -1197,43 +1299,9 @@
                 questions.forEach(q => typeOptions.add(q.questionType));
 
                 const allVerified = quiz.questions.every(q => q.verified);
-
-                container.innerHTML = `
-                    <div class="view-split">
-                        <div class="left-col">
-                            <div class="passage-header">
-                                <div class="passage-meta">
-                                    <span>READING PASSAGE</span>
-                                    <span>CHỦ ĐỀ: ${quiz.topic}</span>
-                                    <span>ĐỘ KHÓ: ${quiz.difficulty}</span>
-                                </div>
-                                <h2 class="passage-title">${quiz.topic}</h2>
-                            </div>
-                            <div class="passage-body" id="passage-text-container">${escapeHtml(quiz.passageText)}</div>
-                        </div>
-                        <div class="right-col">
-                            <div class="right-col-header">
-                                <div class="col-title-row">
-                                    <span class="col-title">Danh sách câu hỏi (${questions.length})</span>
-                                    ${!allVerified ? `<button class="verify-all-btn" onclick="verifyAllQuestions('reading', ${quiz.quizId})">Duyệt tất cả</button>` : ''}
-                                </div>
-                                <div class="filter-controls">
-                                    <input type="text" class="search-box" placeholder="Tìm câu hỏi..." oninput="handleSearch(this.value)">
-                                    <select class="dropdown-filter" onchange="handleTypeFilter(this.value)">
-                                        <option value="ALL">Tất cả dạng bài</option>
-                                        ${Array.from(typeOptions).map(t => `<option value="${t}">${t}</option>`).join('')}
-                                    </select>
-                                    <select class="dropdown-filter" onchange="handleStatusFilter(this.value)">
-                                        <option value="ALL">Tất cả trạng thái</option>
-                                        <option value="DRAFT">Chờ duyệt</option>
-                                        <option value="VERIFIED">Đã duyệt</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div id="questions-container"></div>
-                        </div>
-                    </div>
-                `;
+                viewSplit = createElement("div", "view-split");
+                viewSplit.appendChild(createReadingPane(quiz));
+                viewSplit.appendChild(createQuestionsPane("reading", quiz.quizId, questions, typeOptions, allVerified));
             } else {
                 const part = listeningParts.find(p => p.partId === selectedItem.id);
                 if (!part) return;
@@ -1241,54 +1309,174 @@
                 questions.forEach(q => typeOptions.add(q.questionType));
 
                 const allVerified = part.questions.every(q => q.verified);
-
-                container.innerHTML = `
-                    <div class="view-split">
-                        <div class="left-col">
-                            <div class="transcript-header">
-                                <div class="transcript-meta">
-                                    <span>LISTENING PART ${part.partNumber}</span>
-                                    <span>CHỦ ĐỀ: ${part.topic || 'General'}</span>
-                                </div>
-                                <h2 class="transcript-title">${part.title}</h2>
-                            </div>
-                            <div class="audio-player-container">
-                                <span class="stat-label">File Audio</span>
-                                <audio controls src="${part.audioUrl}"></audio>
-                            </div>
-                            <div class="transcript-body">${escapeHtml(part.transcriptText)}</div>
-                        </div>
-                        <div class="right-col">
-                            <div class="right-col-header">
-                                <div class="col-title-row">
-                                    <span class="col-title">Danh sách câu hỏi (${questions.length})</span>
-                                    ${!allVerified ? `<button class="verify-all-btn" onclick="verifyAllQuestions('listening', ${part.partId})">Duyệt tất cả</button>` : ''}
-                                </div>
-                                <div class="filter-controls">
-                                    <input type="text" class="search-box" placeholder="Tìm câu hỏi..." oninput="handleSearch(this.value)">
-                                    <select class="dropdown-filter" onchange="handleTypeFilter(this.value)">
-                                        <option value="ALL">Tất cả dạng bài</option>
-                                        ${Array.from(typeOptions).map(t => `<option value="${t}">${t}</option>`).join('')}
-                                    </select>
-                                    <select class="dropdown-filter" onchange="handleStatusFilter(this.value)">
-                                        <option value="ALL">Tất cả trạng thái</option>
-                                        <option value="DRAFT">Chờ duyệt</option>
-                                        <option value="VERIFIED">Đã duyệt</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div id="questions-container"></div>
-                        </div>
-                    </div>
-                `;
+                viewSplit = createElement("div", "view-split");
+                viewSplit.appendChild(createListeningPane(part));
+                viewSplit.appendChild(createQuestionsPane("listening", part.partId, questions, typeOptions, allVerified));
             }
 
-            const textContainer = document.getElementById("passage-text-container");
-            if (textContainer) {
-                textContainer.setAttribute("data-raw-text", textContainer.innerText);
-            }
-
+            container.replaceChildren(viewSplit);
             applyQuestionFilters();
+        }
+
+        function createReadingPane(quiz) {
+            const leftCol = createElement("div", "left-col");
+            const header = createElement("div", "passage-header");
+            const meta = createElement("div", "passage-meta");
+            meta.appendChild(createElement("span", null, "READING PASSAGE"));
+            meta.appendChild(createElement("span", null, `CHỦ ĐỀ: ${quiz.topic || ""}`));
+            meta.appendChild(createElement("span", null, `ĐỘ KHÓ: ${quiz.difficulty || ""}`));
+
+            const title = createElement("h2", "passage-title", quiz.topic || "");
+            const passageBody = createElement("div", "passage-body", quiz.passageText || "");
+            passageBody.id = "passage-text-container";
+            passageBody.dataset.rawText = quiz.passageText || "";
+
+            header.appendChild(meta);
+            header.appendChild(title);
+            leftCol.appendChild(header);
+            leftCol.appendChild(passageBody);
+
+            return leftCol;
+        }
+
+        function createListeningPane(part) {
+            const leftCol = createElement("div", "left-col");
+            const header = createElement("div", "transcript-header");
+            const meta = createElement("div", "transcript-meta");
+            meta.appendChild(createElement("span", null, `LISTENING PART ${part.partNumber || ""}`));
+            meta.appendChild(createElement("span", null, `CHỦ ĐỀ: ${part.topic || "General"}`));
+
+            const title = createElement("h2", "transcript-title", part.title || "");
+            header.appendChild(meta);
+            header.appendChild(title);
+
+            const audioContainer = createElement("div", "audio-player-container");
+            audioContainer.appendChild(createElement("span", "stat-label", "File Audio"));
+            const audio = document.createElement("audio");
+            audio.controls = true;
+            const audioUrl = sanitizeSameOriginUrl(part.audioUrl);
+            if (audioUrl) {
+                audio.src = audioUrl;
+            }
+            audioContainer.appendChild(audio);
+
+            const transcript = createElement("div", "transcript-body", part.transcriptText || "");
+
+            leftCol.appendChild(header);
+            leftCol.appendChild(audioContainer);
+            leftCol.appendChild(transcript);
+
+            return leftCol;
+        }
+
+        function createQuestionsPane(category, id, questions, typeOptions, allVerified) {
+            const rightCol = createElement("div", "right-col");
+            const header = createElement("div", "right-col-header");
+            const titleRow = createElement("div", "col-title-row");
+            titleRow.appendChild(createElement("span", "col-title", `Danh sách câu hỏi (${questions.length})`));
+
+            if (!allVerified) {
+                const verifyAllButton = createElement("button", "verify-all-btn", "Duyệt tất cả");
+                verifyAllButton.type = "button";
+                verifyAllButton.addEventListener("click", () => verifyAllQuestions(category, id));
+                titleRow.appendChild(verifyAllButton);
+            }
+
+            const filters = createElement("div", "filter-controls");
+            const searchInput = document.createElement("input");
+            searchInput.type = "text";
+            searchInput.className = "search-box";
+            searchInput.placeholder = "Tìm câu hỏi...";
+            searchInput.value = qSearchQuery;
+            searchInput.addEventListener("input", () => handleSearch(searchInput.value));
+
+            const typeSelect = createFilterSelect("dropdown-filter", qTypeFilter, [
+                ["ALL", "Tất cả dạng bài"],
+                ...Array.from(typeOptions)
+                    .filter(Boolean)
+                    .sort()
+                    .map(type => [type, type])
+            ]);
+            typeSelect.addEventListener("change", () => handleTypeFilter(typeSelect.value));
+
+            const statusSelect = createFilterSelect("dropdown-filter", qStatusFilter, [
+                ["ALL", "Tất cả trạng thái"],
+                ["DRAFT", "Chờ duyệt"],
+                ["VERIFIED", "Đã duyệt"]
+            ]);
+            statusSelect.addEventListener("change", () => handleStatusFilter(statusSelect.value));
+
+            filters.appendChild(searchInput);
+            filters.appendChild(typeSelect);
+            filters.appendChild(statusSelect);
+            header.appendChild(titleRow);
+            header.appendChild(filters);
+
+            const questionsContainer = document.createElement("div");
+            questionsContainer.id = "questions-container";
+
+            rightCol.appendChild(header);
+            rightCol.appendChild(questionsContainer);
+
+            return rightCol;
+        }
+
+        function createFilterSelect(className, selectedValue, options) {
+            const select = document.createElement("select");
+            select.className = className;
+
+            options.forEach(([value, label]) => {
+                const option = document.createElement("option");
+                option.value = value;
+                option.textContent = label;
+                option.selected = value === selectedValue;
+                select.appendChild(option);
+            });
+
+            return select;
+        }
+
+        function sanitizeSameOriginUrl(url) {
+            if (!url) return "";
+
+            try {
+                const parsed = new URL(url, window.location.origin);
+                if (parsed.origin !== window.location.origin) return "";
+                return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+            } catch (err) {
+                return "";
+            }
+        }
+
+        function createPlaceholderScreen() {
+            const placeholder = createElement("div", "placeholder-screen");
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.setAttribute("width", "64");
+            svg.setAttribute("height", "64");
+            svg.setAttribute("viewBox", "0 0 24 24");
+            svg.setAttribute("fill", "none");
+            svg.setAttribute("stroke", "currentColor");
+            svg.setAttribute("stroke-width", "1.5");
+            svg.setAttribute("stroke-linecap", "round");
+            svg.setAttribute("stroke-linejoin", "round");
+
+            [
+                ["path", "M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"],
+                ["polyline", "14 2 14 8 20 8"],
+                ["path", "M16 13H8"],
+                ["path", "M16 17H8"],
+                ["path", "M10 9H8"]
+            ].forEach(([tag, value]) => {
+                const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+                node.setAttribute(tag === "polyline" ? "points" : "d", value);
+                svg.appendChild(node);
+            });
+
+            placeholder.appendChild(svg);
+            placeholder.appendChild(createElement("h3", null, "Chọn phần thi để xem nội dung"));
+            placeholder.appendChild(createElement("p", null, "Hãy chọn một Reading Passage hoặc Listening Part ở thanh bên trái để bắt đầu kiểm duyệt đáp án."));
+
+            return placeholder;
         }
 
         function handleSearch(val) {
@@ -1335,80 +1523,120 @@
                 return true;
             });
 
-            container.innerHTML = filtered.map(q => renderQuestionCard(category, q)).join('');
+            container.replaceChildren(...filtered.map(q => createQuestionCard(category, q)));
         }
 
-        function renderQuestionCard(category, q) {
+        function createQuestionCard(category, q) {
             const isVerified = q.verified;
-            return `
-                <div class="question-card ${isVerified ? 'verified' : 'draft'}" id="q-card-${q.questionId}">
-                    <div class="card-header">
-                        <span class="question-number">Câu ${q.orderIndex} (${q.questionType})</span>
-                        <span class="badge ${isVerified ? 'badge-verified' : 'badge-draft'}">${isVerified ? 'Verified' : 'Draft'}</span>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="stat-label">Nội dung câu hỏi</label>
-                        <textarea class="edit-input" id="q-text-${q.questionId}" rows="2">${escapeHtml(q.questionText)}</textarea>
-                    </div>
+            const questionId = q.questionId;
+            const card = createElement("div", `question-card ${isVerified ? 'verified' : 'draft'}`);
+            card.id = `q-card-${questionId}`;
 
-                    ${q.options && q.options.length > 0 ? `
-                        <ul class="options-list">
-                            ${q.options.map(opt => `
-                                <li class="option-item ${opt.label === q.correctAnswer ? 'correct' : ''}">
-                                    <strong>${opt.label}.</strong> ${escapeHtml(opt.content)}
-                                </li>
-                            `).join('')}
-                        </ul>
-                    ` : ''}
+            const header = createElement("div", "card-header");
+            header.appendChild(createElement("span", "question-number", `Câu ${q.orderIndex || ""} (${q.questionType || ""})`));
+            header.appendChild(createStatusBadge(isVerified));
+            card.appendChild(header);
 
-                    <div class="edit-row">
-                        <div class="edit-col">
-                            <label>Đáp án đúng</label>
-                            <input type="text" class="edit-input-small" id="q-ans-${q.questionId}" value="${escapeHtml(q.correctAnswer)}">
-                        </div>
-                    </div>
+            card.appendChild(createTextareaGroup(
+                "Nội dung câu hỏi",
+                `q-text-${questionId}`,
+                q.questionText || "",
+                2
+            ));
 
-                    ${category === 'reading' ? `
-                        <div class="form-group" style="margin-top: 10px;">
-                            <label class="stat-label">Văn bản minh chứng (Evidence)</label>
-                            <textarea class="edit-input" id="q-ev-${q.questionId}" rows="2" placeholder="Nhập văn bản minh chứng..." oninput="detectOffsetLength(${q.questionId})">${escapeHtml(q.evidenceText || '')}</textarea>
-                        </div>
-                        <div class="edit-row">
-                            <div class="edit-col">
-                                <label>Offset</label>
-                                <input type="number" class="edit-input-small" id="q-off-${q.questionId}" value="${q.evidenceOffset || 0}" onchange="triggerHighlight(${q.questionId})">
-                            </div>
-                            <div class="edit-col">
-                                <label>Length</label>
-                                <input type="number" class="edit-input-small" id="q-len-${q.questionId}" value="${q.evidenceLength || 0}" onchange="triggerHighlight(${q.questionId})">
-                            </div>
-                        </div>
-                    ` : ''}
+            if (Array.isArray(q.options) && q.options.length > 0) {
+                const optionsList = createElement("ul", "options-list");
+                q.options.forEach(opt => {
+                    const item = createElement(
+                        "li",
+                        `option-item ${opt.label === q.correctAnswer ? 'correct' : ''}`
+                    );
+                    item.appendChild(createElement("strong", null, `${opt.label || ""}.`));
+                    item.appendChild(document.createTextNode(` ${opt.content || ""}`));
+                    optionsList.appendChild(item);
+                });
+                card.appendChild(optionsList);
+            }
 
-                    <div class="form-group" style="margin-top: 10px;">
-                        <label class="stat-label">Giải thích chi tiết</label>
-                        <textarea class="edit-input" id="q-expl-${q.questionId}" rows="3" placeholder="Nhập nội dung giải thích...">${escapeHtml(q.explanation || '')}</textarea>
-                    </div>
+            const answerRow = createElement("div", "edit-row");
+            answerRow.appendChild(createInputColumn("Đáp án đúng", `q-ans-${questionId}`, "text", q.correctAnswer || ""));
+            card.appendChild(answerRow);
 
-                    <div class="card-actions">
-                        ${category === 'reading' ? `
-                            <button class="action-btn btn-secondary" onclick="triggerHighlight(${q.questionId})">Xem minh chứng</button>
-                        ` : ''}
-                        <button class="action-btn btn-success" onclick="saveAndVerifyQuestion('${category}', ${q.questionId})">Lưu & Duyệt</button>
-                    </div>
-                </div>
-            `;
+            if (category === 'reading') {
+                const evidenceGroup = createTextareaGroup(
+                    "Văn bản minh chứng (Evidence)",
+                    `q-ev-${questionId}`,
+                    q.evidenceText || "",
+                    2,
+                    "Nhập văn bản minh chứng..."
+                );
+                evidenceGroup.style.marginTop = "10px";
+                evidenceGroup.querySelector("textarea").addEventListener("input", () => detectOffsetLength(questionId));
+                card.appendChild(evidenceGroup);
+
+                const evidenceRow = createElement("div", "edit-row");
+                evidenceRow.appendChild(createInputColumn("Offset", `q-off-${questionId}`, "number", q.evidenceOffset || 0, () => triggerHighlight(questionId)));
+                evidenceRow.appendChild(createInputColumn("Length", `q-len-${questionId}`, "number", q.evidenceLength || 0, () => triggerHighlight(questionId)));
+                card.appendChild(evidenceRow);
+            }
+
+            const explanationGroup = createTextareaGroup(
+                "Giải thích chi tiết",
+                `q-expl-${questionId}`,
+                q.explanation || "",
+                3,
+                "Nhập nội dung giải thích..."
+            );
+            explanationGroup.style.marginTop = "10px";
+            card.appendChild(explanationGroup);
+
+            const actions = createElement("div", "card-actions");
+            if (category === 'reading') {
+                const highlightButton = createElement("button", "action-btn btn-secondary", "Xem minh chứng");
+                highlightButton.type = "button";
+                highlightButton.addEventListener("click", () => triggerHighlight(questionId));
+                actions.appendChild(highlightButton);
+            }
+
+            const saveButton = createElement("button", "action-btn btn-success", "Lưu & Duyệt");
+            saveButton.type = "button";
+            saveButton.addEventListener("click", () => saveAndVerifyQuestion(category, questionId));
+            actions.appendChild(saveButton);
+            card.appendChild(actions);
+
+            return card;
         }
 
-        function escapeHtml(text) {
-            if (!text) return '';
-            return text
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
+        function createTextareaGroup(labelText, id, value, rows, placeholder) {
+            const group = createElement("div", "form-group");
+            group.appendChild(createElement("label", "stat-label", labelText));
+
+            const textarea = document.createElement("textarea");
+            textarea.className = "edit-input";
+            textarea.id = id;
+            textarea.rows = rows;
+            textarea.value = value;
+            if (placeholder) textarea.placeholder = placeholder;
+            group.appendChild(textarea);
+
+            return group;
+        }
+
+        function createInputColumn(labelText, id, type, value, onChange) {
+            const column = createElement("div", "edit-col");
+            column.appendChild(createElement("label", null, labelText));
+
+            const input = document.createElement("input");
+            input.type = type;
+            input.className = "edit-input-small";
+            input.id = id;
+            input.value = value;
+            if (onChange) {
+                input.addEventListener("change", onChange);
+            }
+            column.appendChild(input);
+
+            return column;
         }
 
         function detectOffsetLength(questionId) {
@@ -1420,7 +1648,7 @@
             if (!evInput || !passageContainer) return;
             
             const evText = evInput.value.trim();
-            const rawText = passageContainer.getAttribute("data-raw-text") || passageContainer.innerText;
+            const rawText = passageContainer.getAttribute("data-raw-text") || passageContainer.textContent;
             
             if (!evText) {
                 offInput.value = 0;
@@ -1448,10 +1676,10 @@
             const container = document.getElementById("passage-text-container");
             if (!container) return;
 
-            const rawText = container.getAttribute("data-raw-text") || container.innerText;
+            const rawText = container.getAttribute("data-raw-text") || container.textContent;
 
             if (isNaN(offset) || isNaN(length) || length === 0 || offset < 0 || offset + length > rawText.length) {
-                container.innerHTML = escapeHtml(rawText);
+                container.textContent = rawText;
                 return;
             }
 
@@ -1459,12 +1687,14 @@
             const highlighted = rawText.substring(offset, offset + length);
             const after = rawText.substring(offset + length);
 
-            container.innerHTML = escapeHtml(before) + `<mark class="highlight">${escapeHtml(highlighted)}</mark>` + escapeHtml(after);
+            const markElement = createElement("mark", "highlight", highlighted);
+            container.replaceChildren(
+                document.createTextNode(before),
+                markElement,
+                document.createTextNode(after)
+            );
 
-            const markElement = container.querySelector("mark");
-            if (markElement) {
-                markElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
+            markElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
         async function saveAndVerifyQuestion(category, questionId) {
@@ -1523,11 +1753,12 @@
                     updateStats();
                     renderSidebar();
                     renderContentPane();
+                    setAppStatus("Đã lưu và duyệt câu hỏi.", "success");
                 } else {
-                    alert("Lỗi lưu câu hỏi: " + data.message);
+                    setAppStatus(`Lỗi lưu câu hỏi: ${data.message || "Không rõ nguyên nhân."}`, "error");
                 }
             } catch (err) {
-                alert("Lỗi kết nối: " + err.message);
+                setAppStatus(`Lỗi kết nối: ${err.message}`, "error");
             }
         }
 
@@ -1548,6 +1779,7 @@
             }
 
             let successCount = 0;
+            let failureCount = 0;
             for (const q of questionsToVerify) {
                 try {
                     let payload = {
@@ -1570,16 +1802,22 @@
                     if (data.status === "SUCCESS") {
                         q.verified = true;
                         successCount++;
+                    } else {
+                        failureCount++;
                     }
                 } catch (err) {
-                    console.error(`Error verifying question ${q.questionId}:`, err);
+                    failureCount++;
                 }
             }
 
             updateStats();
             renderSidebar();
             renderContentPane();
-            alert(`Đã duyệt thành công ${successCount}/${questionsToVerify.length} câu hỏi.`);
+            if (failureCount > 0) {
+                setAppStatus(`Đã duyệt ${successCount}/${questionsToVerify.length} câu hỏi. ${failureCount} câu chưa lưu được.`, "error");
+            } else {
+                setAppStatus(`Đã duyệt thành công ${successCount}/${questionsToVerify.length} câu hỏi.`, "success");
+            }
         }
     </script>
 </body>

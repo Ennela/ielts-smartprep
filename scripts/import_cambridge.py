@@ -11,9 +11,12 @@ from PIL import Image
 import google.generativeai as genai
 from dotenv import load_dotenv
 
+SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
+PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+
 # Find and load .env file from project root
 dotenv_path = None
-curr_dir = os.path.abspath(os.path.dirname(__file__))
+curr_dir = SCRIPT_DIR
 while True:
     test_path = os.path.join(curr_dir, '.env')
     if os.path.exists(test_path):
@@ -26,7 +29,7 @@ while True:
 
 if dotenv_path:
     load_dotenv(dotenv_path)
-    print(f"Loaded environment from: {dotenv_path}")
+    print("Loaded environment configuration from .env.")
 else:
     print("Warning: .env file not found. Using system environment variables.")
 
@@ -43,7 +46,7 @@ def configure_ai_client():
         try:
             genai.configure(api_key=GEMINI_API_KEY)
         except Exception as e:
-            print(f"Warning: Failed to configure google-generativeai: {e}")
+            print(f"Warning: Failed to configure google-generativeai: {redact_sensitive(e)}")
     return True
 
 def parse_jdbc_mysql_url(jdbc_url):
@@ -69,6 +72,17 @@ DB_PASSWORD = (
 )
 DB_NAME = os.getenv("MYSQL_DATABASE") or SPRING_DATASOURCE.get("database") or "ielts_smartprep"
 DB_PORT = int(os.getenv("MYSQL_PORT") or os.getenv("DB_PORT") or SPRING_DATASOURCE.get("port") or 3306)
+
+def redact_sensitive(value):
+    text = str(value)
+    for secret in (GEMINI_API_KEY, OPENROUTER_API_KEY, DB_PASSWORD):
+        if secret:
+            text = text.replace(secret, "[REDACTED]")
+    return re.sub(
+        r"(?i)((?:api[_-]?key|authorization|password|token|secret)\s*[:=]\s*)(?:bearer\s+)?[^\s,;]+",
+        r"\1[REDACTED]",
+        text,
+    )
 
 IMPORT_CREATED_BY = "import_script"
 REQUIRED_IMPORT_COLUMNS = {
@@ -275,9 +289,9 @@ def call_gemini_with_retry(prompt, images=None, response_json=False):
                     if resp2.status_code == 200:
                         return resp2.json()['choices'][0]['message']['content']
                     else:
-                        raise Exception(f"OpenRouter API error {resp2.status_code}: {resp2.text}")
+                        raise Exception(f"OpenRouter API returned HTTP {resp2.status_code}")
                 else:
-                    raise Exception(f"OpenRouter API error {resp.status_code}: {resp.text}")
+                    raise Exception(f"OpenRouter API returned HTTP {resp.status_code}")
             else:
                 model = genai.GenerativeModel('gemini-2.5-flash')
                 contents = []
@@ -302,14 +316,14 @@ def call_gemini_with_retry(prompt, images=None, response_json=False):
             err_msg = str(e).lower()
             if "exhausted" in err_msg or "429" in err_msg or "503" in err_msg or "rate limit" in err_msg:
                 wait_time = (2 ** attempt) * 10 + 15
-                print(f"  [API Rate Limit/Error] Retrying in {wait_time}s... Error: {e}")
+                print(f"  [API Rate Limit/Error] Retrying in {wait_time}s... Error: {redact_sensitive(e)}")
                 time.sleep(wait_time)
             elif "403" in err_msg and "leaked" in err_msg and openrouter_key:
                 print(f"  [Gemini API Error] Key reported as leaked! Switching to OpenRouter...")
                 use_openrouter = True
                 time.sleep(2)
             else:
-                print(f"  [API Error] Retrying in 5s... Error: {e}")
+                print(f"  [API Error] Retrying in 5s... Error: {redact_sensitive(e)}")
                 time.sleep(5)
 
     raise Exception("Failed to get response from API after 6 attempts.")
@@ -707,7 +721,10 @@ def extract_writing_prompt(pdf_path, temp_dir, task_num, pages, is_text_mode, pd
         bbox = data["chart_bbox"]
         target_page = pages[0]
         # Create output directories
-        out_dir = r"d:\sources\repos\proj\IELST\ielts-smartprep\frontend\public\images"
+        out_dir = os.path.abspath(
+            os.getenv("CAMBRIDGE_IMAGE_OUTPUT_DIR")
+            or os.path.join(PROJECT_ROOT, "frontend", "public", "images")
+        )
         os.makedirs(out_dir, exist_ok=True)
 
         img_filename = f"{pdf_basename}_test{test_num}_task1.png"
@@ -775,6 +792,7 @@ def process_pdf(pdf_path, folder_path, dry_run):
         os.remove(failed_log_path)
 
     def log_failure(message):
+        message = redact_sensitive(message)
         with open(failed_log_path, "a", encoding="utf-8") as f:
             f.write(message + "\n")
         print(f"  [LOGGED FAILURE] {message}")
@@ -882,79 +900,302 @@ def process_pdf(pdf_path, folder_path, dry_run):
 
     return extracted_data
 
-# Validate extracted counts and fields
-def validate_extracted_data(data):
-    print("\n==========================================")
-    print("VALIDATION REPORT")
-    print("==========================================")
+def report_item(code, message, location):
+    return {"code": code, "message": message, "location": location}
 
-    is_valid = True
+
+def add_report_item(report, test_report, bucket, code, message, location):
+    item = report_item(code, message, location)
+    if item not in report[bucket]:
+        report[bucket].append(item)
+    if test_report is not None and item not in test_report[bucket]:
+        test_report[bucket].append(item)
+
+
+def duplicate_values(values):
+    seen = set()
+    duplicates = set()
+    for value in values:
+        if value is None:
+            continue
+        if value in seen:
+            duplicates.add(value)
+        seen.add(value)
+    return sorted(duplicates, key=str)
+
+
+def refresh_report_status(report, allow_critical_errors=False, allow_duplicates=False):
+    report["overrides"] = {
+        "allow_critical_validation_errors": allow_critical_errors,
+        "allow_duplicates": allow_duplicates,
+    }
+    report["summary"]["warnings"] = len(report["warnings"])
+    report["summary"]["critical_errors"] = len(report["critical_errors"])
+    report["summary"]["duplicates"] = len(report["duplicates"])
+    report["validation_passed"] = not report["critical_errors"]
+    report["duplicate_check_passed"] = not report["duplicates"]
+    database_check_ready = (
+        report["mode"] != "confirm"
+        or report["database_duplicate_check"]["status"] == "completed"
+    )
+    report["can_import"] = (
+        (report["validation_passed"] or allow_critical_errors)
+        and (report["duplicate_check_passed"] or allow_duplicates)
+        and database_check_ready
+    )
+
+
+# Build a compact, review-focused report without copying passage text or prompts.
+def validate_extracted_data(data, mode):
+    report = {
+        "schema_version": 1,
+        "mode": mode,
+        "source": {
+            "book_title": data.get("book_title"),
+            "pdf_basename": data.get("pdf_basename"),
+        },
+        "summary": {
+            "tests": 0,
+            "passages": 0,
+            "questions": {"reading": 0, "listening": 0, "total": 0},
+            "warnings": 0,
+            "critical_errors": 0,
+            "duplicates": 0,
+        },
+        "tests": [],
+        "warnings": [],
+        "critical_errors": [],
+        "duplicates": [],
+        "database_duplicate_check": {"status": "not_requested"},
+    }
+
     tests = data.get("tests", {})
+    report["summary"]["tests"] = len(tests)
+    if not tests:
+        add_report_item(report, None, "critical_errors", "NO_TESTS", "No tests were extracted.", "tests")
 
     for test_num, test_data in tests.items():
-        print(f"\nTest {test_num}:")
+        test_location = f"tests.{test_num}"
+        test_report = {
+            "test_number": test_num,
+            "passages": [],
+            "listening_parts": [],
+            "writing_tasks": [],
+            "questions": {"reading": 0, "listening": 0, "total": 0},
+            "warnings": [],
+            "critical_errors": [],
+            "duplicates": [],
+        }
+        report["tests"].append(test_report)
 
-        # 1. Reading Quiz validation
         readings = test_data.get("reading", [])
-        print(f"  Reading Passages: {len(readings)}/3 extracted")
         if len(readings) != 3:
-            is_valid = False
-            print("    [ERROR] Reading passages count must be exactly 3!")
+            add_report_item(
+                report, test_report, "critical_errors", "READING_PASSAGE_COUNT",
+                f"Expected 3 reading passages, found {len(readings)}.", f"{test_location}.reading",
+            )
+        for passage_num in duplicate_values([r.get("passage_num") for r in readings]):
+            add_report_item(
+                report, test_report, "duplicates", "DUPLICATE_PASSAGE_NUMBER",
+                f"Reading passage number {passage_num} appears more than once.", f"{test_location}.reading",
+            )
+        reading_order_indexes = [
+            question.get("order_index")
+            for reading in readings
+            for question in reading.get("questions", [])
+        ]
+        for order_index in duplicate_values(reading_order_indexes):
+            add_report_item(
+                report, test_report, "duplicates", "DUPLICATE_READING_QUESTION",
+                f"Reading question order_index {order_index} appears more than once in the test.", f"{test_location}.reading",
+            )
 
-        total_reading_qs = 0
-        for r in readings:
-            q_count = len(r.get("questions", []))
-            total_reading_qs += q_count
-            print(f"    Passage {r['passage_num']} ({r['title'][:30]}...): {q_count} questions")
-            # Passage validations
-            if not r.get("passage_text") or len(r.get("passage_text", "")) < 200:
-                print(f"      [WARNING] Passage text is empty or unusually short!")
-            for q in r.get("questions", []):
-                if not q.get("correct_answer"):
-                    print(f"      [ERROR] Q{q.get('order_index')} correct answer is empty!")
-                    is_valid = False
+        for reading_index, reading in enumerate(readings):
+            passage_num = reading.get("passage_num")
+            location = f"{test_location}.reading[{reading_index}]"
+            questions = reading.get("questions", [])
+            test_report["passages"].append({
+                "passage_number": passage_num,
+                "title": reading.get("title"),
+                "questions": len(questions),
+            })
+            report["summary"]["passages"] += 1
+            test_report["questions"]["reading"] += len(questions)
 
-        print(f"    Total Reading Questions: {total_reading_qs}/40")
-        if total_reading_qs != 40:
-            print("    [WARNING] Total reading questions count is not 40!")
+            if passage_num is None:
+                add_report_item(report, test_report, "critical_errors", "MISSING_PASSAGE_NUMBER", "Passage number is missing.", location)
+            if not reading.get("passage_text") or len(reading.get("passage_text", "")) < 200:
+                add_report_item(report, test_report, "warnings", "SHORT_PASSAGE_TEXT", "Passage text is empty or unusually short.", location)
+            for question_index, question in enumerate(questions):
+                question_location = f"{location}.questions[{question_index}]"
+                if question.get("order_index") is None or not question.get("question_text"):
+                    add_report_item(report, test_report, "critical_errors", "INVALID_READING_QUESTION", "Reading question needs order_index and question_text.", question_location)
+                if not question.get("correct_answer"):
+                    add_report_item(report, test_report, "critical_errors", "MISSING_READING_ANSWER", "Reading question has no correct answer.", question_location)
 
-        # 2. Listening validation
+        if test_report["questions"]["reading"] != 40:
+            add_report_item(
+                report, test_report, "warnings", "READING_QUESTION_COUNT",
+                f"Expected 40 reading questions, found {test_report['questions']['reading']}.", f"{test_location}.reading",
+            )
+
         listenings = test_data.get("listening", [])
-        print(f"  Listening Parts: {len(listenings)}/4 extracted")
         if len(listenings) != 4:
-            is_valid = False
-            print("    [ERROR] Listening parts count must be exactly 4!")
+            add_report_item(
+                report, test_report, "critical_errors", "LISTENING_PART_COUNT",
+                f"Expected 4 listening parts, found {len(listenings)}.", f"{test_location}.listening",
+            )
+        for part_num in duplicate_values([part.get("part_number") for part in listenings]):
+            add_report_item(
+                report, test_report, "duplicates", "DUPLICATE_LISTENING_PART",
+                f"Listening part number {part_num} appears more than once.", f"{test_location}.listening",
+            )
+        listening_order_indexes = [
+            question.get("order_index")
+            for listening in listenings
+            for question in listening.get("questions", [])
+        ]
+        for order_index in duplicate_values(listening_order_indexes):
+            add_report_item(
+                report, test_report, "duplicates", "DUPLICATE_LISTENING_QUESTION",
+                f"Listening question order_index {order_index} appears more than once in the test.", f"{test_location}.listening",
+            )
 
-        total_listening_qs = 0
-        for l in listenings:
-            q_count = len(l.get("questions", []))
-            total_listening_qs += q_count
-            print(f"    Part {l['part_number']} ({l['title'][:30]}...): {q_count} questions")
-            if not l.get("transcript_text") or len(l.get("transcript_text", "")) < 200:
-                print(f"      [WARNING] Transcript is empty or unusually short!")
-            for q in l.get("questions", []):
-                if not q.get("correct_answer"):
-                    print(f"      [ERROR] Q{q.get('order_index')} correct answer is empty!")
-                    is_valid = False
+        for part_index, listening in enumerate(listenings):
+            part_num = listening.get("part_number")
+            location = f"{test_location}.listening[{part_index}]"
+            questions = listening.get("questions", [])
+            test_report["listening_parts"].append({
+                "part_number": part_num,
+                "title": listening.get("title"),
+                "questions": len(questions),
+            })
+            test_report["questions"]["listening"] += len(questions)
 
-        print(f"    Total Listening Questions: {total_listening_qs}/40")
-        if total_listening_qs != 40:
-            print("    [WARNING] Total listening questions count is not 40!")
+            if part_num is None:
+                add_report_item(report, test_report, "critical_errors", "MISSING_LISTENING_PART_NUMBER", "Listening part number is missing.", location)
+            if not listening.get("transcript_text") or len(listening.get("transcript_text", "")) < 200:
+                add_report_item(report, test_report, "warnings", "SHORT_TRANSCRIPT", "Transcript is empty or unusually short.", location)
+            for question_index, question in enumerate(questions):
+                question_location = f"{location}.questions[{question_index}]"
+                if question.get("order_index") is None or not question.get("question_text"):
+                    add_report_item(report, test_report, "critical_errors", "INVALID_LISTENING_QUESTION", "Listening question needs order_index and question_text.", question_location)
+                if not question.get("correct_answer"):
+                    add_report_item(report, test_report, "critical_errors", "MISSING_LISTENING_ANSWER", "Listening question has no correct answer.", question_location)
 
-        # 3. Writing validation
+        if test_report["questions"]["listening"] != 40:
+            add_report_item(
+                report, test_report, "warnings", "LISTENING_QUESTION_COUNT",
+                f"Expected 40 listening questions, found {test_report['questions']['listening']}.", f"{test_location}.listening",
+            )
+
         writings = test_data.get("writing", [])
-        print(f"  Writing Tasks: {len(writings)}/2 extracted")
         if len(writings) != 2:
-            is_valid = False
-            print("    [ERROR] Writing tasks count must be exactly 2!")
-        for w in writings:
-            print(f"    Task {w['task_number']} Type: {w.get('essay_type')}")
-            if w['task_number'] == 1 and not w.get("image_url"):
-                print("      [WARNING] Task 1 visual chart image was not cropped!")
-            if not w.get("prompt_text") or len(w.get("prompt_text", "")) < 50:
-                print("      [WARNING] Writing prompt text is extremely short or empty!")
+            add_report_item(
+                report, test_report, "critical_errors", "WRITING_TASK_COUNT",
+                f"Expected 2 writing tasks, found {len(writings)}.", f"{test_location}.writing",
+            )
+        for task_num in duplicate_values([writing.get("task_number") for writing in writings]):
+            add_report_item(
+                report, test_report, "duplicates", "DUPLICATE_WRITING_TASK",
+                f"Writing task number {task_num} appears more than once.", f"{test_location}.writing",
+            )
+        for writing_index, writing in enumerate(writings):
+            task_num = writing.get("task_number")
+            location = f"{test_location}.writing[{writing_index}]"
+            test_report["writing_tasks"].append({
+                "task_number": task_num,
+                "essay_type": writing.get("essay_type"),
+                "has_image": bool(writing.get("image_url")),
+            })
+            if task_num is None:
+                add_report_item(report, test_report, "critical_errors", "MISSING_WRITING_TASK_NUMBER", "Writing task number is missing.", location)
+            if task_num == 1 and not writing.get("image_url"):
+                add_report_item(report, test_report, "warnings", "MISSING_TASK_1_IMAGE", "Task 1 visual image was not created.", location)
+            if not writing.get("prompt_text") or len(writing.get("prompt_text", "")) < 50:
+                add_report_item(report, test_report, "warnings", "SHORT_WRITING_PROMPT", "Writing prompt is empty or unusually short.", location)
 
-    return is_valid
+        test_report["questions"]["total"] = test_report["questions"]["reading"] + test_report["questions"]["listening"]
+        report["summary"]["questions"]["reading"] += test_report["questions"]["reading"]
+        report["summary"]["questions"]["listening"] += test_report["questions"]["listening"]
+
+    report["summary"]["questions"]["total"] = (
+        report["summary"]["questions"]["reading"] + report["summary"]["questions"]["listening"]
+    )
+    refresh_report_status(report)
+    return report
+
+
+def detect_batch_duplicates(import_items):
+    seen_titles = {}
+    for item in import_items:
+        data = item["data"]
+        report = item["report"]
+        for test_num in data.get("tests", {}):
+            title = f"{data.get('book_title')} Test {test_num}"
+            normalized_title = title.strip().casefold()
+            if normalized_title in seen_titles:
+                first_report = seen_titles[normalized_title]
+                message = f"Mock test title '{title}' appears in more than one input PDF."
+                add_report_item(report, None, "duplicates", "DUPLICATE_INPUT_TEST", message, f"tests.{test_num}")
+                add_report_item(first_report, None, "duplicates", "DUPLICATE_INPUT_TEST", message, f"tests.{test_num}")
+            else:
+                seen_titles[normalized_title] = report
+
+
+def detect_database_duplicates(import_items):
+    titles = [
+        f"{item['data'].get('book_title')} Test {test_num}"
+        for item in import_items
+        for test_num in item["data"].get("tests", {})
+    ]
+    if not titles:
+        return set()
+
+    conn = pymysql.connect(
+        host=DB_HOST,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        database=DB_NAME,
+        port=DB_PORT,
+        cursorclass=pymysql.cursors.DictCursor,
+    )
+    try:
+        with conn.cursor() as cursor:
+            placeholders = ", ".join(["%s"] * len(titles))
+            cursor.execute(f"SELECT title FROM mock_tests WHERE title IN ({placeholders})", titles)
+            return {row["title"].strip().casefold() for row in cursor.fetchall()}
+    finally:
+        conn.close()
+
+
+def apply_database_duplicates(import_items, existing_titles):
+    for item in import_items:
+        data = item["data"]
+        report = item["report"]
+        report["database_duplicate_check"] = {"status": "completed"}
+        for test_num in data.get("tests", {}):
+            title = f"{data.get('book_title')} Test {test_num}"
+            if title.strip().casefold() in existing_titles:
+                add_report_item(
+                    report, None, "duplicates", "DUPLICATE_DATABASE_TEST",
+                    f"Mock test '{title}' already exists in the database.", f"tests.{test_num}",
+                )
+
+
+def save_review_files(item, report_dir):
+    data = item["data"]
+    basename = data["pdf_basename"]
+    os.makedirs(report_dir, exist_ok=True)
+    preview_path = os.path.join(report_dir, f"{basename}_extracted_preview.json")
+    report_path = os.path.join(report_dir, f"{basename}_import_report.json")
+    with open(preview_path, "w", encoding="utf-8") as preview_file:
+        json.dump(data, preview_file, ensure_ascii=False, indent=2)
+    with open(report_path, "w", encoding="utf-8") as report_file:
+        json.dump(item["report"], report_file, ensure_ascii=False, indent=2)
+    print(f"Saved extracted preview: {preview_path}")
+    print(f"Saved import report: {report_path}")
+
 
 # Save data to MySQL database
 def insert_data_to_db(data):
@@ -974,14 +1215,14 @@ def insert_data_to_db(data):
         cursor = conn.cursor()
         print("Connected to database successfully.")
     except Exception as e:
-        print(f"Database connection failed: {e}")
+        print(f"Database connection failed: {redact_sensitive(e)}")
         return False
 
     try:
         ensure_required_import_columns(cursor)
     except Exception as e:
         conn.close()
-        print(f"Database schema check failed: {e}")
+        print(f"Database schema check failed: {redact_sensitive(e)}")
         return False
 
     book_title = data["book_title"]
@@ -1128,37 +1369,56 @@ def insert_data_to_db(data):
     except Exception as e:
         conn.rollback()
         conn.close()
-        print(f"\n[CRITICAL ERROR] Database insertion failed. Transaction rolled back. Error: {e}")
+        print(f"\n[CRITICAL ERROR] Database insertion failed. Transaction rolled back. Error: {redact_sensitive(e)}")
         return False
 
 # Main flow
 def main():
     parser = argparse.ArgumentParser(description="Import Cambridge IELTS resources into Database using Gemini Vision.")
     parser.add_argument("--folder", required=True, help="Path to folder containing Cambridge PDF(s).")
+    parser.add_argument("--report-dir", help="Directory for preview and import report JSON files (defaults to --folder).")
     mode_group = parser.add_mutually_exclusive_group(required=True)
-    mode_group.add_argument("--dry-run", action="store_true", help="Analyze and print summary without inserting into database.")
+    mode_group.add_argument("--dry-run", action="store_true", help="Analyze and write review reports without inserting into database.")
     mode_group.add_argument("--confirm", action="store_true", help="Insert records into the database.")
+    parser.add_argument(
+        "--check-db-duplicates", action="store_true",
+        help="Require a database duplicate check during dry-run (also attempted automatically when credentials exist).",
+    )
+    parser.add_argument(
+        "--allow-critical-validation-errors", action="store_true",
+        help="With --confirm, explicitly allow writes despite critical content validation errors.",
+    )
+    parser.add_argument(
+        "--allow-duplicates", action="store_true",
+        help="With --confirm, continue importing non-existing tests when duplicates are detected; existing tests remain skipped.",
+    )
 
     args = parser.parse_args()
+    if not args.confirm and (args.allow_critical_validation_errors or args.allow_duplicates):
+        parser.error("Validation and duplicate overrides are only valid with --confirm.")
 
     folder_path = os.path.abspath(args.folder)
+    report_dir = os.path.abspath(args.report_dir or folder_path)
     if not os.path.isdir(folder_path):
         print(f"Error: Specified folder does not exist: {folder_path}")
-        sys.exit(1)
+        return 1
 
     # Find PDF files
     pdf_files = sorted(os.path.join(folder_path, f) for f in os.listdir(folder_path) if f.lower().endswith(".pdf"))
     if not pdf_files:
         print(f"Error: No PDF files found in folder {folder_path}")
-        sys.exit(1)
+        return 1
 
-    if args.confirm and not has_database_credentials():
-        sys.exit(1)
+    require_database_check = args.confirm or args.check_db_duplicates
+    check_database = require_database_check or bool(DB_PASSWORD)
+    if require_database_check and not has_database_credentials():
+        return 1
 
     if not configure_ai_client():
-        sys.exit(1)
+        return 1
 
     print(f"Found {len(pdf_files)} PDF file(s) for import.")
+    import_items = []
 
     for pdf_path in pdf_files:
         print(f"\n==========================================")
@@ -1172,30 +1432,74 @@ def main():
             print(f"Could not extract data for {pdf_path}. Skipping.")
             continue
 
-        # Validate
-        is_valid = validate_extracted_data(extracted_data)
+        import_items.append({
+            "data": extracted_data,
+            "report": validate_extracted_data(extracted_data, "confirm" if args.confirm else "dry-run"),
+        })
 
-        # Save output json log for review
-        log_out_path = os.path.join(folder_path, f"{extracted_data['pdf_basename']}_extracted_preview.json")
-        with open(log_out_path, "w", encoding="utf-8") as f:
-            json.dump(extracted_data, f, ensure_ascii=False, indent=2)
-        print(f"\nSaved preview json details to: {log_out_path}")
+    if not import_items:
+        print("No PDF was extracted successfully. No database modifications were performed.")
+        return 1
 
-        if not is_valid:
-            print("\n[WARNING] Validation checks encountered issues! Please check the output reports.")
+    # All duplicate and validation checks finish before any call that can write to the database.
+    detect_batch_duplicates(import_items)
+    database_check_failed = False
+    if check_database:
+        try:
+            existing_titles = detect_database_duplicates(import_items)
+            apply_database_duplicates(import_items, existing_titles)
+        except Exception as e:
+            database_check_failed = require_database_check
+            message = f"Database duplicate check failed: {redact_sensitive(e)}"
+            print(message)
+            for item in import_items:
+                item["report"]["database_duplicate_check"] = {"status": "failed", "message": message}
+                bucket = "critical_errors" if require_database_check else "warnings"
+                code = "DATABASE_DUPLICATE_CHECK_FAILED" if require_database_check else "DATABASE_DUPLICATE_CHECK_UNAVAILABLE"
+                detail = "Database duplicate check did not complete; importing is blocked." if require_database_check else "Database duplicate check was unavailable during dry-run; --confirm will require it."
+                add_report_item(item["report"], None, bucket, code, detail, "database")
+    else:
+        for item in import_items:
+            item["report"]["database_duplicate_check"] = {"status": "skipped_no_credentials"}
+            add_report_item(
+                item["report"], None, "warnings", "DATABASE_DUPLICATE_CHECK_SKIPPED",
+                "Database duplicate check was skipped because credentials were not configured; --confirm will require it.", "database",
+            )
 
-        # Dry-run report
-        if args.dry_run:
-            print("\n[DRY RUN SUMMARY] Extracted data successfully. No database modifications were performed.")
-        elif args.confirm:
-            print("\n[CONFIRMATION] Proceeding to insert data into MySQL database...")
-            success = insert_data_to_db(extracted_data)
-            if success:
-                print(f"\nImport for {os.path.basename(pdf_path)} completed successfully!")
-            else:
-                print(f"\nImport for {os.path.basename(pdf_path)} FAILED.")
+    for item in import_items:
+        refresh_report_status(
+            item["report"],
+            allow_critical_errors=args.allow_critical_validation_errors,
+            allow_duplicates=args.allow_duplicates,
+        )
+        save_review_files(item, report_dir)
+        summary = item["report"]["summary"]
+        print(
+            f"Report summary for {item['data']['pdf_basename']}: "
+            f"tests={summary['tests']}, passages={summary['passages']}, "
+            f"questions={summary['questions']['total']}, warnings={summary['warnings']}, "
+            f"critical_errors={summary['critical_errors']}, duplicates={summary['duplicates']}"
+        )
+
+    blocked = database_check_failed or any(not item["report"]["can_import"] for item in import_items)
+    if args.dry_run:
+        print("\n[DRY RUN] Reports created. No database modifications were performed.")
+        return 2 if blocked else 0
+
+    if blocked:
+        print("\n[BLOCKED] Preflight checks failed. No database modifications were performed. Review the JSON reports.")
+        return 2
+
+    print("\n[CONFIRMATION] Preflight checks passed. Proceeding with database import...")
+    all_succeeded = True
+    for item in import_items:
+        success = insert_data_to_db(item["data"])
+        all_succeeded = all_succeeded and success
+        status = "completed successfully" if success else "FAILED"
+        print(f"Import for {item['data']['pdf_basename']} {status}.")
 
     print("\nPipeline finished.")
+    return 0 if all_succeeded else 1
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

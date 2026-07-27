@@ -19,8 +19,8 @@ public class WritingSourceResolver implements VocabSourceResolver {
     }
 
     @Override
-    public String resolveSourceText(Long sourceId) {
-        WritingSubmission submission = writingSubmissionRepository.findById(sourceId)
+    public String resolveSourceText(Long userId, Long sourceId) {
+        WritingSubmission submission = writingSubmissionRepository.findBySubmissionIdAndUserUserId(sourceId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Writing submission not found with ID: " + sourceId));
 
         String promptText = (submission.getPrompt() != null) ? submission.getPrompt().getPromptText() : "";

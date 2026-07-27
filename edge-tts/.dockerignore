@@ -1,0 +1,12 @@
+.git
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.log
+logs/
+__pycache__/
+*.py[cod]

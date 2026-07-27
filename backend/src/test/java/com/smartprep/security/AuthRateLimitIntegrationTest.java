@@ -2,6 +2,7 @@ package com.smartprep.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartprep.dto.request.LoginRequest;
+import com.smartprep.repository.AbstractMySQLContainerTest;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.BucketConfiguration;
 import io.github.bucket4j.distributed.BucketProxy;
@@ -19,9 +20,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -47,22 +45,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
-@Testcontainers
-class AuthRateLimitIntegrationTest {
-
-    @Container
-    static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.0")
-            .withDatabaseName("ielts_smartprep_test")
-            .withUsername("test")
-            .withPassword("test");
+class AuthRateLimitIntegrationTest extends AbstractMySQLContainerTest {
 
     @DynamicPropertySource
     static void overrideProps(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", MYSQL::getJdbcUrl);
-        registry.add("spring.datasource.username", MYSQL::getUsername);
-        registry.add("spring.datasource.password", MYSQL::getPassword);
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
-        registry.add("spring.flyway.enabled", () -> "true");
         // Set low rate limit so we can exhaust it easily
         registry.add("app.rate-limit.auth-login-capacity", () -> "3");
         registry.add("app.rate-limit.auth-login-refill-minutes", () -> "1");

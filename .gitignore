@@ -10,7 +10,21 @@ frontend/dist/
 
 # Environment
 .env
+.env.*
+!.env.example
 *.env.local
+
+# Credentials and local secret configuration
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.crt
+application-local.properties
+application-local.yml
+application-secrets.properties
+application-secrets.yml
 
 # IDE
 .idea/
@@ -24,6 +38,12 @@ frontend/dist/
 *.war
 *.log
 hs_err_pid*
+__pycache__/
+*.py[cod]
+
+# Temporary and backup files
+*.bak
+*.tmp
 
 # OS
 .DS_Store

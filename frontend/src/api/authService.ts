@@ -2,6 +2,16 @@ import type { AxiosResponse } from 'axios';
 import axiosClient from './axiosClient';
 import type { ApiResponse, AuthResponse, User } from './types';
 
+/**
+ * Remove all auth-related keys from localStorage.
+ * Exported so axiosClient (and any other module) can call it without circular imports.
+ */
+export function clearAllAuthData(): void {
+    localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+}
+
 const authService = {
     register: (email: string, username: string, password: string): Promise<AxiosResponse<ApiResponse<AuthResponse>>> =>
         axiosClient.post('/auth/register', { email, username, password }),
@@ -31,11 +41,11 @@ const authService = {
 
     // ── Token Management ──────────────────────────────────────────────────
 
-    refreshToken: (refreshToken: string): Promise<AxiosResponse<ApiResponse<{ token: string; refreshToken?: string }>>> =>
-        axiosClient.post('/auth/refresh', { refreshToken }),
+    refreshToken: (refreshToken?: string): Promise<AxiosResponse<ApiResponse<{ token: string }>>> =>
+        axiosClient.post('/auth/refresh', refreshToken ? { refreshToken } : {}),
 
-    serverLogout: (refreshToken: string): Promise<AxiosResponse<ApiResponse<void>>> =>
-        axiosClient.post('/auth/logout', { refreshToken }),
+    serverLogout: (refreshToken?: string): Promise<AxiosResponse<ApiResponse<void>>> =>
+        axiosClient.post('/auth/logout', refreshToken ? { refreshToken } : {}),
 
     // ── Password Recovery ─────────────────────────────────────────────────
 
@@ -54,24 +64,17 @@ const authService = {
         axiosClient.post('/auth/resend-verification'),
 
     // ── Local Storage Helpers ─────────────────────────────────────────────
-    // WARNING: JWT is stored in localStorage for convenience.
-    // Risk: XSS attacks can read localStorage. Mitigations applied:
-    // - Access token is short-lived (15 min)
-    // - CSP headers block inline/external script injection
-    // - Refresh token rotation invalidates stolen tokens quickly
+    // Access tokens remain in localStorage for bearer auth.
+    // Refresh tokens are stored by the backend in an HttpOnly cookie.
 
     logout: async (): Promise<void> => {
         const refreshToken = localStorage.getItem('refreshToken');
-        if (refreshToken) {
-            try {
-                await axiosClient.post('/auth/logout', { refreshToken });
-            } catch (_e) {
+        try {
+            await axiosClient.post('/auth/logout', refreshToken ? { refreshToken } : {});
+        } catch (_e) {
                 // Ignore errors during logout — token may already be expired
-            }
         }
-        localStorage.removeItem('token');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
+        clearAllAuthData();
     },
 };
 

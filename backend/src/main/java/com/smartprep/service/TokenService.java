@@ -66,6 +66,22 @@ public class TokenService {
     }
 
     /**
+     * Blacklist an access token's JTI so the {@link com.smartprep.security.JwtAuthenticationFilter}
+     * will reject it on subsequent requests.
+     *
+     * @param jti            the token's unique identifier
+     * @param remainingTtlMs milliseconds until the token naturally expires
+     */
+    public void blacklistAccessToken(String jti, long remainingTtlMs) {
+        if (jti == null) {
+            return;
+        }
+        long ttl = remainingTtlMs > 0 ? remainingTtlMs : jwtTokenProvider.getAccessExpirationMs();
+        redisTemplate.opsForValue().set(BLACKLIST_PREFIX + jti, "revoked", ttl, TimeUnit.MILLISECONDS);
+        log.info("Blacklisted access JTI: {}", jti);
+    }
+
+    /**
      * Validate a refresh token string fully: signature, type, JTI existence, blacklist check.
      *
      * @return userId from the token

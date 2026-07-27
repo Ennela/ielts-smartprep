@@ -19,8 +19,8 @@ public class ReadingSourceResolver implements VocabSourceResolver {
     }
 
     @Override
-    public String resolveSourceText(Long sourceId) {
-        ReadingQuiz quiz = readingQuizRepository.findById(sourceId)
+    public String resolveSourceText(Long userId, Long sourceId) {
+        ReadingQuiz quiz = readingQuizRepository.findByQuizIdAndUserUserId(sourceId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Reading quiz not found with ID: " + sourceId));
         return quiz.getPassageText() != null ? quiz.getPassageText() : "";
     }

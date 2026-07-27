@@ -12,7 +12,7 @@ public class SpeakingSourceResolver implements VocabSourceResolver {
     }
 
     @Override
-    public String resolveSourceText(Long sourceId) {
+    public String resolveSourceText(Long userId, Long sourceId) {
         // Return a mock speaking topic and transcript to satisfy the 4-skills interface.
         return "Speaking Topic:\n" +
                 "Describe a clean and well-preserved natural place that you visited and liked.\n" +

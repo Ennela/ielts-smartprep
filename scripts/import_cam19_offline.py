@@ -3,6 +3,8 @@ import os
 import re
 import pymysql
 
+from runtime_config import mysql_connection_config
+
 cache_path = r"d:\sources\repos\proj\IELST\ielts-smartprep\scripts\cam19_ocr_cache.json"
 review_path = r"d:\sources\repos\proj\IELST\ielts-smartprep\scripts\cam19_import_review.json"
 
@@ -12,10 +14,7 @@ with open(cache_path, "r", encoding="utf-8") as f:
 
 # Connect to database
 db_conn = pymysql.connect(
-    host='localhost',
-    user='root',
-    password='smartprep_root_2024',
-    database='ielts_smartprep',
+    **mysql_connection_config(),
     cursorclass=pymysql.cursors.DictCursor
 )
 

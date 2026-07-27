@@ -1,10 +1,9 @@
 import pymysql
 
+from runtime_config import mysql_connection_config
+
 connection = pymysql.connect(
-    host='localhost',
-    user='root',
-    password='smartprep_root_2024',
-    database='ielts_smartprep',
+    **mysql_connection_config(),
     cursorclass=pymysql.cursors.DictCursor
 )
 

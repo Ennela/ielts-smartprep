@@ -5,6 +5,14 @@
 $CONTAINER_NAME = "ielts-smartprep-minio-1"
 $AUDIO_SOURCE = "d:\sources\repos\proj\IELST\IETLS 19 cam\CAMBRIDGE 19\Audio cam 19"
 $BUCKET = "listening-audio"
+$MINIO_ACCESS_KEY = $env:MINIO_ACCESS_KEY
+$MINIO_SECRET_KEY = $env:MINIO_SECRET_KEY
+
+if ([string]::IsNullOrWhiteSpace($MINIO_ACCESS_KEY) -or
+    [string]::IsNullOrWhiteSpace($MINIO_SECRET_KEY)) {
+    Write-Error "MINIO_ACCESS_KEY and MINIO_SECRET_KEY must be set before running this script."
+    exit 1
+}
 
 # Mapping: original filename -> MinIO key
 $fileMapping = @{
@@ -61,15 +69,20 @@ foreach ($entry in $fileMapping.GetEnumerator()) {
 
 if ($successCount -gt 0) {
     Write-Host "`nConfiguring MinIO client and importing to bucket..." -ForegroundColor Cyan
-    
-    # Configure mc client inside container
-    docker exec $CONTAINER_NAME mc alias set local http://localhost:9000 minioadmin minioadmin
-    
-    # Ensure the bucket exists
-    docker exec $CONTAINER_NAME mc mb -p local/$BUCKET
-    
-    # Copy the files into the bucket
-    docker exec $CONTAINER_NAME mc cp --recursive /tmp/audio/ local/$BUCKET
+
+    # Send credentials over stdin so they are not exposed in the host process list.
+    # The temporary mc alias is removed when the shell exits, including on failure.
+    $credentialInput = $MINIO_ACCESS_KEY + [Environment]::NewLine + $MINIO_SECRET_KEY
+    $minioCommand = "read -r access_key; read -r secret_key; " +
+        "trap 'mc alias rm local >/dev/null 2>&1' EXIT; " +
+        "mc alias set local http://localhost:9000 `"`$access_key`" `"`$secret_key`" >/dev/null && " +
+        "mc mb -p local/$BUCKET && mc cp --recursive /tmp/audio/ local/$BUCKET"
+    $credentialInput | docker exec -i $CONTAINER_NAME sh -c $minioCommand
+
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "MinIO import failed."
+        exit 1
+    }
     
     # Clean up temp folder inside container
     docker exec $CONTAINER_NAME rm -rf /tmp/audio

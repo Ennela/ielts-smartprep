@@ -127,6 +127,17 @@ class JwtTokenProviderTest {
     class ValidationTests {
 
         @Test
+        @DisplayName("should reject a JWT secret shorter than 32 bytes")
+        void constructor_shortSecret_throwsWithoutEchoingSecret() {
+            String weakValue = "too-short";
+
+            IllegalStateException exception = assertThrows(IllegalStateException.class,
+                    () -> new JwtTokenProvider(weakValue, ACCESS_EXPIRATION_MS, REFRESH_EXPIRATION_MS));
+
+            assertFalse(exception.getMessage().contains(weakValue));
+        }
+
+        @Test
         @DisplayName("should validate a valid access token")
         void validateToken_validAccess_returnsTrue() {
             String token = jwtTokenProvider.generateAccessToken(1L, "user", "STUDENT");

@@ -23,8 +23,11 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CorsConfigurationSource corsConfigurationSource;
 
-    @Value("${app.frontend-url:http://localhost:5173}")
-    private String frontendUrl;
+    @Value("${app.security.csp-policy:default-src 'self'}")
+    private String cspPolicy;
+
+    @Value("${app.security.swagger-enabled:true}")
+    private boolean swaggerEnabled;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -33,32 +36,34 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .headers(headers -> headers
-                .contentSecurityPolicy(csp -> csp.policyDirectives(
-                    "default-src 'self'; " +
-                    "script-src 'self'; " +
-                    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-                    "font-src 'self' https://fonts.gstatic.com; " +
-                    "img-src 'self' data: blob:; " +
-                    "connect-src 'self' " + frontendUrl + " http://localhost:8080"
-                ))
+                .contentSecurityPolicy(csp -> csp.policyDirectives(cspPolicy))
             )
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    "/api/v1/auth/register",
-                    "/api/v1/auth/login",
-                    "/api/v1/auth/refresh",
-                    "/api/v1/auth/forgot-password",
-                    "/api/v1/auth/reset-password",
-                    "/api/v1/auth/verify-email"
-                ).permitAll()
-                .requestMatchers("/api/v1/listening/audio/**").permitAll()
-                .requestMatchers("/api/v1/auth/avatar/**").permitAll()
-                .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
-                .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
-                .requestMatchers("/review_portal.html").permitAll()
-                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                .anyRequest().authenticated()
-            )
+            .authorizeHttpRequests(auth -> {
+                auth
+                    .requestMatchers(
+                        "/api/v1/auth/register",
+                        "/api/v1/auth/login",
+                        "/api/v1/auth/refresh",
+                        "/api/v1/auth/forgot-password",
+                        "/api/v1/auth/reset-password",
+                        "/api/v1/auth/verify-email"
+                    ).permitAll()
+                    .requestMatchers("/api/v1/listening/audio/**").permitAll()
+                    .requestMatchers("/api/v1/auth/avatar/**").permitAll()
+                    .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                    .requestMatchers("/review_portal.html").permitAll();
+
+                // Swagger routes: only permit when enabled (dev/test), deny in prod
+                if (swaggerEnabled) {
+                    auth.requestMatchers(
+                        "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**"
+                    ).permitAll();
+                }
+
+                auth
+                    .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                    .anyRequest().authenticated();
+            })
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

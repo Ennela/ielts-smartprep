@@ -1,15 +1,17 @@
 import requests
 import json
 
-api_key = "AIzaSyDbeZlxqjdZfzeyyAfLwdora77n5CdLSp0"
+from runtime_config import require_env
+
+api_key = require_env("GEMINI_API_KEY")
 models = ["gemini-1.5-flash", "gemini-2.5-flash", "gemini-flash-latest"]
 
 for model in models:
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     payload = {
         "contents": [{"parts": [{"text": "Hello, respond with 'OK'"}]}]
     }
-    headers = {"Content-Type": "application/json"}
+    headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
     try:
         res = requests.post(url, json=payload, headers=headers, timeout=10)
         print(f"Model: {model}")

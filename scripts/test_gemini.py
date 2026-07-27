@@ -1,10 +1,12 @@
 import requests
 import json
 
-api_key = "AIzaSyDbeZlxqjdZfzeyyAfLwdora77n5CdLSp0"
-gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={api_key}"
+from runtime_config import require_env
 
-headers = {"Content-Type": "application/json"}
+api_key = require_env("GEMINI_API_KEY")
+gemini_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
+
+headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
 payload = {
     "contents": [{
         "parts": [{"text": "Hello, this is a test. Reply with 'OK'."}]

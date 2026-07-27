@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
@@ -34,7 +35,7 @@ public class GeminiClient {
     private final Retry retry;
     private final StringRedisTemplate redisTemplate;
 
-    @Value("${app.gemini.api-key:}")
+    @Value("${app.gemini.api-key}")
     private String apiKey;
 
     @Value("${app.gemini.base-url}")
@@ -64,7 +65,7 @@ public class GeminiClient {
             try {
                 return parser.apply(rawResponse);
             } catch (Exception ex) {
-                log.warn("AI response validation/parsing failed: {}", ex.getMessage());
+                log.warn("AI response validation/parsing failed ({})", ex.getClass().getSimpleName());
                 if (ex instanceof InvalidAiResponseException) {
                     throw (InvalidAiResponseException) ex;
                 }
@@ -83,11 +84,15 @@ public class GeminiClient {
     }
 
     private String generateInternal(String systemPrompt, String userPrompt) {
-        String url = baseUrl + ":generateContent?key=" + apiKey;
+        if (!StringUtils.hasText(apiKey)) {
+            throw new ServiceUnavailableException("Gemini API key is not configured");
+        }
+        String url = baseUrl + ":generateContent";
         Map<String, Object> requestBody = buildRequestBody(systemPrompt, userPrompt);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.set("x-goog-api-key", apiKey);
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
         try {
@@ -97,14 +102,14 @@ public class GeminiClient {
             logAndTrackUsage(responseBody);
             return extractTextFromResponse(responseBody);
         } catch (ResourceAccessException ex) {
-            log.warn("Gemini API timeout/network access error: {}", ex.getMessage());
+            log.warn("Gemini API timeout/network access error");
             throw new AiServiceException("Gemini API timeout or connection failure", ex);
         } catch (Exception ex) {
-            log.warn("Gemini API call failed: {}", ex.getMessage());
+            log.warn("Gemini API call failed ({})", ex.getClass().getSimpleName());
             if (ex instanceof AiServiceException || ex instanceof InvalidAiResponseException) {
                 throw ex;
             }
-            throw new AiServiceException("Gemini API error: " + ex.getMessage(), ex);
+            throw new AiServiceException("Gemini API request failed", ex);
         }
     }
 
@@ -145,7 +150,7 @@ public class GeminiClient {
      * Fallback method invoked when circuit breaker is OPEN or call fails.
      */
     private String fallbackGenerate(String systemPrompt, String userPrompt, Throwable throwable) {
-        log.error("Circuit breaker fallback for Gemini API: {}", throwable.getMessage());
+        log.error("Circuit breaker fallback for Gemini API ({})", throwable.getClass().getSimpleName());
         throw new ServiceUnavailableException(
                 "AI service is temporarily unavailable. Please try again in a few moments.");
     }
@@ -199,4 +204,3 @@ public class GeminiClient {
         }
     }
 }
-

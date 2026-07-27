@@ -46,8 +46,8 @@ app:
     edge-tts-url: http://localhost:8000
   minio:
     endpoint: http://localhost:9000
-    access-key: minioadmin
-    secret-key: minioadmin
+    access-key: test-only-minio-access-key
+    secret-key: test-only-minio-secret-key
     bucket: test-bucket
   rate-limit:
     capacity: 1000
@@ -57,6 +57,11 @@ app:
     auth-login-refill-minutes: 1
     auth-register-capacity: 1000
     auth-register-refill-minutes: 1
+  cors:
+    allowed-origins: http://localhost,http://localhost:5173
+  security:
+    swagger-enabled: true
+    csp-policy: "default-src 'self'"
 
 # Disable actuator in tests
 management:

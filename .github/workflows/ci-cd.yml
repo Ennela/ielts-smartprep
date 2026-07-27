@@ -1,127 +1,63 @@
-name: CI/CD Pipeline
+name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main]
   pull_request:
-    branches: [ "main" ]
+    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
-  # ---------------------------------------------
-  # Job 1: Backend CI (Build & Test)
-  # ---------------------------------------------
-  backend-ci:
-    name: Backend CI
+  backend-tests:
+    name: Backend unit tests
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
     steps:
-      - name: Checkout repository
+      - name: Check out repository
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
+          distribution: temurin
           java-version: '17'
-          distribution: 'temurin'
-          cache: 'maven'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
 
-      - name: Build and Test Backend
-        working-directory: ./backend
-        run: mvn clean test
+      - name: Run unit tests
+        run: mvn --batch-mode test
 
-  # ---------------------------------------------
-  # Job 2: Frontend CI (Lint & Build)
-  # ---------------------------------------------
-  frontend-ci:
-    name: Frontend CI
+  frontend-checks:
+    name: Frontend checks
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
     steps:
-      - name: Checkout repository
+      - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: ./frontend/package-lock.json
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        working-directory: ./frontend
         run: npm ci
 
-      - name: Build Frontend
-        working-directory: ./frontend
-        run: npm run build
+      - name: Lint
+        run: npm run lint
 
-  # ---------------------------------------------
-  # Job 3: Build & Verify Docker Images
-  # ---------------------------------------------
-  build-docker:
-    name: Build & Verify Docker Images
-    needs: [backend-ci, frontend-ci]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Run tests
+        run: npm test
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Docker Hub
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      # Build Backend
-      - name: Build and Push Backend Image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME || 'smartprep' }}/ielts-smartprep-backend:latest
-            ${{ secrets.DOCKERHUB_USERNAME || 'smartprep' }}/ielts-smartprep-backend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      # Build Frontend
-      - name: Build and Push Frontend Image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend
-          push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-          tags: |
-            ${{ secrets.DOCKERHUB_USERNAME || 'smartprep' }}/ielts-smartprep-frontend:latest
-            ${{ secrets.DOCKERHUB_USERNAME || 'smartprep' }}/ielts-smartprep-frontend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # ---------------------------------------------
-  # Job 4: Continuous Deployment (Only on Main push)
-  # ---------------------------------------------
-  deploy:
-    name: Deploy to Server
-    needs: build-docker
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: SSH and Deploy to Server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          port: ${{ secrets.SERVER_PORT || 22 }}
-          script: |
-            cd /app/ielts-smartprep
-            
-            # Pull new Docker images
-            docker compose pull
-            
-            # Recreate containers with zero-downtime or minimal restart
-            docker compose up -d --remove-orphans
-            
-            # Clean up dangling images
-            docker image prune -f
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
