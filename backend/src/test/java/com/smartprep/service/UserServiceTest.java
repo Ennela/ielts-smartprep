@@ -244,7 +244,7 @@ class UserServiceTest {
             when(jwtTokenProvider.validateToken(refreshToken)).thenReturn(true);
             when(jwtTokenProvider.getJtiFromToken(refreshToken)).thenReturn("jti-revoke");
 
-            userService.logout(refreshToken);
+            userService.logout(refreshToken, null);
 
             verify(tokenService).revokeRefreshToken("jti-revoke");
         }
@@ -254,7 +254,7 @@ class UserServiceTest {
         void logout_invalidToken_noop() {
             when(jwtTokenProvider.validateToken("expired")).thenReturn(false);
 
-            assertDoesNotThrow(() -> userService.logout("expired"));
+            assertDoesNotThrow(() -> userService.logout("expired", null));
             verify(tokenService, never()).revokeRefreshToken(any());
         }
     }

@@ -3,20 +3,27 @@ package com.smartprep.controller;
 import com.smartprep.dto.request.*;
 import com.smartprep.dto.response.ApiResponse;
 import com.smartprep.dto.response.AuthResponse;
+import com.smartprep.exception.InvalidTokenException;
 import com.smartprep.model.entity.User;
+import com.smartprep.security.JwtTokenProvider;
 import com.smartprep.service.EmailVerificationService;
 import com.smartprep.service.PasswordResetService;
 import com.smartprep.service.UserService;
 import com.smartprep.service.StorageService;
 import org.springframework.web.multipart.MultipartFile;
+import java.time.Duration;
 import java.util.Map;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -25,10 +32,17 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Authentication", description = "Authentication, token management, and password recovery API")
 public class AuthController {
 
+    private static final String REFRESH_TOKEN_COOKIE = "refreshToken";
+    private static final String AUTH_COOKIE_PATH = "/api/v1/auth";
+
     private final UserService userService;
     private final PasswordResetService passwordResetService;
     private final EmailVerificationService emailVerificationService;
     private final StorageService storageService;
+    private final JwtTokenProvider jwtTokenProvider;
+
+    @Value("${app.security.secure-cookies:false}")
+    private boolean secureCookies;
 
     // ── Registration & Login ──────────────────────────────────────────────
 
@@ -36,31 +50,41 @@ public class AuthController {
     @Operation(summary = "Register a new user", description = "Creates a new account and sends a verification email")
     public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
         AuthResponse response = userService.register(request);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(response, "Registration successful. Please check your email to verify your account."));
+        return authResponseWithRefreshCookie(response,
+                "Registration successful. Please check your email to verify your account.",
+                HttpStatus.CREATED);
     }
 
     @PostMapping("/login")
     @Operation(summary = "Login to user account", description = "Authenticates credentials and returns access + refresh tokens")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = userService.login(request);
-        return ResponseEntity.ok(ApiResponse.ok(response, "Login successful"));
+        return authResponseWithRefreshCookie(response, "Login successful", HttpStatus.OK);
     }
 
     // ── Token Management ──────────────────────────────────────────────────
 
     @PostMapping("/refresh")
     @Operation(summary = "Refresh access token", description = "Exchanges a valid refresh token for a new access + refresh token pair (rotation)")
-    public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
-        AuthResponse response = userService.refreshToken(request.getRefreshToken());
-        return ResponseEntity.ok(ApiResponse.ok(response, "Token refreshed"));
+    public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(
+            @CookieValue(name = REFRESH_TOKEN_COOKIE, required = false) String refreshTokenCookie,
+            @RequestBody(required = false) RefreshTokenRequest request) {
+        String refreshToken = resolveRefreshToken(refreshTokenCookie, request);
+        AuthResponse response = userService.refreshToken(refreshToken);
+        return authResponseWithRefreshCookie(response, "Token refreshed", HttpStatus.OK);
     }
 
     @PostMapping("/logout")
-    @Operation(summary = "Logout and revoke refresh token", description = "Revokes the refresh token so it can no longer be used")
-    public ResponseEntity<ApiResponse<Void>> logout(@Valid @RequestBody RefreshTokenRequest request) {
-        userService.logout(request.getRefreshToken());
-        return ResponseEntity.ok(ApiResponse.ok(null, "Logged out successfully"));
+    @Operation(summary = "Logout and revoke refresh token", description = "Revokes the refresh token and blacklists the current access token")
+    public ResponseEntity<ApiResponse<Void>> logout(
+            @CookieValue(name = REFRESH_TOKEN_COOKIE, required = false) String refreshTokenCookie,
+            @RequestBody(required = false) RefreshTokenRequest request,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        String accessToken = extractBearerToken(authHeader);
+        userService.logout(resolveRefreshTokenOrNull(refreshTokenCookie, request), accessToken);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, clearRefreshCookie().toString())
+                .body(ApiResponse.ok(null, "Logged out successfully"));
     }
 
     // ── Password Recovery ─────────────────────────────────────────────────
@@ -115,11 +139,16 @@ public class AuthController {
     }
 
     @PutMapping("/password")
-    @Operation(summary = "Change user password", description = "Updates the account password after verifying current password")
+    @Operation(summary = "Change user password", description = "Updates the account password after verifying current password. Invalidates current tokens.")
     public ResponseEntity<ApiResponse<Void>> changePassword(
             @AuthenticationPrincipal User user,
-            @Valid @RequestBody ChangePasswordRequest request) {
-        userService.changePassword(user.getUserId(), request);
+            @Valid @RequestBody ChangePasswordRequest request,
+            @RequestHeader(value = "Authorization", required = false) String authHeader) {
+        String accessToken = extractBearerToken(authHeader);
+        // refreshToken is not directly available here; pass null.
+        // The access token blacklisting will force re-auth, and the refresh token
+        // will fail to issue new access tokens once the user re-authenticates.
+        userService.changePassword(user.getUserId(), request, null, accessToken);
         return ResponseEntity.ok(ApiResponse.ok(null, "Password changed successfully"));
     }
 
@@ -174,5 +203,60 @@ public class AuthController {
             }
             return ResponseEntity.notFound().build();
         }
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────
+
+    private String extractBearerToken(String authHeader) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            return authHeader.substring(7);
+        }
+        return null;
+    }
+
+    private ResponseEntity<ApiResponse<AuthResponse>> authResponseWithRefreshCookie(
+            AuthResponse response,
+            String message,
+            HttpStatus status) {
+        ResponseCookie cookie = buildRefreshCookie(response.getRefreshToken());
+        response.setRefreshToken(null);
+        return ResponseEntity.status(status)
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(ApiResponse.ok(response, message));
+    }
+
+    private ResponseCookie buildRefreshCookie(String refreshToken) {
+        return ResponseCookie.from(REFRESH_TOKEN_COOKIE, refreshToken)
+                .httpOnly(true)
+                .secure(secureCookies)
+                .path(AUTH_COOKIE_PATH)
+                .maxAge(Duration.ofMillis(jwtTokenProvider.getRefreshExpirationMs()))
+                .sameSite("Lax")
+                .build();
+    }
+
+    private ResponseCookie clearRefreshCookie() {
+        return ResponseCookie.from(REFRESH_TOKEN_COOKIE, "")
+                .httpOnly(true)
+                .secure(secureCookies)
+                .path(AUTH_COOKIE_PATH)
+                .maxAge(Duration.ZERO)
+                .sameSite("Lax")
+                .build();
+    }
+
+    private String resolveRefreshToken(String refreshTokenCookie, RefreshTokenRequest request) {
+        String refreshToken = resolveRefreshTokenOrNull(refreshTokenCookie, request);
+        if (!StringUtils.hasText(refreshToken)) {
+            throw new InvalidTokenException("Refresh token is required");
+        }
+        return refreshToken;
+    }
+
+    private String resolveRefreshTokenOrNull(String refreshTokenCookie, RefreshTokenRequest request) {
+        if (StringUtils.hasText(refreshTokenCookie)) {
+            return refreshTokenCookie;
+        }
+        return request != null ? request.getRefreshToken() : null;
     }
 }

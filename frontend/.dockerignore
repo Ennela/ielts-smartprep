@@ -1,0 +1,13 @@
+.git
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.log
+logs/
+node_modules/
+dist/
+coverage/

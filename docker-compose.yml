@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   frontend:
     build: ./frontend
@@ -34,8 +32,8 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
       MINIO_BUCKET: ${MINIO_BUCKET:-listening-audio}
       TTS_ENABLED: ${TTS_ENABLED:-true}
       EDGE_TTS_URL: http://edge-tts:8000
@@ -60,6 +58,14 @@ services:
     restart: always
     ports:
       - "8000:8000"
+    environment:
+      EDGE_TTS_ENV: production
+      EDGE_TTS_CORS_ALLOWED_ORIGINS: ${EDGE_TTS_CORS_ALLOWED_ORIGINS:-}
+      EDGE_TTS_ALLOWED_VOICES: ${EDGE_TTS_ALLOWED_VOICES:-en-US-GuyNeural,en-US-AriaNeural,en-GB-RyanNeural,en-GB-SoniaNeural,en-AU-WilliamNeural,en-AU-NatashaNeural}
+      EDGE_TTS_MAX_TEXT_LENGTH: ${EDGE_TTS_MAX_TEXT_LENGTH:-5000}
+      EDGE_TTS_MAX_REQUEST_BYTES: ${EDGE_TTS_MAX_REQUEST_BYTES:-20000}
+      EDGE_TTS_RATE_LIMIT_REQUESTS: ${EDGE_TTS_RATE_LIMIT_REQUESTS:-30}
+      EDGE_TTS_RATE_LIMIT_WINDOW_SECONDS: ${EDGE_TTS_RATE_LIMIT_WINDOW_SECONDS:-60}
     networks:
       - app-network
 
@@ -89,8 +95,8 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
     volumes:
       - minio-data:/data
     networks:
@@ -111,4 +117,3 @@ volumes:
 networks:
   app-network:
     driver: bridge
-

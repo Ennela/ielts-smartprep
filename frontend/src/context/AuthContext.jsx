@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import authService from '../api/authService';
+import authService, { clearAllAuthData } from '../api/authService';
 
 const AuthContext = createContext(null);
 
@@ -13,9 +13,7 @@ export function AuthProvider({ children }) {
       authService.getProfile()
         .then((res) => setUser(res.data.data))
         .catch(() => {
-          localStorage.removeItem('token');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
+          clearAllAuthData();
         })
         .finally(() => setLoading(false));
     } else {
@@ -23,13 +21,24 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // ── Cross-tab logout sync ──────────────────────────────────────────────
+  // When another tab clears the access token (via logout or refresh failure),
+  // this tab detects the storage event and resets its own auth state.
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'token' && e.newValue === null) {
+        setUser(null);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   const login = async (username, password) => {
     const res = await authService.login(username, password);
     const data = res.data.data;
     localStorage.setItem('token', data.token);
-    if (data.refreshToken) {
-      localStorage.setItem('refreshToken', data.refreshToken);
-    }
+    localStorage.removeItem('refreshToken');
     setUser(data);
     return data;
   };
@@ -38,9 +47,7 @@ export function AuthProvider({ children }) {
     const res = await authService.register(email, username, password);
     const data = res.data.data;
     localStorage.setItem('token', data.token);
-    if (data.refreshToken) {
-      localStorage.setItem('refreshToken', data.refreshToken);
-    }
+    localStorage.removeItem('refreshToken');
     setUser(data);
     return data;
   };

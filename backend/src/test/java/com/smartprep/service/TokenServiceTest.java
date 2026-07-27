@@ -172,4 +172,45 @@ class TokenServiceTest {
                     () -> tokenService.validateRefreshToken(token));
         }
     }
+
+    @Nested
+    @DisplayName("blacklistAccessToken")
+    class BlacklistAccessTests {
+
+        @Test
+        @DisplayName("should blacklist access JTI with given TTL")
+        void blacklist_success() {
+            tokenService.blacklistAccessToken("access-jti-1", 600000L);
+
+            verify(valueOps).set(
+                    eq("blacklist:jti:access-jti-1"),
+                    eq("revoked"),
+                    eq(600000L),
+                    eq(TimeUnit.MILLISECONDS)
+            );
+        }
+
+        @Test
+        @DisplayName("should use default TTL when remaining is zero or negative")
+        void blacklist_zeroTtl_usesDefault() {
+            when(jwtTokenProvider.getAccessExpirationMs()).thenReturn(900000L);
+
+            tokenService.blacklistAccessToken("access-jti-2", 0L);
+
+            verify(valueOps).set(
+                    eq("blacklist:jti:access-jti-2"),
+                    eq("revoked"),
+                    eq(900000L),
+                    eq(TimeUnit.MILLISECONDS)
+            );
+        }
+
+        @Test
+        @DisplayName("should do nothing when JTI is null")
+        void blacklist_nullJti_noop() {
+            tokenService.blacklistAccessToken(null, 600000L);
+
+            verify(valueOps, never()).set(anyString(), anyString(), anyLong(), any(TimeUnit.class));
+        }
+    }
 }

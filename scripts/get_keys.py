@@ -3,8 +3,10 @@ import requests
 import re
 import time
 
-api_key = "AIzaSyDbeZlxqjdZfzeyyAfLwdora77n5CdLSp0"
-gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+from runtime_config import require_env
+
+api_key = require_env("GEMINI_API_KEY")
+gemini_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 
 cache_path = r"d:\sources\repos\proj\IELST\ielts-smartprep\scripts\cam19_ocr_cache.json"
 with open(cache_path, "r", encoding="utf-8") as f:
@@ -16,7 +18,7 @@ def call_gemini(ocr_text):
         "Format the output as a JSON object where the keys are string question numbers from '1' to '40' and values are the correct answers (e.g. 'FALSE', 'grain', 'C', 'B', 'E').\n"
         "Clean up OCR noise."
     )
-    headers = {"Content-Type": "application/json"}
+    headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
     payload = {
         "system_instruction": {
             "parts": [{"text": system_prompt}]
@@ -45,5 +47,3 @@ for test, page in pages.items():
         print(res)
     except Exception as e:
         print(f"Error: {e}")
-
-

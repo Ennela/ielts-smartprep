@@ -121,12 +121,22 @@ public class UserService {
     }
 
     /**
-     * Logout by revoking the refresh token.
+     * Logout by revoking the refresh token and blacklisting the current access token.
+     *
+     * @param refreshToken the refresh token to revoke
+     * @param accessToken  the current access token to blacklist (nullable)
      */
-    public void logout(String refreshToken) {
-        if (jwtTokenProvider.validateToken(refreshToken)) {
+    public void logout(String refreshToken, String accessToken) {
+        // Revoke the refresh token so it cannot be reused
+        if (refreshToken != null && jwtTokenProvider.validateToken(refreshToken)) {
             String jti = jwtTokenProvider.getJtiFromToken(refreshToken);
             tokenService.revokeRefreshToken(jti);
+        }
+
+        // Blacklist the access token so it is rejected immediately
+        if (accessToken != null && jwtTokenProvider.validateToken(accessToken)) {
+            String accessJti = jwtTokenProvider.getJtiFromToken(accessToken);
+            tokenService.blacklistAccessToken(accessJti, jwtTokenProvider.getAccessExpirationMs());
         }
     }
 
@@ -151,7 +161,17 @@ public class UserService {
         return buildAuthResponse(user, null, null);
     }
 
-    public void changePassword(Long userId, ChangePasswordRequest request) {
+    /**
+     * Change user password and invalidate the current session tokens.
+     * After this call the client must re-authenticate.
+     *
+     * @param userId       the authenticated user's ID
+     * @param request      current + new password
+     * @param refreshToken the caller's refresh token to revoke (nullable)
+     * @param accessToken  the caller's access token to blacklist (nullable)
+     */
+    public void changePassword(Long userId, ChangePasswordRequest request,
+                               String refreshToken, String accessToken) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         
@@ -161,6 +181,16 @@ public class UserService {
         
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+
+        // Invalidate current session tokens so the user must re-login
+        if (refreshToken != null && jwtTokenProvider.validateToken(refreshToken)) {
+            String jti = jwtTokenProvider.getJtiFromToken(refreshToken);
+            tokenService.revokeRefreshToken(jti);
+        }
+        if (accessToken != null && jwtTokenProvider.validateToken(accessToken)) {
+            String accessJti = jwtTokenProvider.getJtiFromToken(accessToken);
+            tokenService.blacklistAccessToken(accessJti, jwtTokenProvider.getAccessExpirationMs());
+        }
     }
 
     private AuthResponse buildAuthResponse(User user, String token, String refreshToken) {

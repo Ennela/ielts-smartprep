@@ -14,6 +14,7 @@ interface EnrichedError extends Error {
 const axiosClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1',
   headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,
 });
 
 // ── Request interceptor: attach access token ────────────────────────────
@@ -71,8 +72,8 @@ axiosClient.interceptors.response.use(
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (!refreshToken) {
+      const currentAccessToken = localStorage.getItem('token');
+      if (!currentAccessToken) {
         isRefreshing = false;
         clearAuthAndRedirect();
         return Promise.reject(error);
@@ -81,15 +82,16 @@ axiosClient.interceptors.response.use(
       try {
         const res = await axios.post(
           (import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1') + '/auth/refresh',
-          { refreshToken },
-          { headers: { 'Content-Type': 'application/json' } }
+          {},
+          { headers: { 'Content-Type': 'application/json' }, withCredentials: true }
         );
 
-        const { token: newAccessToken, refreshToken: newRefreshToken } = res.data.data;
-        localStorage.setItem('token', newAccessToken);
-        if (newRefreshToken) {
-          localStorage.setItem('refreshToken', newRefreshToken);
+        const { token: newAccessToken } = res.data.data;
+        if (!newAccessToken) {
+          throw new Error('Refresh response missing access token');
         }
+        localStorage.setItem('token', newAccessToken);
+        localStorage.removeItem('refreshToken');
 
         if (axiosClient.defaults.headers.common) {
           axiosClient.defaults.headers.common.Authorization = `Bearer ${newAccessToken}`;
@@ -127,6 +129,9 @@ function clearAuthAndRedirect() {
   localStorage.removeItem('refreshToken');
   localStorage.removeItem('user');
   const currentPath = window.location.pathname + window.location.search;
+  if (currentPath === '/login') {
+    return;
+  }
   if (
     currentPath &&
     currentPath !== '/' &&

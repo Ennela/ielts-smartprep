@@ -1,23 +1,25 @@
 package com.smartprep.repository;
 
+import org.junit.jupiter.api.Tag;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * Shared Testcontainers MySQL base class.
  * Reuses a single container across all integration test subclasses to speed up the suite.
  */
-@Testcontainers
+@Tag("integration")
 public abstract class AbstractMySQLContainerTest {
 
-    @Container
-    static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.0")
+    private static final MySQLContainer<?> MYSQL = new MySQLContainer<>("mysql:8.0")
             .withDatabaseName("ielts_smartprep_test")
             .withUsername("test")
             .withPassword("test");
+
+    static {
+        MYSQL.start();
+    }
 
     @DynamicPropertySource
     static void configureDataSource(DynamicPropertyRegistry registry) {
@@ -25,6 +27,6 @@ public abstract class AbstractMySQLContainerTest {
         registry.add("spring.datasource.username", MYSQL::getUsername);
         registry.add("spring.datasource.password", MYSQL::getPassword);
         registry.add("spring.flyway.enabled", () -> "true");
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
     }
 }

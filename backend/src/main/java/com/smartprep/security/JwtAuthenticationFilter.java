@@ -54,13 +54,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             Long userId = jwtTokenProvider.getUserIdFromToken(token);
             String role = jwtTokenProvider.getRoleFromToken(token);
-
-            // Enrich MDC with userId for structured logging
-            TraceIdFilter.setUserId(String.valueOf(userId));
+            if (!StringUtils.hasText(role)) {
+                filterChain.doFilter(request, response);
+                return;
+            }
 
             userRepository.findById(userId).ifPresent(user -> {
+                if (user.getRole() == null || !user.getRole().name().equals(role)) {
+                    return;
+                }
+
+                // Enrich MDC with userId for structured logging after successful auth.
+                TraceIdFilter.setUserId(String.valueOf(userId));
+
                 var authorities = Collections.singletonList(
-                        new SimpleGrantedAuthority("ROLE_" + (role != null ? role : "STUDENT"))
+                        new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
                 );
                 UsernamePasswordAuthenticationToken auth =
                         new UsernamePasswordAuthenticationToken(user, null, authorities);

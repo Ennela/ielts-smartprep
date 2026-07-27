@@ -1,6 +1,7 @@
 package com.smartprep.repository;
 
 import com.smartprep.model.entity.WritingPrompt;
+import com.smartprep.model.enums.ContentStatus;
 import com.smartprep.model.enums.EssayType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,5 +21,7 @@ public interface WritingPromptRepository extends JpaRepository<WritingPrompt, Lo
     Page<WritingPrompt> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
     Page<WritingPrompt> findByEssayTypeOrderByCreatedAtDesc(EssayType essayType, Pageable pageable);
+
+    Page<WritingPrompt> findByContentStatus(ContentStatus contentStatus, Pageable pageable);
 }
 

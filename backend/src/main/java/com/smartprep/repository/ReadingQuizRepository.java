@@ -1,6 +1,7 @@
 package com.smartprep.repository;
 
 import com.smartprep.model.entity.ReadingQuiz;
+import com.smartprep.model.enums.ContentStatus;
 import com.smartprep.model.enums.Difficulty;
 import com.smartprep.model.enums.Topic;
 import org.springframework.data.domain.Page;
@@ -31,4 +32,6 @@ public interface ReadingQuizRepository extends JpaRepository<ReadingQuiz, Long> 
             @Param("difficulty") Difficulty difficulty,
             @Param("source") String source,
             Pageable pageable);
+
+    Page<ReadingQuiz> findByContentStatus(ContentStatus contentStatus, Pageable pageable);
 }

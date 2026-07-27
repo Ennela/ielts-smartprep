@@ -1,0 +1,16 @@
+.git
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.log
+logs/
+**/__pycache__/
+**/*.py[cod]
+backend/target/
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/

@@ -1,8 +1,10 @@
 import requests
 import json
 
-api_key = "AIzaSyDbeZlxqjdZfzeyyAfLwdora77n5CdLSp0"
-gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+from runtime_config import require_env
+
+api_key = require_env("GEMINI_API_KEY")
+gemini_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
 
 with open("scripts/cam19_ocr_cache.json", "r", encoding="utf-8") as f:
     ocr_cache = json.load(f)
@@ -27,7 +29,7 @@ QUESTIONS:
 - Q3 (order_index: 3): Statement about racket development -> ANSWER: NOT GIVEN
 """
 
-headers = {"Content-Type": "application/json"}
+headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
 payload = {
     "system_instruction": {
         "parts": [{"text": system_prompt}]

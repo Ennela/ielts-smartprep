@@ -1,5 +1,6 @@
 package com.smartprep.model.entity;
 
+import com.smartprep.model.enums.ContentStatus;
 import com.smartprep.model.enums.Difficulty;
 import com.smartprep.model.enums.Topic;
 import jakarta.persistence.*;
@@ -53,6 +54,11 @@ public class ReadingQuiz {
     @Column(nullable = false, length = 30)
     @Builder.Default
     private String moduleType = "ACADEMIC";
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "content_status", nullable = false, length = 20)
+    @Builder.Default
+    private ContentStatus contentStatus = ContentStatus.DRAFT;
 
     @Column(name = "source", length = 100)
     private String source;

@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import com.smartprep.model.enums.AudioStatus;
+import com.smartprep.model.enums.ContentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
@@ -26,4 +27,6 @@ public interface ListeningPartRepository extends JpaRepository<ListeningPart, Lo
             Pageable pageable);
 
     List<ListeningPart> findByAudioStatus(AudioStatus audioStatus);
+
+    Page<ListeningPart> findByContentStatus(ContentStatus contentStatus, Pageable pageable);
 }
