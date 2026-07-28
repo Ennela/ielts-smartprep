@@ -259,11 +259,11 @@ export default function AdminReadingQuizzesPage() {
     try {
       await adminApi.deleteReadingQuiz(deleteId);
       setDeleteId(null);
-      setSuccessMsg('Reading passage deleted successfully!');
+      setSuccessMsg('Reading passage archived successfully!');
       invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to delete quiz');
+      setError(err.response?.data?.message || err.message || 'Failed to archive quiz');
     } finally {
       setDeleting(false);
     }
@@ -725,16 +725,16 @@ export default function AdminReadingQuizzesPage() {
         <div className="admin-modal-overlay" onClick={() => setDeleteId(null)}>
           <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 700, marginBottom: 12 }}>
-              Confirm Delete
+              Confirm Archive
             </h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 24, lineHeight: 1.6 }}>
-              Are you sure you want to delete this reading passage? This action cannot be undone.
+              Archive this reading passage? It will disappear from active lists, while its questions, mock-test links, and history remain available for restoration.
             </p>
             <div className="admin-form-actions">
               <button className="btn btn-outline" onClick={() => setDeleteId(null)}>Cancel</button>
               <button className="btn admin-btn-danger-fill" onClick={handleDelete} disabled={deleting}>
                 {deleting && <span className="spinner" />}
-                Delete Passage
+                Archive Passage
               </button>
             </div>
           </div>

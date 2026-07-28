@@ -109,7 +109,7 @@ export default function AdminWritingPromptsPage() {
     try {
       await adminApi.deleteWritingPrompt(deleteId);
       setDeleteId(null);
-      setSuccessMsg('Prompt deleted successfully!');
+      setSuccessMsg('Prompt archived successfully!');
       invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
@@ -309,16 +309,16 @@ export default function AdminWritingPromptsPage() {
         <div className="admin-modal-overlay" onClick={() => setDeleteId(null)}>
           <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 700, marginBottom: 12 }}>
-              Confirm Delete
+              Confirm Archive
             </h2>
             <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', marginBottom: 24, lineHeight: 1.6 }}>
-              Are you sure you want to delete this writing prompt? This action cannot be undone.
+              Archive this writing prompt? It will disappear from active lists, while linked student submissions remain intact and the prompt can be restored.
             </p>
             <div className="admin-form-actions">
               <button className="btn btn-outline" onClick={() => setDeleteId(null)}>Cancel</button>
               <button className="btn admin-btn-danger-fill" onClick={handleDelete} disabled={deleting}>
                 {deleting && <span className="spinner" />}
-                Delete Prompt
+                Archive Prompt
               </button>
             </div>
           </div>

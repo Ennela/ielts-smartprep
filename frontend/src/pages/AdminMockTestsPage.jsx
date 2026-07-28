@@ -173,7 +173,7 @@ export default function AdminMockTestsPage() {
     try {
       await adminApi.deleteMockTest(deleteId);
       setDeleteId(null);
-      setSuccessMsg('Mock test deleted successfully!');
+      setSuccessMsg('Mock test archived successfully!');
       invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
@@ -443,16 +443,16 @@ export default function AdminMockTestsPage() {
         <div className="admin-modal-overlay" onClick={() => setDeleteId(null)}>
           <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 700, marginBottom: 12 }}>
-              Confirm Delete
+              Confirm Archive
             </h2>
             <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', marginBottom: 24, lineHeight: 1.6 }}>
-              Are you sure you want to delete this full mock test? This will remove the exam template setup, but student submissions and histories will remain untouched.
+              Archive this full mock test? It will disappear from active lists, while its setup, original content, student submissions, and histories remain available for restoration.
             </p>
             <div className="admin-form-actions">
               <button className="btn btn-outline" onClick={() => setDeleteId(null)}>Cancel</button>
               <button className="btn admin-btn-danger-fill" onClick={handleDelete} disabled={deleting}>
                 {deleting && <span className="spinner" />}
-                Delete Mock Test
+                Archive Mock Test
               </button>
             </div>
           </div>

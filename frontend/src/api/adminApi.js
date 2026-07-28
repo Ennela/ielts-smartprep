@@ -30,6 +30,9 @@ const adminApi = {
     deleteWritingPrompt: (promptId) =>
         axiosClient.delete(`/admin/writing-prompts/${promptId}`),
 
+    restoreWritingPrompt: (promptId) =>
+        axiosClient.post(`/admin/writing-prompts/${promptId}/restore`),
+
     listReadingQuizzes: (topic, difficulty, source, page = 0, size = DEFAULT_SIZE, sort = 'createdAt,desc') => {
         const params = { page, size, sort };
         if (topic) params.topic = topic;
@@ -47,6 +50,9 @@ const adminApi = {
     deleteReadingQuiz: (quizId) =>
         axiosClient.delete(`/admin/reading-quizzes/${quizId}`),
 
+    restoreReadingQuiz: (quizId) =>
+        axiosClient.post(`/admin/reading-quizzes/${quizId}/restore`),
+
     listMockTests: (page = 0, size = DEFAULT_SIZE, sort = 'createdAt,desc') =>
         axiosClient.get('/admin/mock-tests', { params: { page, size, sort } }),
 
@@ -58,6 +64,9 @@ const adminApi = {
 
     deleteMockTest: (id) =>
         axiosClient.delete(`/admin/mock-tests/${id}`),
+
+    restoreMockTest: (id) =>
+        axiosClient.post(`/admin/mock-tests/${id}/restore`),
 
     listListeningParts: (audioStatus, topic, page = 0, size = DEFAULT_SIZE, sort = 'createdAt,desc') => {
         const params = { page, size, sort };
@@ -77,6 +86,9 @@ const adminApi = {
 
     deleteListeningPart: (id) =>
         axiosClient.delete(`/admin/listening/parts/${id}`),
+
+    restoreListeningPart: (id) =>
+        axiosClient.post(`/admin/listening/parts/${id}/restore`),
 
     regenerateListeningAudio: (id) =>
         axiosClient.post(`/admin/listening/parts/${id}/regenerate-audio`),

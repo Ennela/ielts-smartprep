@@ -82,11 +82,11 @@ export default function AdminListeningListPage() {
     try {
       await adminApi.deleteListeningPart(deleteId);
       setDeleteId(null);
-      setSuccessMsg('Listening part deleted successfully!');
+      setSuccessMsg('Listening part archived successfully!');
       invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to delete listening part');
+      setError(err.response?.data?.message || err.message || 'Failed to archive listening part');
     } finally {
       setDeleting(false);
     }
@@ -340,16 +340,16 @@ export default function AdminListeningListPage() {
         <div className="admin-modal-overlay" onClick={() => setDeleteId(null)}>
           <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 700, marginBottom: 12 }}>
-              Confirm Delete
+              Confirm Archive
             </h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 24, lineHeight: 1.6 }}>
-              Are you sure you want to delete this listening part? This will delete all associated questions, option choices, and the MP3 audio file. This action cannot be undone.
+              Archive this listening part? It will disappear from active lists, while its questions, mock-test links, test history, and MP3 audio remain available for restoration.
             </p>
             <div className="admin-form-actions">
               <button className="btn btn-outline" onClick={() => setDeleteId(null)}>Cancel</button>
               <button className="btn admin-btn-danger-fill" onClick={handleDelete} disabled={deleting}>
                 {deleting && <span className="spinner" />}
-                Delete Part
+                Archive Part
               </button>
             </div>
           </div>
