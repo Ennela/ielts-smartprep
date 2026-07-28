@@ -9,6 +9,8 @@ import com.smartprep.model.entity.User;
 import com.smartprep.repository.UserRepository;
 import com.smartprep.security.JwtAuthenticationFilter;
 import com.smartprep.security.JwtTokenProvider;
+import com.smartprep.service.AdminListeningService;
+import com.smartprep.service.AdminService;
 import com.smartprep.service.ContentModerationService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -36,6 +38,7 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -61,7 +64,7 @@ class AdminContentControllerTest {
     @Profile("admin-content-test")
     @EnableWebSecurity
     @Import({SecurityConfig.class, CorsConfig.class,
-            AdminContentController.class,
+            AdminContentController.class, AdminController.class, AdminListeningController.class,
             org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration.class,
             org.springframework.boot.autoconfigure.web.servlet.DispatcherServletAutoConfiguration.class,
             org.springframework.boot.autoconfigure.http.HttpMessageConvertersAutoConfiguration.class,
@@ -125,10 +128,26 @@ class AdminContentControllerTest {
             when(mock.updateStatus(any(), anyLong(), any())).thenReturn(item);
             return mock;
         }
+
+        @Bean
+        public AdminService adminService() {
+            return mock(AdminService.class);
+        }
+
+        @Bean
+        public AdminListeningService adminListeningService() {
+            return mock(AdminListeningService.class);
+        }
     }
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private AdminService adminService;
+
+    @Autowired
+    private AdminListeningService adminListeningService;
 
     // =========================================================================
     // Authorization tests
@@ -202,6 +221,44 @@ class AdminContentControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.success").value(true))
                     .andExpect(jsonPath("$.data.id").value(1));
+        }
+
+        @Test
+        @DisplayName("DELETE Reading and Writing content succeeds with ADMIN token")
+        void deleteReadingAndWriting_adminToken_ok() throws Exception {
+            mockMvc.perform(delete("/api/v1/admin/reading-quizzes/41")
+                            .header("Authorization", "Bearer admin-token"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.message").value("Reading quiz template archived"));
+
+            mockMvc.perform(delete("/api/v1/admin/writing-prompts/42")
+                            .header("Authorization", "Bearer admin-token"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.message").value("Prompt archived"));
+
+            verify(adminService).deleteReadingQuiz(41L);
+            verify(adminService).deleteWritingPrompt(42L);
+        }
+
+        @Test
+        @DisplayName("DELETE Listening and Mock content succeeds with ADMIN token")
+        void deleteListeningAndMock_adminToken_ok() throws Exception {
+            mockMvc.perform(delete("/api/v1/admin/listening/parts/43")
+                            .header("Authorization", "Bearer admin-token"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.message").value("Listening part archived successfully"));
+
+            mockMvc.perform(delete("/api/v1/admin/mock-tests/44")
+                            .header("Authorization", "Bearer admin-token"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.success").value(true))
+                    .andExpect(jsonPath("$.message").value("Mock test archived successfully"));
+
+            verify(adminListeningService).deletePart(43L);
+            verify(adminService).deleteMockTest(44L);
         }
     }
 }

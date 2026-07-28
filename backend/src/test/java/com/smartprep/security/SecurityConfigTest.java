@@ -19,8 +19,10 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.test.context.support.WithMockUser;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -125,6 +127,26 @@ class SecurityConfigTest {
                                 : "Expected admin nested endpoint to be protected but got " + status;
                     });
         }
+
+        @Test
+        @WithMockUser(roles = "STUDENT")
+        @DisplayName("DELETE admin content endpoint rejects STUDENT role")
+        void adminDelete_studentRole_forbidden() throws Exception {
+            mockMvc.perform(delete("/api/v1/admin/reading-quizzes/1"))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        @DisplayName("DELETE admin content endpoint accepts ADMIN role")
+        void adminDelete_adminRole_passesSecurity() throws Exception {
+            mockMvc.perform(delete("/api/v1/admin/reading-quizzes/1"))
+                    .andExpect(result -> {
+                        int status = result.getResponse().getStatus();
+                        assert status != 401 && status != 403
+                                : "Expected ADMIN to pass security but got " + status;
+                    });
+        }
     }
 
     // =========================================================================
@@ -216,6 +238,19 @@ class SecurityConfigTest {
                             .header("Origin", "https://evil-site.com")
                             .header("Access-Control-Request-Method", "POST"))
                     .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+        }
+
+        @Test
+        @DisplayName("DELETE preflight from allowed origin is accepted")
+        void deletePreflight_allowedOrigin_returnsCorsHeaders() throws Exception {
+            mockMvc.perform(options("/api/v1/admin/writing-prompts/1")
+                            .header("Origin", "http://localhost:5173")
+                            .header("Access-Control-Request-Method", "DELETE")
+                            .header("Access-Control-Request-Headers", "Authorization"))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"))
+                    .andExpect(header().string("Access-Control-Allow-Methods",
+                            org.hamcrest.Matchers.containsString("DELETE")));
         }
     }
 
