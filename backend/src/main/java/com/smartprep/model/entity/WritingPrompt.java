@@ -42,6 +42,9 @@ public class WritingPrompt {
     @Column(name = "imported_at")
     private LocalDateTime importedAt;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

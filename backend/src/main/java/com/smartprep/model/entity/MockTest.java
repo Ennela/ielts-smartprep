@@ -45,6 +45,9 @@ public class MockTest {
     @Column(name = "imported_at")
     private LocalDateTime importedAt;
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @ManyToMany
     @JoinTable(
         name = "mock_test_listening_parts",
