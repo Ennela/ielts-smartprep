@@ -90,12 +90,18 @@ public class AdminListeningController {
 
     /**
      * DELETE /api/v1/admin/listening/parts/{partId}
-     * Delete a listening part.
+     * Archive a listening part.
      */
     @DeleteMapping("/parts/{partId}")
     public ResponseEntity<ApiResponse<Void>> deletePart(@PathVariable Long partId) {
         adminListeningService.deletePart(partId);
-        return ResponseEntity.ok(ApiResponse.ok(null, "Listening part deleted successfully"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Listening part archived successfully"));
+    }
+
+    @PostMapping("/parts/{partId}/restore")
+    public ResponseEntity<ApiResponse<Void>> restorePart(@PathVariable Long partId) {
+        adminListeningService.restorePart(partId);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Listening part restored successfully"));
     }
 
     /**

@@ -35,7 +35,6 @@ public class AdminListeningService {
 
     private final ListeningPartRepository partRepository;
     private final AudioGenerationService audioGenerationService;
-    private final StorageService storageService;
 
     /**
      * List all listening parts with pagination and filtering by audioStatus & topic.
@@ -184,21 +183,26 @@ public class AdminListeningService {
     }
 
     /**
-     * Delete a listening part and clean up associated audio object from MinIO.
+     * Archive a listening part. Audio is intentionally retained so the archive
+     * operation is atomic with the database transaction and fully recoverable.
      */
     @Transactional
     public void deletePart(Long partId) {
         ListeningPart part = partRepository.findById(partId)
                 .orElseThrow(() -> new ResourceNotFoundException("Listening part not found: " + partId));
 
-        // Delete audio from MinIO
-        String audioUrl = part.getAudioUrl();
-        if (audioUrl != null && audioUrl.contains("/audio/")) {
-            String key = audioUrl.substring(audioUrl.lastIndexOf("/audio/") + 7);
-            storageService.deleteAudio(key);
-        }
+        part.setDeletedAt(LocalDateTime.now());
+        part.setUpdatedAt(LocalDateTime.now());
+        partRepository.save(part);
+    }
 
-        partRepository.delete(part);
+    @Transactional
+    public void restorePart(Long partId) {
+        ListeningPart part = partRepository.findIncludingDeletedById(partId)
+                .orElseThrow(() -> new ResourceNotFoundException("Listening part not found: " + partId));
+        part.setDeletedAt(null);
+        part.setUpdatedAt(LocalDateTime.now());
+        partRepository.save(part);
     }
 
     /**

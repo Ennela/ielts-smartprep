@@ -93,7 +93,13 @@ public class AdminController {
     @DeleteMapping("/writing-prompts/{promptId}")
     public ResponseEntity<ApiResponse<Void>> deleteWritingPrompt(@PathVariable Long promptId) {
         adminService.deleteWritingPrompt(promptId);
-        return ResponseEntity.ok(ApiResponse.ok(null, "Prompt deleted"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Prompt archived"));
+    }
+
+    @PostMapping("/writing-prompts/{promptId}/restore")
+    public ResponseEntity<ApiResponse<Void>> restoreWritingPrompt(@PathVariable Long promptId) {
+        adminService.restoreWritingPrompt(promptId);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Prompt restored"));
     }
 
     // ===== Reading Quizzes =====
@@ -132,7 +138,13 @@ public class AdminController {
     @DeleteMapping("/reading-quizzes/{quizId}")
     public ResponseEntity<ApiResponse<Void>> deleteReadingQuiz(@PathVariable Long quizId) {
         adminService.deleteReadingQuiz(quizId);
-        return ResponseEntity.ok(ApiResponse.ok(null, "Reading quiz template deleted"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Reading quiz template archived"));
+    }
+
+    @PostMapping("/reading-quizzes/{quizId}/restore")
+    public ResponseEntity<ApiResponse<Void>> restoreReadingQuiz(@PathVariable Long quizId) {
+        adminService.restoreReadingQuiz(quizId);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Reading quiz template restored"));
     }
 
     // ===== Mock Tests =====
@@ -168,7 +180,13 @@ public class AdminController {
     @DeleteMapping("/mock-tests/{mockTestId}")
     public ResponseEntity<ApiResponse<Void>> deleteMockTest(@PathVariable Long mockTestId) {
         adminService.deleteMockTest(mockTestId);
-        return ResponseEntity.ok(ApiResponse.ok(null, "Mock test deleted successfully"));
+        return ResponseEntity.ok(ApiResponse.ok(null, "Mock test archived successfully"));
+    }
+
+    @PostMapping("/mock-tests/{mockTestId}/restore")
+    public ResponseEntity<ApiResponse<Void>> restoreMockTest(@PathVariable Long mockTestId) {
+        adminService.restoreMockTest(mockTestId);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Mock test restored successfully"));
     }
 
     @GetMapping("/reading/{quizId}/preview")

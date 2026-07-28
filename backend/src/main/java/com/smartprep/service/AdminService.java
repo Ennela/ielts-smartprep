@@ -150,10 +150,18 @@ public class AdminService {
 
     @Transactional
     public void deleteWritingPrompt(Long promptId) {
-        if (!writingPromptRepository.existsById(promptId)) {
-            throw new ResourceNotFoundException("Writing prompt not found: " + promptId);
-        }
-        writingPromptRepository.deleteById(promptId);
+        WritingPrompt prompt = writingPromptRepository.findById(promptId)
+                .orElseThrow(() -> new ResourceNotFoundException("Writing prompt not found: " + promptId));
+        prompt.setDeletedAt(LocalDateTime.now());
+        writingPromptRepository.save(prompt);
+    }
+
+    @Transactional
+    public void restoreWritingPrompt(Long promptId) {
+        WritingPrompt prompt = writingPromptRepository.findIncludingDeletedById(promptId)
+                .orElseThrow(() -> new ResourceNotFoundException("Writing prompt not found: " + promptId));
+        prompt.setDeletedAt(null);
+        writingPromptRepository.save(prompt);
     }
 
     @Transactional(readOnly = true)
@@ -312,10 +320,18 @@ public class AdminService {
 
     @Transactional
     public void deleteReadingQuiz(Long quizId) {
-        if (!readingQuizRepository.existsById(quizId)) {
-            throw new ResourceNotFoundException("Reading quiz not found: " + quizId);
-        }
-        readingQuizRepository.deleteById(quizId);
+        ReadingQuiz quiz = readingQuizRepository.findById(quizId)
+                .orElseThrow(() -> new ResourceNotFoundException("Reading quiz not found: " + quizId));
+        quiz.setDeletedAt(LocalDateTime.now());
+        readingQuizRepository.save(quiz);
+    }
+
+    @Transactional
+    public void restoreReadingQuiz(Long quizId) {
+        ReadingQuiz quiz = readingQuizRepository.findIncludingDeletedById(quizId)
+                .orElseThrow(() -> new ResourceNotFoundException("Reading quiz not found: " + quizId));
+        quiz.setDeletedAt(null);
+        readingQuizRepository.save(quiz);
     }
 
     @Transactional(readOnly = true)
@@ -432,10 +448,18 @@ public class AdminService {
 
     @Transactional
     public void deleteMockTest(Long mockTestId) {
-        if (!mockTestRepository.existsById(mockTestId)) {
-            throw new ResourceNotFoundException("Mock test not found: " + mockTestId);
-        }
-        mockTestRepository.deleteById(mockTestId);
+        MockTest mockTest = mockTestRepository.findById(mockTestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Mock test not found: " + mockTestId));
+        mockTest.setDeletedAt(LocalDateTime.now());
+        mockTestRepository.save(mockTest);
+    }
+
+    @Transactional
+    public void restoreMockTest(Long mockTestId) {
+        MockTest mockTest = mockTestRepository.findIncludingDeletedById(mockTestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Mock test not found: " + mockTestId));
+        mockTest.setDeletedAt(null);
+        mockTestRepository.save(mockTest);
     }
 
     private MockTestResponse mapToMockTestResponse(MockTest test) {
