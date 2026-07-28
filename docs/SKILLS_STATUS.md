@@ -366,8 +366,10 @@ Việc ẩn đáp án hiện phụ thuộc vào **một tham số boolean `showC
 
 ### Migration đề xuất
 
+> Cập nhật 2026-07-28: `V41` đã được dùng cho soft delete/FK safety. Migration schema nội dung này được đổi sang `V42`; DB dev thật vẫn ở V40 và V41 chưa được apply.
+
 ```sql
--- V41__complete_cambridge_exam_schema.sql
+-- V42__complete_cambridge_exam_schema.sql
 -- Bổ sung schema để lưu được một đề IELTS Cambridge hoàn chỉnh
 -- (Academic + General Training, đủ 14 dạng câu hỏi, ảnh, alternatives, multi-select)
 
@@ -458,7 +460,7 @@ ALTER TABLE writing_prompts
 2. Thêm ownership check cho `GET /listening/{testId}/result` *(P0 #4)*.
 2b. Chặn nộp lại ở `submit-full` và `listening/submit` *(P0 #7)* — copy đúng guard đã có sẵn ở `ReadingGradingService.java:57-59`.
 3. Gộp 2 bảng band Listening về một nguồn duy nhất là `IeltsScoringUtils`, xoá 3 bản copy của `checkAnswer` *(P0 #5)*.
-4. Chạy migration V41 **trước khi sinh bất kỳ nội dung nào** *(P0 SCHEMA)*.
+4. Apply + verify V41 trên DB dev ở một bước riêng, sau đó duyệt/chạy migration schema nội dung V42 **trước khi sinh bất kỳ nội dung nào** *(P0 SCHEMA)*.
 5. Xoá hoặc thay toàn bộ seed giả V30/V32 *(P0 #1, #3)* — việc này nên gộp vào bước sinh nội dung.
 6. Chuẩn hoá đáp án khi chấm: alternatives, bỏ dấu câu, số↔chữ, enforce word limit *(P1 #2, #11 — nâng lên làm cùng P0 vì đây là "sai kết quả")*.
 7. Sửa `BAND_SCORES_13` để phụ thuộc tổng số câu *(P1 #6)*.

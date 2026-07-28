@@ -4,6 +4,7 @@
 > Đường dẫn tính từ `ielts-smartprep/`. Ngày khảo sát: **2026-07-26**.
 > Tài liệu này phục vụ Prompt B (sinh 8 đề Reading / 6 đề Listening / 30 đề Writing).
 > Liên quan: [SKILLS_STATUS.md](SKILLS_STATUS.md) — audit 3 luồng, có các lỗi P0 ảnh hưởng tới việc dùng được nội dung sau khi seed.
+> **Cập nhật 2026-07-28:** số `V41` đã được dùng cho soft delete + FK safety. Migration schema nội dung mô tả dưới đây phải là **V42**. DB dev thật vẫn ở V40; chưa apply V41.
 
 ---
 
@@ -11,7 +12,7 @@
 
 **Stack**
 - Backend: Java 17, Spring Boot 3.2.5, Maven. ORM là **JPA/Hibernate**, không phải Prisma.
-- DB: MySQL 8, quản lý schema bằng **Flyway** (V1→V40). `ddl-auto: none` ở base, **`validate`** ở dev và prod ([application-dev.yml:13](../backend/src/main/resources/application-dev.yml)).
+- DB: MySQL 8, quản lý schema bằng **Flyway** (source V1→V41; DB dev đã xác minh ở V40). `ddl-auto: none` ở base, **`validate`** ở dev và prod ([application-dev.yml:13](../backend/src/main/resources/application-dev.yml)).
 - Frontend: React + Vite, **npm** (`package-lock.json`), test bằng **Vitest**.
 - Scripts: **Python** (30 file trong `scripts/`) + 1 PowerShell. Không có `requirements.txt` ở bất kỳ đâu.
 - Microservice TTS: FastAPI + thư viện `edge_tts`, `python:3.10-slim`.
@@ -51,7 +52,7 @@ Không có endpoint batch (mỗi request đúng 1 đoạn text), **không có au
 
 **Validation lib đang dùng** — Backend: Bean Validation (`jakarta.validation`) + Jackson, đã có sẵn qua `spring-boot-starter-validation` và `spring-boot-starter-test`. **Không có** thư viện JSON Schema. Frontend: **không có** zod/yup/ajv là direct dependency (zod và ajv chỉ là transitive dev dep của eslint — dùng chúng là phụ thuộc không khai báo).
 
-**Convention** — DB `snake_case`, field Java `camelCase` không `@Column(name=)`, JSON ra FE `camelCase` mặc định (không có `PropertyNamingStrategy` nào). Migration `V<N>__snake_case.sql`, N lớn nhất = 40 → **migration mới bắt đầu từ V41**. Không có `.editorconfig`, không có checkstyle/spotless; chỉ có `frontend/.prettierrc` giới hạn `src/**`.
+**Convention** — DB `snake_case`, field Java `camelCase` không `@Column(name=)`, JSON ra FE `camelCase` mặc định (không có `PropertyNamingStrategy` nào). Migration `V<N>__snake_case.sql`; `V41` đã dành cho content soft delete → **migration schema seed kế tiếp là V42**. Không có `.editorconfig`, không có checkstyle/spotless; chỉ có `frontend/.prettierrc` giới hạn `src/**`.
 
 ---
 
@@ -109,10 +110,10 @@ Không có endpoint batch (mỗi request đúng 1 đoạn text), **không có au
 
 ## Đề xuất migration
 
-Một migration duy nhất, tương thích ngược (mọi cột đều NULL-able hoặc có DEFAULT). Gộp luôn các gap đã nêu ở [SKILLS_STATUS.md](SKILLS_STATUS.md) mục 6 — **bản này thay thế bản V41 phác trong tài liệu đó**.
+Một migration duy nhất, tương thích ngược (mọi cột đều NULL-able hoặc có DEFAULT). Gộp luôn các gap đã nêu ở [SKILLS_STATUS.md](SKILLS_STATUS.md) mục 6 — **bản V42 này thay thế bản V41 phác trong tài liệu đó**.
 
 ```sql
--- V41__seed_content_schema.sql
+-- V42__seed_content_schema.sql
 -- Bổ sung schema để lưu được bộ đề IELTS nguyên gốc (8 Reading / 6 Listening / 30 Writing)
 -- Mọi cột đều nullable hoặc có DEFAULT → dữ liệu hiện có không vỡ.
 
@@ -261,7 +262,7 @@ Từ [SKILLS_STATUS.md](SKILLS_STATUS.md): frontend hiện **không render** `SH
 
 1. Bản quyền — phương án (a)/(b)/(c) cho artifact Cambridge 19.
 2. Mô hình "một đề" — (a) mở rộng `mock_tests`, (b) bảng mới, hay (c) giữ pool phẳng.
-3. Duyệt migration V41 ở trên (≈22 cột + 1 bảng mới + 4 unique key), và cách xử lý V30–V33.
+3. Duyệt migration V42 ở trên (≈22 cột + 1 bảng mới + 4 unique key), và cách xử lý V30–V33.
 4. Cho phép thêm **ffmpeg** (hoặc pydub) không.
 5. Voice bank: dùng 6 voice có sẵn, hay mở rộng allowlist.
 6. Validator bằng Java JUnit 5 + nội dung đặt ở `backend/src/main/resources/seed/`.
