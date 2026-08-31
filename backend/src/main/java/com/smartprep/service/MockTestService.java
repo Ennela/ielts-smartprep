@@ -296,7 +296,8 @@ public class MockTestService {
             listeningTestParts.add(testPart);
         }
 
-        BigDecimal listeningBand = IeltsScoringUtils.calculateListeningBand(listeningCorrect);
+        BigDecimal listeningBand = IeltsScoringUtils.calculateListeningBand(
+                listeningCorrect, totalListeningQuestions);
         listeningTest.setTotalQuestions(totalListeningQuestions);
         listeningTest.setCorrectAnswers(listeningCorrect);
         listeningTest.setScore(listeningBand);
@@ -316,7 +317,15 @@ public class MockTestService {
                 }
             }
         }
-        BigDecimal readingBand = IeltsScoringUtils.calculateReadingBand(readingCorrect);
+        // Use the paper's real module type: Academic and General Training diverge below
+        // band 8.0, so assuming Academic silently mis-scored any GT mock test.
+        String readingModuleType = mockTest.getReadingQuizzes().stream()
+                .map(ReadingQuiz::getModuleType)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse("ACADEMIC");
+        BigDecimal readingBand = IeltsScoringUtils.calculateReadingBand(
+                readingCorrect, totalReadingQuestions, readingModuleType);
 
         // 3. Create placeholder MockTestSubmission record in state GRADING
         MockTestSubmission submission = MockTestSubmission.builder()
@@ -419,7 +428,9 @@ public class MockTestService {
                             .passageText(quiz.getPassageText())
                             .correctAnswers(correctCount)
                             .totalQuestions(questionResults.size())
-                            .bandScore(IeltsScoringUtils.calculateReadingBand(correctCount))
+                            .bandScore(IeltsScoringUtils.calculateReadingBand(
+                                    correctCount, questionResults.size(),
+                                    quiz.getModuleType() != null ? quiz.getModuleType() : "ACADEMIC"))
                             .questions(questionResults)
                             .build();
                 })
