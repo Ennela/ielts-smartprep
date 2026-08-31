@@ -87,8 +87,10 @@ public class ListeningController {
      */
     @GetMapping("/{testId}/result")
     public ResponseEntity<ApiResponse<ListeningTestResponse>> getTestResult(
+            @AuthenticationPrincipal User user,
             @PathVariable Long testId) {
-        return ResponseEntity.ok(ApiResponse.ok(listeningQueryService.getTestResult(testId)));
+        return ResponseEntity.ok(ApiResponse.ok(
+                listeningQueryService.getTestResult(testId, user.getUserId())));
     }
 
     /**

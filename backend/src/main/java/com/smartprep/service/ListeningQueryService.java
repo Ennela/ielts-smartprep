@@ -130,8 +130,10 @@ public class ListeningQueryService {
     }
 
     @Transactional(readOnly = true)
-    public ListeningTestResponse getTestResult(Long testId) {
-        ListeningTest test = testRepository.findById(testId)
+    public ListeningTestResponse getTestResult(Long testId, Long userId) {
+        // Scoped by owner: a bare findById here let any authenticated user read any other
+        // user's answers, band score and transcript by incrementing testId.
+        ListeningTest test = testRepository.findByTestIdAndUserUserId(testId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Listening test not found"));
 
         List<ListeningTestResponse.PartResult> partResults = new ArrayList<>();
