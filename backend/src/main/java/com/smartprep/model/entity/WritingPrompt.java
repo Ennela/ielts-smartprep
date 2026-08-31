@@ -2,6 +2,7 @@ package com.smartprep.model.entity;
 
 import com.smartprep.model.enums.ContentStatus;
 import com.smartprep.model.enums.EssayType;
+import com.smartprep.model.enums.WritingTaskType;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -34,6 +35,13 @@ public class WritingPrompt {
 
     @Column(name = "source", length = 100)
     private String source;
+
+    @Column(name = "seed_key", length = 100)
+    private String seedKey;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "task_type", nullable = false, length = 10)
+    private WritingTaskType taskType;
 
     @Column(name = "created_by", nullable = false, length = 100)
     @Builder.Default

@@ -69,6 +69,8 @@ public class ReadingQuestion {
 
     private Integer evidenceLength;
 
+    private Integer evidenceParagraphIndex;
+
     @Builder.Default
     @Column(nullable = false)
     private Boolean verified = false;

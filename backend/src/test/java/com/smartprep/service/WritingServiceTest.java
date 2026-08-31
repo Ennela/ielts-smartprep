@@ -6,6 +6,7 @@ import com.smartprep.exception.WordCountTooLowException;
 import com.smartprep.model.entity.User;
 import com.smartprep.model.entity.WritingPrompt;
 import com.smartprep.model.enums.EssayType;
+import com.smartprep.model.enums.WritingTaskType;
 import com.smartprep.repository.ScoreHistoryRepository;
 import com.smartprep.repository.UserRepository;
 import com.smartprep.repository.WritingPromptRepository;
@@ -50,6 +51,7 @@ class WritingServiceTest {
                 .promptId(10L)
                 .promptText("Describe the chart.")
                 .essayType(EssayType.LINE_GRAPH)
+                .taskType(WritingTaskType.TASK_1)
                 .build();
         WritingGradeRequest request = new WritingGradeRequest(10L, "short task one essay");
 
@@ -76,6 +78,7 @@ class WritingServiceTest {
                 .promptId(20L)
                 .promptText("Discuss both views.")
                 .essayType(EssayType.DISCUSSION)
+                .taskType(WritingTaskType.TASK_2)
                 .build();
         WritingGradeRequest request = new WritingGradeRequest(20L, "short task two essay");
 

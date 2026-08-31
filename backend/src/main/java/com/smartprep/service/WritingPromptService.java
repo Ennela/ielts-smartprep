@@ -46,6 +46,7 @@ public class WritingPromptService {
                 .promptId(p.getPromptId())
                 .promptText(p.getPromptText())
                 .essayType(p.getEssayType().name())
+                .taskType(p.getTaskType() != null ? p.getTaskType().name() : null)
                 .imageUrl(p.getImageUrl())
                 .build();
     }

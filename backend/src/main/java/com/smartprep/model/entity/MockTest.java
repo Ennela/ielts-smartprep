@@ -1,7 +1,7 @@
 package com.smartprep.model.entity;
 
 import com.smartprep.model.enums.ContentStatus;
-import com.smartprep.model.enums.Difficulty;
+import com.smartprep.model.enums.MockTestDifficulty;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -28,7 +28,7 @@ public class MockTest {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private Difficulty difficulty;
+    private MockTestDifficulty difficulty;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "content_status", nullable = false, length = 20)
@@ -37,6 +37,9 @@ public class MockTest {
 
     @Column(name = "source", length = 100)
     private String source;
+
+    @Column(name = "seed_key", length = 100)
+    private String seedKey;
 
     @Column(name = "created_by", nullable = false, length = 100)
     @Builder.Default

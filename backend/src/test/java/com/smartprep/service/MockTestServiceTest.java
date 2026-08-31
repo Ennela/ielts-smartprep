@@ -3,7 +3,7 @@ package com.smartprep.service;
 import com.smartprep.dto.request.MockTestProgressRequest;
 import com.smartprep.dto.response.MockTestSessionResponse;
 import com.smartprep.model.entity.*;
-import com.smartprep.model.enums.Difficulty;
+import com.smartprep.model.enums.MockTestDifficulty;
 import com.smartprep.model.enums.SessionStatus;
 import com.smartprep.model.enums.SkillType;
 import com.smartprep.repository.*;
@@ -57,7 +57,7 @@ public class MockTestServiceTest {
         mockTest = MockTest.builder()
                 .mockTestId(1L)
                 .title("Cambridge IELTS 18 Test 1")
-                .difficulty(Difficulty.PASSAGE_2)
+                .difficulty(MockTestDifficulty.MEDIUM)
                 .build();
 
         listeningSection = MockTestSection.builder()

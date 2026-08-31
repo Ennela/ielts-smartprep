@@ -16,6 +16,7 @@ public class WritingPromptResponse {
     private Long promptId;
     private String promptText;
     private String essayType;
+    private String taskType;
     private String imageUrl;
     private String visualData;
 }

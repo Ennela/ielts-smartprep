@@ -11,6 +11,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
@@ -30,13 +31,25 @@ class ListeningPartRepositoryTest extends AbstractMySQLContainerTest {
     private TestEntityManager entityManager;
 
     @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
     private ListeningPartRepository listeningPartRepository;
 
     @BeforeEach
     void setUp() {
-        // Clear any seeded data from Flyway to isolate tests
-        listeningPartRepository.deleteAll();
-        entityManager.flush();
+        jdbcTemplate.execute("DELETE FROM mock_test_listening_parts");
+        jdbcTemplate.execute("DELETE FROM mock_test_reading_quizzes");
+        jdbcTemplate.execute("DELETE FROM mock_test_writing_prompts");
+        jdbcTemplate.execute("DELETE FROM mock_test_sections");
+        jdbcTemplate.execute("DELETE FROM mock_test_submissions");
+        jdbcTemplate.execute("DELETE FROM mock_test_sessions");
+        jdbcTemplate.execute("DELETE FROM mock_tests");
+        jdbcTemplate.execute("DELETE FROM listening_test_parts");
+        jdbcTemplate.execute("DELETE FROM question_options");
+        jdbcTemplate.execute("DELETE FROM listening_questions");
+        jdbcTemplate.execute("DELETE FROM listening_parts");
+        entityManager.clear();
     }
 
     @Test

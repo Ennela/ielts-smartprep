@@ -141,7 +141,7 @@ describe('WritingEditorPage - Timer Integration', () => {
   });
 
   it('should display suggested time for Task 1 prompt', async () => {
-    const deadline = new Date(Date.now() + 3600_000).toISOString();
+    const deadline = new Date(Date.now() + 1200_000).toISOString();
 
     writingApi.getPromptById.mockResolvedValue({
       data: { data: mockTask1Prompt }, // LINE_GRAPH = Task 1
@@ -162,9 +162,18 @@ describe('WritingEditorPage - Timer Integration', () => {
     renderWithRouter('43');
 
     await waitFor(() => {
+      expect(attemptApi.startAttempt).toHaveBeenCalledWith({
+        skillType: 'WRITING',
+        examReferenceIds: JSON.stringify([43]),
+        durationOverride: 1200,
+      });
+    });
+
+    await waitFor(() => {
       const indicator = document.getElementById('writing-suggested-time');
       expect(indicator).not.toBeNull();
       expect(indicator.textContent).toMatch(/~20 minutes for Task 1/);
+      expect(indicator.textContent).toMatch(/Total: 20 minutes/);
     });
   });
 

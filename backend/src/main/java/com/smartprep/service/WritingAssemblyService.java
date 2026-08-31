@@ -68,6 +68,7 @@ public class WritingAssemblyService {
                         .promptId(t1.getPromptId())
                         .promptText(t1.getPromptText())
                         .essayType(t1.getEssayType().name())
+                        .taskType(t1.getTaskType() != null ? t1.getTaskType().name() : null)
                         .imageUrl(t1.getImageUrl())
                         .visualData(t1.getVisualData())
                         .build(),
@@ -75,6 +76,7 @@ public class WritingAssemblyService {
                         .promptId(t2.getPromptId())
                         .promptText(t2.getPromptText())
                         .essayType(t2.getEssayType().name())
+                        .taskType(t2.getTaskType() != null ? t2.getTaskType().name() : null)
                         .imageUrl(t2.getImageUrl())
                         .visualData(t2.getVisualData())
                         .build()

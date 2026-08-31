@@ -16,7 +16,9 @@ import com.smartprep.model.entity.WritingPrompt;
 import com.smartprep.model.entity.WritingSubmission;
 import com.smartprep.model.enums.AudioStatus;
 import com.smartprep.model.enums.Difficulty;
+import com.smartprep.model.enums.MockTestDifficulty;
 import com.smartprep.model.enums.EssayType;
+import com.smartprep.model.enums.WritingTaskType;
 import com.smartprep.model.enums.QuestionType;
 import com.smartprep.model.enums.Role;
 import com.smartprep.model.enums.SessionStatus;
@@ -64,7 +66,7 @@ class ContentDeletionSafetyRepositoryTest extends AbstractMySQLContainerTest {
 
         MockTest mockTest = entityManager.persistAndFlush(MockTest.builder()
                 .title("Reading isolation mock")
-                .difficulty(Difficulty.PASSAGE_2)
+                .difficulty(MockTestDifficulty.MEDIUM)
                 .readingQuizzes(new ArrayList<>(List.of(quiz)))
                 .listeningParts(new ArrayList<>(List.of(part)))
                 .writingPrompts(new ArrayList<>(List.of(prompt)))
@@ -98,7 +100,7 @@ class ContentDeletionSafetyRepositoryTest extends AbstractMySQLContainerTest {
                 .build());
         MockTest mockTest = entityManager.persistAndFlush(MockTest.builder()
                 .title("Writing isolation mock")
-                .difficulty(Difficulty.PASSAGE_2)
+                .difficulty(MockTestDifficulty.MEDIUM)
                 .writingPrompts(new ArrayList<>(List.of(prompt)))
                 .build());
 
@@ -138,7 +140,7 @@ class ContentDeletionSafetyRepositoryTest extends AbstractMySQLContainerTest {
 
         MockTest mockTest = entityManager.persistAndFlush(MockTest.builder()
                 .title("Listening isolation mock")
-                .difficulty(Difficulty.PASSAGE_2)
+                .difficulty(MockTestDifficulty.MEDIUM)
                 .listeningParts(new ArrayList<>(List.of(part)))
                 .build());
 
@@ -173,7 +175,7 @@ class ContentDeletionSafetyRepositoryTest extends AbstractMySQLContainerTest {
 
         MockTest mockTest = MockTest.builder()
                 .title("Mock isolation test")
-                .difficulty(Difficulty.PASSAGE_2)
+                .difficulty(MockTestDifficulty.MEDIUM)
                 .readingQuizzes(new ArrayList<>(List.of(quiz)))
                 .listeningParts(new ArrayList<>(List.of(part)))
                 .writingPrompts(new ArrayList<>(List.of(prompt)))
@@ -298,6 +300,7 @@ class ContentDeletionSafetyRepositoryTest extends AbstractMySQLContainerTest {
         return WritingPrompt.builder()
                 .promptText("Dummy Task 1 prompt used only by deletion-safety test")
                 .essayType(EssayType.LINE_GRAPH)
+                .taskType(WritingTaskType.TASK_1)
                 .imageUrl("/dummy/task1.png")
                 .build();
     }

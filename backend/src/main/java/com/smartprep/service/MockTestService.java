@@ -571,6 +571,7 @@ public class MockTestService {
                 .promptId(prompt.getPromptId())
                 .promptText(prompt.getPromptText())
                 .essayType(prompt.getEssayType().name())
+                .taskType(prompt.getTaskType() != null ? prompt.getTaskType().name() : null)
                 .imageUrl(prompt.getImageUrl())
                 .build();
     }

@@ -45,6 +45,9 @@ public class ListeningPart {
     @Column(name = "source", length = 100)
     private String source;
 
+    @Column(name = "seed_key", length = 100)
+    private String seedKey;
+
     @Column(name = "imported_at")
     private java.time.LocalDateTime importedAt;
 

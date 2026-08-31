@@ -13,4 +13,7 @@ public class AdminWritingPromptRequest {
     private String essayType;
 
     private String imageUrl;
+
+    @NotNull
+    private String taskType;
 }

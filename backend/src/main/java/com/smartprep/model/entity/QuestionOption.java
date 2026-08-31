@@ -38,4 +38,7 @@ public class QuestionOption {
 
     @Column(nullable = false)
     private Integer orderIndex;
+
+    @Column(name = "distractor_rationale", columnDefinition = "TEXT")
+    private String distractorRationale;
 }

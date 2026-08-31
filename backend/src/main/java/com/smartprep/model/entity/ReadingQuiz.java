@@ -63,6 +63,9 @@ public class ReadingQuiz {
     @Column(name = "source", length = 100)
     private String source;
 
+    @Column(name = "seed_key", length = 100)
+    private String seedKey;
+
     @Column(name = "created_by", nullable = false, length = 100)
     @Builder.Default
     private String createdBy = "SYSTEM";

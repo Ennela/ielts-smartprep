@@ -118,9 +118,11 @@ export default function WritingEditorPage() {
 
         // Create new attempt if none found
         if (!attempt) {
+          const task1 = TASK1_TYPES.includes(prompt.essayType);
           const res = await attemptApi.startAttempt({
             skillType: 'WRITING',
             examReferenceIds: JSON.stringify([Number(promptId)]),
+            ...(task1 ? { durationOverride: 1200 } : {}),
           });
           attempt = res.data.data;
         }
@@ -344,7 +346,7 @@ export default function WritingEditorPage() {
               : 'Suggested: ~40 minutes for Task 2 (Essay)'}
           </span>
           <span style={{ color: 'var(--outline)' }}>·</span>
-          <span>Total: 60 minutes</span>
+          <span>Total: {isTask1 ? 20 : 60} minutes</span>
         </div>
       )}
 
