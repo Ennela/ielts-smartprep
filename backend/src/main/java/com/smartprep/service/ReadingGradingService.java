@@ -41,15 +41,6 @@ public class ReadingGradingService {
     private final ReadingQueryService readingQueryService;
     private final ExamAttemptService examAttemptService;
 
-    // Band score conversion for 13-question quizzes
-    private static final BigDecimal[] BAND_SCORES_13 = {
-            new BigDecimal("1.0"), new BigDecimal("2.0"), new BigDecimal("2.5"),
-            new BigDecimal("3.0"), new BigDecimal("3.5"), new BigDecimal("4.0"),
-            new BigDecimal("4.5"), new BigDecimal("5.0"), new BigDecimal("5.5"),
-            new BigDecimal("6.0"), new BigDecimal("6.5"), new BigDecimal("7.5"),
-            new BigDecimal("8.5"), new BigDecimal("9.0")
-    };
-
     @Transactional
     public ReadingResultResponse submitQuiz(Long quizId, Long userId, ReadingSubmitRequest request) {
         ReadingQuiz quiz = quizRepository.findByQuizIdAndUserUserId(quizId, userId)
@@ -72,7 +63,11 @@ public class ReadingGradingService {
             if (correct) correctCount++;
         }
 
-        BigDecimal bandScore = calculateBandScore(correctCount);
+        // Scaled onto the shared 40-question scale rather than a private short table, so a
+        // single passage and a full paper report the same band for the same accuracy.
+        BigDecimal bandScore = IeltsScoringUtils.calculateReadingBand(
+                correctCount, quiz.getQuestions().size(),
+                quiz.getModuleType() != null ? quiz.getModuleType() : "ACADEMIC");
         quiz.setCorrectAnswers(correctCount);
         quiz.setScore(bandScore);
         quiz.setSubmittedAt(LocalDateTime.now());
@@ -135,7 +130,10 @@ public class ReadingGradingService {
                 allUserAnswers.add(buildUserAnswer(null, questionCounter, question, userAnswer, correct));
             }
 
-            BigDecimal quizBand = calculateBandScore(quizCorrect);
+            // Per-passage band, scaled onto the same shared scale as the overall band below.
+            BigDecimal quizBand = IeltsScoringUtils.calculateReadingBand(
+                    quizCorrect, quiz.getQuestions().size(),
+                    quiz.getModuleType() != null ? quiz.getModuleType() : "ACADEMIC");
             quiz.setCorrectAnswers(quizCorrect);
             quiz.setScore(quizBand);
             quiz.setSubmittedAt(LocalDateTime.now());
@@ -186,11 +184,6 @@ public class ReadingGradingService {
     // =========================================================================
     // Private helpers
     // =========================================================================
-
-    private BigDecimal calculateBandScore(int correctAnswers) {
-        int idx = Math.min(Math.max(correctAnswers, 0), BAND_SCORES_13.length - 1);
-        return BAND_SCORES_13[idx];
-    }
 
     private UserAnswer buildUserAnswer(ScoreHistory history, int questionNo,
                                         ReadingQuestion question, String userAnswerText, boolean correct) {
