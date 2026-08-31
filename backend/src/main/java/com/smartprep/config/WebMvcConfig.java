@@ -37,6 +37,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .addPathPatterns(
                         "/api/v1/reading/generate",
                         "/api/v1/listening/generate",
+                        "/api/v1/listening/*/generate-audio",
                         "/api/v1/writing/grade",
                         "/api/v1/listening/ai-analyze/**",
                         "/api/v1/listening/vocabulary/**",
