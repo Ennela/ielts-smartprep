@@ -20,7 +20,8 @@ public class ListeningQuestion {
     private ListeningPart part;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 15)
+    // 30, not 15: MATCHING_SENTENCE_ENDINGS is 25 characters. See V45.
+    @Column(nullable = false, length = 30)
     private QuestionType questionType;
 
     @Column(columnDefinition = "TEXT", nullable = false)
