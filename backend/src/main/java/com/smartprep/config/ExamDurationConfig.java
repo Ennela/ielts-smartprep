@@ -32,10 +32,14 @@ public class ExamDurationConfig {
      * @return duration in seconds
      */
     public int getEffectiveDuration(SkillType skill, Integer overrideSeconds) {
+        int defaultDuration = getDefaultDuration(skill);
         if (overrideSeconds != null && overrideSeconds > 0) {
-            return overrideSeconds;
+            // The override comes straight from the client, so it may only ever shorten an
+            // exam. Without this clamp a request could ask for an arbitrarily long deadline
+            // and the "server-authoritative timer" below would grant it.
+            return Math.min(overrideSeconds, defaultDuration);
         }
-        return getDefaultDuration(skill);
+        return defaultDuration;
     }
 
     /**
