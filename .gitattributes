@@ -1,0 +1,8 @@
+# The Maven wrapper is executed by /bin/sh. With core.autocrlf=true (the Windows
+# default) a checkout rewrites it to CRLF, which turns the shebang into
+# "#!/bin/sh\r" and makes the script unrunnable under Docker, WSL or any Unix
+# shell. Pin its line endings so the checkout is correct on every platform.
+mvnw text eol=lf
+
+# Its Windows counterpart must keep CRLF for cmd.exe.
+mvnw.cmd text eol=crlf
