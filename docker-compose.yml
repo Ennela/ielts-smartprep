@@ -26,6 +26,11 @@ services:
     env_file:
       - .env
     environment:
+      # Without this the prod profile never loads and application-prod.yml is inert:
+      # Swagger stays public, cookies lose the Secure flag, the dev CSP is served and
+      # ddl-auto falls back to none. Requires CORS_ALLOWED_ORIGINS to be set.
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
