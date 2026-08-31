@@ -66,6 +66,17 @@ public class ListeningGradingService {
 
     @Transactional
     public ListeningTestResponse submitTest(Long userId, ListeningSubmitRequest request) {
+        // Unlike Reading, this method creates a new ListeningTest on every call rather than
+        // marking an existing one submitted, so there is no submittedAt flag to guard on.
+        // The attempt is the only idempotency key available: without this check a repeated
+        // submit writes a second ListeningTest and a second ScoreHistory row, duplicating
+        // the user's history and progress. Submissions sent without an attemptId remain
+        // unguarded — see B-63.
+        if (request.getAttemptId() != null
+                && examAttemptService.isAlreadySubmitted(request.getAttemptId(), userId)) {
+            throw new IllegalArgumentException("This listening test has already been submitted");
+        }
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
