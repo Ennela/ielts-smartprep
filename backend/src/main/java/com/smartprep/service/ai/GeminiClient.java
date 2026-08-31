@@ -54,14 +54,37 @@ public class GeminiClient {
         this.redisTemplate = redisTemplate;
     }
 
+    /** Sampling temperature for content generation, where variety is desirable. */
+    private static final double CREATIVE_TEMPERATURE = 0.7;
+
+    /** Sampling temperature for grading, where the same input must always produce the same band. */
+    private static final double GRADING_TEMPERATURE = 0.0;
+
     /**
      * Send a prompt to Gemini API, parse and validate the response within the retry boundary.
      * Retries automatically using Resilience4j when timeouts or validation errors occur.
      */
     @CircuitBreaker(name = "gemini")
     public <T> T generateAndParse(String systemPrompt, String userPrompt, CheckedFunction<String, T> parser) {
+        return executeAndParse(systemPrompt, userPrompt, parser, CREATIVE_TEMPERATURE);
+    }
+
+    /**
+     * Same as {@link #generateAndParse} but sampled deterministically.
+     * <p>
+     * Grading must be reproducible: at temperature 0.7 the same essay could come back with a
+     * different band on every submission, which is indefensible for a scoring product.
+     * Content generation keeps the higher temperature, where variety is the point.
+     */
+    @CircuitBreaker(name = "gemini")
+    public <T> T gradeAndParse(String systemPrompt, String userPrompt, CheckedFunction<String, T> parser) {
+        return executeAndParse(systemPrompt, userPrompt, parser, GRADING_TEMPERATURE);
+    }
+
+    private <T> T executeAndParse(String systemPrompt, String userPrompt,
+                                  CheckedFunction<String, T> parser, double temperature) {
         return retry.executeSupplier(() -> {
-            String rawResponse = generateInternal(systemPrompt, userPrompt);
+            String rawResponse = generateInternal(systemPrompt, userPrompt, temperature);
             try {
                 return parser.apply(rawResponse);
             } catch (Exception ex) {
@@ -80,15 +103,15 @@ public class GeminiClient {
      */
     @CircuitBreaker(name = "gemini", fallbackMethod = "fallbackGenerate")
     public String generate(String systemPrompt, String userPrompt) {
-        return retry.executeSupplier(() -> generateInternal(systemPrompt, userPrompt));
+        return retry.executeSupplier(() -> generateInternal(systemPrompt, userPrompt, CREATIVE_TEMPERATURE));
     }
 
-    private String generateInternal(String systemPrompt, String userPrompt) {
+    private String generateInternal(String systemPrompt, String userPrompt, double temperature) {
         if (!StringUtils.hasText(apiKey)) {
             throw new ServiceUnavailableException("Gemini API key is not configured");
         }
         String url = baseUrl + ":generateContent";
-        Map<String, Object> requestBody = buildRequestBody(systemPrompt, userPrompt);
+        Map<String, Object> requestBody = buildRequestBody(systemPrompt, userPrompt, temperature);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -155,7 +178,7 @@ public class GeminiClient {
                 "AI service is temporarily unavailable. Please try again in a few moments.");
     }
 
-    private Map<String, Object> buildRequestBody(String systemPrompt, String userPrompt) {
+    private Map<String, Object> buildRequestBody(String systemPrompt, String userPrompt, double temperature) {
         return Map.of(
                 "system_instruction", Map.of(
                         "parts", List.of(Map.of("text", systemPrompt))
@@ -164,8 +187,8 @@ public class GeminiClient {
                         Map.of("parts", List.of(Map.of("text", userPrompt)))
                 ),
                 "generationConfig", Map.of(
-                        "temperature", 0.7,
-                        "topP", 0.9,
+                        "temperature", temperature,
+                        "topP", temperature == GRADING_TEMPERATURE ? 1.0 : 0.9,
                         "responseMimeType", "application/json"
                 )
         );

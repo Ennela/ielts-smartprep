@@ -158,7 +158,7 @@ class WritingGradingServiceTest {
             assertThat(result.getImprovementNotes()).hasSize(2);
             assertThat(result.getWordCount()).isEqualTo(13);
 
-            verify(geminiClient, times(2)).generateAndParse(anyString(), anyString(), any());
+            verify(geminiClient, times(2)).gradeAndParse(anyString(), anyString(), any());
         }
 
         @Test
@@ -237,7 +237,7 @@ class WritingGradingServiceTest {
             assertThat(result.getTaskResponse()).isEqualByComparingTo(new BigDecimal("1.0"));
             assertThat(result.getWordCount()).isEqualTo(2);
             assertThat(result.getGeneralFeedback()).contains("too short");
-            verify(geminiClient, never()).generateAndParse(anyString(), anyString(), any());
+            verify(geminiClient, never()).gradeAndParse(anyString(), anyString(), any());
         }
     }
 
@@ -246,12 +246,12 @@ class WritingGradingServiceTest {
     // ===================================================================
 
     /**
-     * Stub two sequential generateAndParse calls:
+     * Stub two sequential gradeAndParse calls:
      * first returns parsed grading JSON, second returns parsed rewrite JSON.
      */
     @SuppressWarnings("unchecked")
     private void stubGeminiCalls(String gradingResponse, String rewriteResponse) {
-        when(geminiClient.generateAndParse(anyString(), anyString(), any(GeminiClient.CheckedFunction.class)))
+        when(geminiClient.gradeAndParse(anyString(), anyString(), any(GeminiClient.CheckedFunction.class)))
                 .thenAnswer(invocation -> {
                     GeminiClient.CheckedFunction<String, JsonNode> parser = invocation.getArgument(2);
                     return parser.apply(gradingResponse);
