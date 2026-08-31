@@ -9,6 +9,7 @@ import com.smartprep.exception.ResourceNotFoundException;
 import com.smartprep.model.entity.*;
 import com.smartprep.model.enums.*;
 import com.smartprep.repository.*;
+import com.smartprep.config.ExamDurationConfig;
 import com.smartprep.service.ai.MockTestAsyncGrader;
 import com.smartprep.service.util.IeltsScoringUtils;
 import com.smartprep.service.util.QuestionOptionMapper;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -34,6 +36,10 @@ public class MockTestService {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
     private final MockTestAsyncGrader asyncGrader;
+    private final ExamDurationConfig durationConfig;
+
+    /** Grace window after a section deadline in which a client's answers are still accepted. */
+    private static final int SUBMIT_GRACE_SECONDS = 60;
 
     /**
      * Get all available Mock Tests
@@ -139,9 +145,11 @@ public class MockTestService {
             throw new IllegalStateException("Cannot update progress on a completed/expired session");
         }
 
+        // Answers come from the client; the clock does not. request.getTimeRemainingSeconds()
+        // and request.getCurrentSection() are deliberately ignored — honouring them let a
+        // caller grant itself unlimited time or skip ahead simply by posting different values.
         session.setProgressJson(request.getProgressJson());
-        session.setTimeRemainingSeconds(request.getTimeRemainingSeconds());
-        session.setCurrentSection(request.getCurrentSection());
+        session.setTimeRemainingSeconds(serverTimeRemainingSeconds(session));
         session = sessionRepository.save(session);
 
         return mapToSessionResponse(session);
@@ -209,8 +217,28 @@ public class MockTestService {
             throw new IllegalStateException("This exam has already been submitted or expired");
         }
 
+        // A full mock test is only complete after the final section. Without this a caller
+        // could submit while still on LISTENING and have the test graded with no Reading or
+        // Writing answers at all. The frontend only ever submits from WRITING; earlier
+        // sections go through nextSection.
+        if (session.getCurrentSection() != SkillType.WRITING) {
+            throw new IllegalStateException(
+                    "Cannot submit before the final section. Current section: " + session.getCurrentSection());
+        }
+
         // Update session
-        session.setProgressJson(request.getProgressJson());
+        // Past the deadline the client's answers are no longer accepted, but the submission
+        // itself still succeeds using the last progress saved in time — rejecting it outright
+        // would discard work that was done legitimately. The grace window covers auto-submit
+        // latency at the moment the timer hits zero.
+        boolean lateSubmission = LocalDateTime.now().isAfter(
+                currentSectionDeadline(session).plusSeconds(SUBMIT_GRACE_SECONDS));
+        if (lateSubmission) {
+            log.warn("Late submit for session {}: deadline was {}, keeping last saved progress",
+                    sessionId, currentSectionDeadline(session));
+        } else {
+            session.setProgressJson(request.getProgressJson());
+        }
         session.setStatus(SessionStatus.SUBMITTED);
         session.setTimeRemainingSeconds(0);
         sessionRepository.save(session);
@@ -483,6 +511,40 @@ public class MockTestService {
                 .readingQuizIds(readingQuizIds)
                 .writingPromptIds(writingPromptIds)
                 .build();
+    }
+
+    /** Configured length of one section, falling back to the IDP standard for that skill. */
+    private int sectionDurationSeconds(MockTestSession session, SkillType section) {
+        return session.getMockTest().getSections().stream()
+                .filter(s -> s.getSectionType() == section)
+                .map(MockTestSection::getDurationSeconds)
+                .findFirst()
+                .orElseGet(() -> durationConfig.getDefaultDuration(section));
+    }
+
+    /** When the current section must end. Derived from persisted state, never from the client. */
+    private LocalDateTime currentSectionDeadline(MockTestSession session) {
+        LocalDateTime sectionStart = session.getSectionStartedAt() != null
+                ? session.getSectionStartedAt()
+                : session.getStartedAt();
+        return sectionStart.plusSeconds(sectionDurationSeconds(session, session.getCurrentSection()));
+    }
+
+    /**
+     * Seconds left in the current section according to the server clock, floored at zero.
+     * <p>
+     * This replaces trusting {@code timeRemainingSeconds} as sent by the client, which
+     * previously let a caller keep a session alive indefinitely by posting an inflated value.
+     */
+    private int serverTimeRemainingSeconds(MockTestSession session) {
+        long remaining = Duration.between(LocalDateTime.now(), currentSectionDeadline(session)).getSeconds();
+        return (int) Math.max(0, remaining);
+    }
+
+    /** True once the current section's deadline has passed, allowing a small submit grace period. */
+    private boolean isSectionExpired(MockTestSession session) {
+        return LocalDateTime.now().isAfter(
+                currentSectionDeadline(session).plusSeconds(ExamDurationConfig.DEADLINE_BUFFER_SECONDS));
     }
 
     private MockTestSessionResponse mapToSessionResponse(MockTestSession session) {
