@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMockTest } from '../context/MockTestContext';
 import AudioPlayer from '../components/listening/AudioPlayer';
+import McqQuestion from '../components/listening/McqQuestion';
+import FillBlankQuestion from '../components/listening/FillBlankQuestion';
 import PassageViewer from '../components/reading/PassageViewer';
 import MockTestQuestionPanel from '../components/mocktest/MockTestQuestionPanel';
 import { useToast } from '../context/ToastContext';
@@ -363,7 +365,7 @@ export default function MockTestSessionPage() {
                         {q.questionType === 'MCQ' ? (
                           <McqQuestion question={q} value={answers[q.questionId] || ''} onChange={v => setAnswer(q.questionId, v)} />
                         ) : (
-                          <FillBlankQuestion question={q} value={answers[q.questionId] || ''} onChange={v => setAnswer(q.questionId, v)} />
+                          <FillBlankQuestion variant="underline" question={q} value={answers[q.questionId] || ''} onChange={v => setAnswer(q.questionId, v)} />
                         )}
                       </div>
                     );
@@ -505,67 +507,6 @@ export default function MockTestSessionPage() {
           )}
         </div>
       </footer>
-    </div>
-  );
-}
-
-// ── Sub-component MCQ ──
-function McqQuestion({ question, value, onChange }) {
-  const lines = question.questionText.split('\n');
-  const stem = lines[0];
-  const options = lines.slice(1).filter(l => l.trim());
-  return (
-    <div>
-      <p className="question-text">{stem}</p>
-      <div className="mcq-options">
-        {options.map((opt, idx) => {
-          const letter = opt.trim().charAt(0);
-          return (
-            <label key={idx} className={`mcq-option ${value === letter ? 'selected' : ''}`}>
-              <input 
-                type="radio" 
-                name={`q-${question.questionId}`} 
-                value={letter}
-                checked={value === letter} 
-                onChange={() => onChange(letter)} 
-              />
-              <span className="mcq-letter">{letter}</span>
-              <span className="mcq-label">{opt.trim().substring(2).trim()}</span>
-            </label>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ── Sub-component Fill Blank ──
-function FillBlankQuestion({ question, value, onChange }) {
-  const parts = question.questionText.split('___');
-  return (
-    <div>
-      <p className="question-text" style={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px', margin: 0 }}>
-        {parts.map((part, idx) => (
-          <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            {part}
-            {idx < parts.length - 1 && (
-              <input 
-                type="text" 
-                className="fill-blank-input" 
-                value={value}
-                onChange={e => onChange(e.target.value)} 
-                placeholder="your answer..." 
-                style={{
-                  border: 'none', borderBottom: '2px solid var(--outline)',
-                  background: 'transparent', outline: 'none', padding: '2px 8px',
-                  fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--primary)',
-                  textAlign: 'center', width: '120px'
-                }}
-              />
-            )}
-          </span>
-        ))}
-      </p>
     </div>
   );
 }

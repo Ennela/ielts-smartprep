@@ -5,6 +5,8 @@ import listeningApi from '../api/listeningApi';
 import attemptApi from '../api/attemptApi';
 import adminApi from '../api/adminApi';
 import AudioPlayer from '../components/listening/AudioPlayer';
+import McqQuestion from '../components/listening/McqQuestion';
+import FillBlankQuestion from '../components/listening/FillBlankQuestion';
 import useExamTimer from '../hooks/useExamTimer';
 import useExamWarnings from '../hooks/useExamWarnings';
 import { useToast } from '../context/ToastContext';
@@ -478,72 +480,6 @@ export default function ListeningExamPage() {
           {submitting ? 'Grading...' : `Submit (${answeredCount}/${totalQuestions})`}
         </button>
       </div>
-    </div>
-  );
-}
-
-/* ── MCQ Question ── */
-function McqQuestion({ question, value, onChange }) {
-  if (question.options && question.options.length > 0) {
-    return (
-      <div className="mcq-question">
-        <p className="question-text">{question.questionText}</p>
-        <div className="mcq-options">
-          {question.options.map((opt, i) => {
-            const letter = opt.label;
-            return (
-              <label key={opt.optionId || i} className={`mcq-option ${value === letter ? 'selected' : ''}`}>
-                <input type="radio" name={`q-${question.questionId}`} value={letter}
-                  checked={value === letter} onChange={() => onChange(letter)} />
-                <span className="mcq-letter">{letter}</span>
-                <span className="mcq-label">{opt.content}</span>
-              </label>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  const lines = question.questionText.split('\n');
-  const stem = lines[0];
-  const options = lines.slice(1).filter(l => l.trim());
-  return (
-    <div className="mcq-question">
-      <p className="question-text">{stem}</p>
-      <div className="mcq-options">
-        {options.map((opt, i) => {
-          const letter = opt.trim().charAt(0);
-          return (
-            <label key={i} className={`mcq-option ${value === letter ? 'selected' : ''}`}>
-              <input type="radio" name={`q-${question.questionId}`} value={letter}
-                checked={value === letter} onChange={() => onChange(letter)} />
-              <span className="mcq-letter">{letter}</span>
-              <span className="mcq-label">{opt.trim().substring(2).trim()}</span>
-            </label>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/* ── Fill-in-the-Blank Question ── */
-function FillBlankQuestion({ question, value, onChange }) {
-  const parts = question.questionText.split('___');
-  return (
-    <div className="fill-blank-question">
-      <p className="question-text">
-        {parts.map((part, i) => (
-          <span key={i}>
-            {part}
-            {i < parts.length - 1 && (
-              <input type="text" className="fill-blank-input" value={value}
-                onChange={e => onChange(e.target.value)} placeholder="your answer" />
-            )}
-          </span>
-        ))}
-      </p>
     </div>
   );
 }
