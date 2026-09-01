@@ -16,7 +16,7 @@ export default function ListeningExamPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const mode = searchParams.get('mode') || 'practice';
-  const { warning: triggerWarningToast } = useToast();
+  const { warning: triggerWarningToast, error: showErrorToast } = useToast();
   const partIds = useMemo(() =>
     (searchParams.get('parts') || '').split(',').map(Number).filter(Boolean),
   [searchParams]);
@@ -59,11 +59,11 @@ export default function ListeningExamPage() {
       navigate(`/listening/result/${res.data?.data?.testId}`, { state: res.data?.data });
     }).catch(err => {
       console.error(err);
-      alert('Auto-submit failed. Please try submitting manually.');
+      showErrorToast('Auto-submit failed. Please try submitting manually.');
       setSubmitting(false);
       submittingRef.current = false;
     });
-  }, [attemptId, mode, partIds, navigate, isPreview]);
+  }, [attemptId, mode, partIds, navigate, isPreview, showErrorToast]);
 
   // Server-authoritative timer (active for ALL modes)
   const { timeLeft, isWarning, isCritical, formattedTime, stopTimer } = useExamTimer({
@@ -232,7 +232,7 @@ export default function ListeningExamPage() {
       navigate(`/listening/result/${res.data?.data?.testId}`, { state: res.data?.data });
     } catch (err) {
       console.error(err);
-      alert('Submission failed');
+      showErrorToast('Submission failed');
       setSubmitting(false);
       submittingRef.current = false;
     }

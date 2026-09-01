@@ -2,11 +2,13 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMockTest } from '../context/MockTestContext';
 import mockTestApi from '../api/mockTestApi';
+import { useToast } from '../context/ToastContext';
 import styles from '../styles/MockTest.module.css';
 
 export default function MockTestLobbyPage() {
   const navigate = useNavigate();
   const { activeSession, startOrResumeTest, loadActiveSession, clearSession } = useMockTest();
+  const { error: showErrorToast } = useToast();
   const [tests, setTests] = useState([]);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -65,7 +67,7 @@ export default function MockTestLobbyPage() {
         navigate(`/mock-tests/take/${session.sessionId}`);
       }
     } catch (err) {
-      alert(err.message || 'Failed to start test');
+      showErrorToast(err.response?.data?.message || err.message || 'Failed to start test');
     } finally {
       setActionLoading(false);
     }

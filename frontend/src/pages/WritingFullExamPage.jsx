@@ -13,7 +13,7 @@ const SESSION_KEY = 'writing_full_attemptId';
 export default function WritingFullExamPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { warning: triggerWarningToast } = useToast();
+  const { warning: triggerWarningToast, error: showErrorToast } = useToast();
 
   const [task1, setTask1] = useState(null);
   const [task2, setTask2] = useState(null);
@@ -75,11 +75,11 @@ export default function WritingFullExamPage() {
       navigate('/writing/full-result', { state: { result: res.data.data }, replace: true });
     }).catch(err => {
       console.error(err);
-      alert('Auto-submit failed. Please try submitting manually.');
+      showErrorToast('Auto-submit failed. Please try submitting manually.');
       setSubmitting(false);
       submittingRef.current = false;
     });
-  }, [attemptId, task1, task2, navigate]);
+  }, [attemptId, task1, task2, navigate, showErrorToast]);
 
   // Server-authoritative timer
   const { timeLeft, isWarning, isCritical, formattedTime, stopTimer } = useExamTimer({

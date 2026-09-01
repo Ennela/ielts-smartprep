@@ -4,9 +4,11 @@ import { useMockTest } from '../context/MockTestContext';
 import AudioPlayer from '../components/listening/AudioPlayer';
 import PassageViewer from '../components/reading/PassageViewer';
 import MockTestQuestionPanel from '../components/mocktest/MockTestQuestionPanel';
+import { useToast } from '../context/ToastContext';
 
 export default function MockTestSessionPage() {
   const navigate = useNavigate();
+  const { error: showErrorToast } = useToast();
   const { _sessionId } = useParams();
   const {
     activeSession,
@@ -177,8 +179,9 @@ export default function MockTestSessionPage() {
       if (submission) {
         navigate(`/mock-tests/result/${submission.submissionId}`);
       }
-    } catch (_err) {
-      alert('Failed to submit exam. Please verify connection and retry.');
+    } catch (err) {
+      console.error(err);
+      showErrorToast('Failed to submit exam. Please verify connection and retry.');
     } finally {
       setSubmitting(false);
     }
