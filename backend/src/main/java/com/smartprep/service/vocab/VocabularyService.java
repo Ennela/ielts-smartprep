@@ -116,7 +116,7 @@ public class VocabularyService {
                 .map(v -> v.getWord().toLowerCase().trim())
                 .collect(Collectors.toSet());
 
-        if (skillTypeStr.equalsIgnoreCase("MOCK")) {
+        if (skillTypeStr.equalsIgnoreCase("MOCK_TEST")) {
             MockTestSubmission submission = mockTestSubmissionRepository.findById(sourceId)
                     .filter(s -> s.getUser() != null && s.getUser().getUserId().equals(userId))
                     .orElseThrow(() -> new ResourceNotFoundException("Mock test submission not found with ID: " + sourceId));

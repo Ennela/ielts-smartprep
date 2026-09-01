@@ -6,6 +6,9 @@ import com.smartprep.dto.response.VocabResponse;
 import com.smartprep.exception.ResourceNotFoundException;
 import com.smartprep.model.entity.User;
 import com.smartprep.model.entity.Vocabulary;
+import com.smartprep.model.entity.MockTest;
+import com.smartprep.model.entity.MockTestSubmission;
+import com.smartprep.model.entity.ReadingQuiz;
 import com.smartprep.model.enums.SkillType;
 import com.smartprep.repository.UserRepository;
 import com.smartprep.repository.VocabularyRepository;
@@ -331,6 +334,58 @@ class VocabularyServiceTest {
 
             assertThat(result).hasSize(1);
             assertThat(result.get(0).getWord()).isEqualTo("pristine");
+        }
+
+        /**
+         * The frontend has always sent "MOCK_TEST" (AiVocabularyButton on the mock test
+         * result page), while this branch used to match only "MOCK". The mismatch fell
+         * through to SkillType.valueOf and threw, so the feature never worked.
+         */
+        @Test
+        @DisplayName("MOCK_TEST source aggregates section text without consulting a resolver")
+        void mockTestSource() {
+            when(vocabularyRepository.findByUserUserIdOrderByCreatedAtDesc(1L))
+                    .thenReturn(Collections.emptyList());
+
+            ReadingQuiz quiz = ReadingQuiz.builder().passageText("Mock test passage text").build();
+            MockTest mockTest = MockTest.builder().readingQuizzes(List.of(quiz)).build();
+            MockTestSubmission submission = MockTestSubmission.builder()
+                    .submissionId(500L)
+                    .user(testUser)
+                    .mockTest(mockTest)
+                    .build();
+            when(mockTestSubmissionRepository.findById(500L)).thenReturn(Optional.of(submission));
+
+            VocabAiService.SuggestedVocab s1 = new VocabAiService.SuggestedVocab(
+                    "pristine", "/ˈprɪstiːn/", "adjective", "nguyên sơ", "A pristine beach", "pristine environment", "C1");
+            when(vocabAiService.suggestVocabulary("Mock test passage text")).thenReturn(List.of(s1));
+
+            List<VocabAiService.SuggestedVocab> result =
+                    vocabularyService.suggestVocabulary(1L, "MOCK_TEST", 500L);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getWord()).isEqualTo("pristine");
+            verifyNoInteractions(resolvers);
+        }
+
+        @Test
+        @DisplayName("MOCK_TEST source rejects a submission belonging to another user")
+        void mockTestSourceNotOwned() {
+            when(vocabularyRepository.findByUserUserIdOrderByCreatedAtDesc(1L))
+                    .thenReturn(Collections.emptyList());
+
+            User otherUser = User.builder().userId(99L).username("someone-else").build();
+            MockTestSubmission submission = MockTestSubmission.builder()
+                    .submissionId(500L)
+                    .user(otherUser)
+                    .build();
+            when(mockTestSubmissionRepository.findById(500L)).thenReturn(Optional.of(submission));
+
+            assertThatThrownBy(() -> vocabularyService.suggestVocabulary(1L, "MOCK_TEST", 500L))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessageContaining("Mock test submission not found");
+
+            verifyNoInteractions(vocabAiService);
         }
     }
 
