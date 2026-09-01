@@ -191,6 +191,6 @@ class ReviewServiceTest {
 
         assertThatThrownBy(() -> reviewService.explainAnswer(10L, 200L, 1L))
                 .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining("does not belong");
+                .hasMessage("Answer not found");
     }
 }

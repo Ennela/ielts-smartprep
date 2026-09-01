@@ -147,7 +147,9 @@ branches throw the same exception type with the same message**, so a caller cann
 
 This covers `getSessionById`, `saveProgress`, `nextSection`, `submitExam`, `regradeWriting`
 and `getSubmission`. `ReviewService.getHistoryDetail` follows the same pattern with
-`Score history not found`.
+`Score history not found`, and so do `ReviewService.explainAnswer` (`Answer not found`) and
+`VocabularyService.reviewVocabulary` / `deleteVocabulary` (`Vocabulary item not found`) —
+the last three were brought into line after §5 first flagged them as leaks.
 
 Leaking existence is a smaller problem than leaking content, but it still tells an attacker
 which ids are worth attacking and roughly how much data the system holds.
@@ -227,18 +229,20 @@ Password reset tokens live under the `pwd-reset:` prefix with a **15 minute** TT
 
 ## 5. Known gaps and accepted risks
 
-Documented rather than hidden. None of these are fixed as of this writing.
+Documented rather than hidden. Entries marked *fixed* were closed after this document
+first listed them; the rest are open.
 
-**5.1 — Vocabulary endpoints leak resource existence.**
-`VocabularyService.reviewVocabulary` and `deleteVocabulary` throw `ResourceNotFoundException`
-when an item does not exist, but `IllegalArgumentException` ("You are not authorized to…")
-when it exists and belongs to someone else. Those map to different HTTP statuses, so
-`POST /vocab/{id}/review` and `DELETE /vocab/{id}` can be used to enumerate other users'
-vocabulary ids. This contradicts the pattern deliberately adopted in `MockTestService` (§3).
+**5.1 and 5.2 — resource-existence leaks on vocabulary and answer ids — fixed.**
+`VocabularyService.reviewVocabulary` and `deleteVocabulary` used to throw
+`ResourceNotFoundException` for a missing item but `IllegalArgumentException` ("You are not
+authorized to…") for one owned by someone else. The two map to different HTTP statuses, so
+`POST /vocab/{id}/review` and `DELETE /vocab/{id}` could be used to enumerate other users'
+vocabulary ids. `ReviewService.explainAnswer` leaked the same way, through
+`Answer does not belong to this history` being distinguishable from `Answer not found`.
 
-**5.2 — Answer ids leak the same way.**
-`ReviewService.explainAnswer` throws `Answer does not belong to this history`, which is
-distinguishable from `Answer not found`.
+All three now throw the same exception with the same message as a genuine miss, matching the
+pattern in `MockTestService` (§3), and the tests assert the messages are identical rather
+than merely that something was thrown.
 
 **5.3 — Login allows user enumeration.**
 `UserService.login` throws for an unknown username *before* calling `recordFailedAttempt`,

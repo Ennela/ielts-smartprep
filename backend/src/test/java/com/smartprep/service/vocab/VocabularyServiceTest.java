@@ -227,7 +227,7 @@ class VocabularyServiceTest {
         }
 
         @Test
-        @DisplayName("should throw when user does not own the vocab")
+        @DisplayName("not-owned is indistinguishable from a missing item")
         void notAuthorized() {
             User otherUser = User.builder().userId(2L).build();
             Vocabulary vocab = buildVocab(10L, "cat", "con mèo", 2.5, 0, 0);
@@ -236,8 +236,8 @@ class VocabularyServiceTest {
             when(vocabularyRepository.findById(10L)).thenReturn(Optional.of(vocab));
 
             assertThatThrownBy(() -> vocabularyService.reviewVocabulary(1L, 10L, "GOOD"))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("not authorized");
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessage("Vocabulary item not found");
         }
     }
 
@@ -272,7 +272,7 @@ class VocabularyServiceTest {
         }
 
         @Test
-        @DisplayName("should throw when user does not own the vocab")
+        @DisplayName("not-owned is indistinguishable from a missing item")
         void notAuthorized() {
             User otherUser = User.builder().userId(2L).build();
             Vocabulary vocab = buildVocab(10L, "bird", "con chim", 2.5, 0, 0);
@@ -281,7 +281,8 @@ class VocabularyServiceTest {
             when(vocabularyRepository.findById(10L)).thenReturn(Optional.of(vocab));
 
             assertThatThrownBy(() -> vocabularyService.deleteVocabulary(1L, 10L))
-                    .isInstanceOf(IllegalArgumentException.class);
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessage("Vocabulary item not found");
         }
     }
 

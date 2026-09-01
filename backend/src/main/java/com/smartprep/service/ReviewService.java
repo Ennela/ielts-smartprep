@@ -75,7 +75,9 @@ public class ReviewService {
                 .orElseThrow(() -> new ResourceNotFoundException("Answer not found"));
 
         if (!answer.getScoreHistory().getHistoryId().equals(historyId)) {
-            throw new ResourceNotFoundException("Answer does not belong to this history");
+            // Same message as a missing answer: confirming that an answer id exists but sits
+            // under someone else's history would leak its existence.
+            throw new ResourceNotFoundException("Answer not found");
         }
 
         // If explanation already cached, return it

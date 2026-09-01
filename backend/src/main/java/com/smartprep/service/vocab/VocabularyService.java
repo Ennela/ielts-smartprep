@@ -101,7 +101,9 @@ public class VocabularyService {
                 .orElseThrow(() -> new ResourceNotFoundException("Vocabulary item not found"));
 
         if (!vocab.getUser().getUserId().equals(userId)) {
-            throw new IllegalArgumentException("You are not authorized to review this vocabulary item");
+            // Same exception and message as a genuine miss: a caller must not be able to tell
+            // "exists but is not yours" from "does not exist". Matches MockTestService.
+            throw new ResourceNotFoundException("Vocabulary item not found");
         }
 
         sm2Service.updateReview(vocab, grade);
@@ -303,7 +305,9 @@ public class VocabularyService {
                 .orElseThrow(() -> new ResourceNotFoundException("Vocabulary item not found"));
 
         if (!vocab.getUser().getUserId().equals(userId)) {
-            throw new IllegalArgumentException("You are not authorized to delete this vocabulary item");
+            // Same exception and message as a genuine miss: a caller must not be able to tell
+            // "exists but is not yours" from "does not exist". Matches MockTestService.
+            throw new ResourceNotFoundException("Vocabulary item not found");
         }
 
         vocabularyRepository.delete(vocab);
