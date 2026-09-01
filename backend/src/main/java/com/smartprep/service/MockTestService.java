@@ -123,7 +123,9 @@ public class MockTestService {
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found with id: " + sessionId));
 
         if (!session.getUser().getUserId().equals(userId)) {
-            throw new SecurityException("Unauthorized access to this session");
+            // Same exception and message as a genuine miss: a caller must not be able to tell
+            // "exists but is not yours" from "does not exist". Matches ReviewService.
+            throw new ResourceNotFoundException("Session not found with id: " + sessionId);
         }
 
         return mapToSessionResponse(session);
@@ -138,7 +140,9 @@ public class MockTestService {
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found with id: " + sessionId));
 
         if (!session.getUser().getUserId().equals(userId)) {
-            throw new SecurityException("Unauthorized access to this session");
+            // Same exception and message as a genuine miss: a caller must not be able to tell
+            // "exists but is not yours" from "does not exist". Matches ReviewService.
+            throw new ResourceNotFoundException("Session not found with id: " + sessionId);
         }
 
         if (session.getStatus() != SessionStatus.IN_PROGRESS) {
@@ -164,7 +168,9 @@ public class MockTestService {
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found with id: " + sessionId));
 
         if (!session.getUser().getUserId().equals(userId)) {
-            throw new SecurityException("Unauthorized access to this session");
+            // Same exception and message as a genuine miss: a caller must not be able to tell
+            // "exists but is not yours" from "does not exist". Matches ReviewService.
+            throw new ResourceNotFoundException("Session not found with id: " + sessionId);
         }
 
         if (session.getStatus() != SessionStatus.IN_PROGRESS) {
@@ -210,7 +216,9 @@ public class MockTestService {
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found with id: " + sessionId));
 
         if (!session.getUser().getUserId().equals(userId)) {
-            throw new SecurityException("Unauthorized access to this session");
+            // Same exception and message as a genuine miss: a caller must not be able to tell
+            // "exists but is not yours" from "does not exist". Matches ReviewService.
+            throw new ResourceNotFoundException("Session not found with id: " + sessionId);
         }
 
         if (session.getStatus() != SessionStatus.IN_PROGRESS) {
@@ -373,7 +381,9 @@ public class MockTestService {
                 .orElseThrow(() -> new ResourceNotFoundException("Submission not found with id: " + submissionId));
 
         if (!sub.getUser().getUserId().equals(userId)) {
-            throw new SecurityException("Unauthorized access to this report");
+            // Same exception and message as a genuine miss: a caller must not be able to tell
+            // "exists but is not yours" from "does not exist". Matches ReviewService.
+            throw new ResourceNotFoundException("Submission not found with id: " + submissionId);
         }
 
         MockTestSession session = sessionRepository.findById(sub.getSessionId()).orElse(null);
