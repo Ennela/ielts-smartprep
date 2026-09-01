@@ -95,9 +95,14 @@ self-evidently a win, and it is a larger change than it appears.
 - The access token expires in 15 minutes, so a stolen one has a short window.
 - The refresh token — the credential that grants *renewed* access for 7 days — is outside
   JavaScript's reach entirely. An XSS payload cannot exfiltrate a long-lived credential.
-- Production applies a strict CSP with **no `unsafe-inline`** and no localhost origins
-  (`application-prod.yml`), against a dev policy that does permit inline styles. This is
-  the main structural defence against the XSS that the attack requires in the first place.
+- A CSP restricts what an injected script could do. Note carefully *which* CSP: the one in
+  `application-prod.yml` is emitted by Spring and therefore lands only on API responses,
+  where it protects nothing, because a policy on a JSON body has no document to govern.
+  The policy that matters is the one on the HTML document, which is served by nginx and
+  was **missing entirely** until §5.8 was closed. It now sets `script-src 'self'` plus a
+  hash for the one inline theme script. Its `style-src` keeps `'unsafe-inline'`, because
+  40 components style themselves with React inline style attributes and a strict style-src
+  would render the app unusable — a deliberate weakening of a far less dangerous directive.
 - Every authenticated request re-reads the user's `role` from the database rather than
   trusting the claim (`JwtAuthenticationFilter`), so a token minted before a role change
   cannot be replayed with the old role.
@@ -270,16 +275,40 @@ is not relying on one line of proxy config to be safe.
 This assumes exactly one trusted proxy. Exposing the backend port directly to untrusted
 clients would let a caller pick its own key again.
 
-**5.6 — Unauthenticated requests bypass the AI limiter.**
-`RateLimitInterceptor` returns `true` when it cannot identify a user, deferring to Spring
-Security. That is correct for endpoints requiring authentication, but it means the limiter
-contributes nothing on any path that is ever made public.
+**5.6 — Unauthenticated requests bypassed the AI limiter — fixed.**
+`RateLimitInterceptor` returned `true` when it could not identify a user, deferring to
+Spring Security. That was correct only as long as every path stayed authenticated: the
+limiter contributed nothing the moment one was opened up, on endpoints that spend money per
+call. It now fails closed and answers 401, on the reasoning that a caller with no identity
+has no quota rather than an unlimited one.
 
-**5.7 — Some sensitive endpoints are not rate limited.**
-`/auth/reset-password`, `/auth/refresh` and `/listening/generate-mock` appear in neither
-interceptor's path list.
+**5.7 — Sensitive endpoints missing from the limiters — fixed, with one deliberate omission.**
+`/auth/reset-password` is now covered by the per-IP auth limiter: it consumes a reset token,
+and unmetered it was the one public endpoint where guessing cost an attacker nothing.
+`/listening/generate-mock` is now covered by the per-user AI limiter — it generates four
+listening parts in a single call, making it the most expensive request in the application,
+and it was not metered at all.
 
-**5.8 — No security headers from the reverse proxy.**
-`frontend/nginx.conf` adds none. Spring Security's defaults supply `X-Frame-Options` and
-`X-Content-Type-Options`, but HSTS is only emitted over HTTPS and no `Referrer-Policy` is
-set anywhere.
+`/auth/refresh` is deliberately left out. The auth limiter keys on IP, and every user behind
+one NAT — an office, a school, a university campus, which is precisely this product's
+audience — shares that key. Browsers refresh on 401, so bursts are normal rather than
+suspicious, and the failure mode is logging out groups of legitimate users at once. The
+abuse it would prevent is already bounded: a refresh needs a valid token whose JTI is
+rotated and revoked on use.
+
+**5.8 — No security headers from the reverse proxy — fixed.**
+`frontend/nginx.conf` added none, so the HTML document — the only response where a CSP
+actually constrains anything — was served with no CSP, no `X-Frame-Options`, no
+`X-Content-Type-Options` and no `Referrer-Policy`. It now sets all four, and repeats them
+inside the static-asset location because an nginx location that declares any `add_header`
+of its own stops inheriting the server-level ones.
+
+No `Strict-Transport-Security`. Nothing terminates TLS at this nginx, so it is not the
+component that knows whether HTTPS is in use; HSTS belongs at the TLS edge.
+
+Closing this surfaced a related deployment bug, fixed at the same time: the SPA called the
+backend at an absolute `http://localhost:8080`, so the nginx `/api/` proxy was dead code,
+the browser needed CORS, the `X-Forwarded-For` handling in §5.5 never applied to real
+traffic, and the app only worked when opened on the machine running it. Both the vite dev
+server and this nginx already proxy `/api`, so the SPA now uses a relative `/api/v1` and
+every request is same-origin.

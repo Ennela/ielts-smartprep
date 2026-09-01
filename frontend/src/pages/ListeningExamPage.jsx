@@ -243,7 +243,7 @@ export default function ListeningExamPage() {
   const currentPart = parts[currentPartIndex];
   const totalQuestions = parts.reduce((s, p) => s + (p.questions?.length || 0), 0);
   const answeredCount = Object.keys(answers).filter(k => answers[k]?.trim()).length;
-  const audioBaseUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:8080';
+  const audioBaseUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') ?? '';
 
   if (loading) return (
     <div className="listening-page">

@@ -88,7 +88,7 @@ export default function MockTestSessionPage() {
   };
 
   const currentSection = activeSession?.currentSection || 'LISTENING';
-  const audioBaseUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:8080';
+  const audioBaseUrl = import.meta.env.VITE_API_URL?.replace('/api/v1', '') ?? '';
 
   // ── Section 1: Listening Helpers ──
   const listeningParts = activeSession?.listeningParts || [];

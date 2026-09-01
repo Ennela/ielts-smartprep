@@ -112,14 +112,21 @@ class RateLimitInterceptorTest {
         verify(valueOps, never()).increment(anyString());
     }
 
+    /**
+     * This used to return true, on the reasoning that Spring Security would reject the
+     * request anyway. That made the limiter contribute nothing the moment any of its paths
+     * were opened up, on endpoints that cost money per call. It now fails closed.
+     */
     @Test
-    @DisplayName("should bypass rate limiting for anonymous requests")
+    @DisplayName("should reject an unidentified caller instead of letting it through unmetered")
     void preHandle_anonymousRequest() {
         org.springframework.security.core.context.SecurityContextHolder.clearContext();
+        when(request.getRequestURI()).thenReturn("/api/v1/writing/grade");
 
         boolean result = rateLimitInterceptor.preHandle(request, response, new Object());
 
-        assertTrue(result);
+        assertFalse(result);
+        verify(response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         verifyNoInteractions(redisTemplate, proxyManager);
     }
 }
