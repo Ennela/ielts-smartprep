@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 public class VocabAiSuggestRequest {
 
     @NotBlank(message = "Skill type is required")
-    private String skillType; // READING, WRITING, LISTENING, SPEAKING
+    private String skillType; // READING, WRITING, LISTENING, or MOCK
 
     @NotNull(message = "Source ID is required")
     private Long sourceId;

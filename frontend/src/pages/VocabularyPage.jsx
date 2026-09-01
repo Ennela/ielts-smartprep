@@ -656,7 +656,6 @@ export default function VocabularyPage() {
                     <option value="READING">Reading</option>
                     <option value="LISTENING">Listening</option>
                     <option value="WRITING">Writing</option>
-                    <option value="SPEAKING">Speaking</option>
                   </select>
                 </div>
               </div>
