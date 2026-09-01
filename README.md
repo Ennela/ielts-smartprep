@@ -162,6 +162,7 @@ tables.
 | Document | Contents |
 |---|---|
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Detailed architecture with file-level references |
+| [docs/SECURITY.md](docs/SECURITY.md) | Security decisions, ownership checks, rate limits, known gaps |
 | [docs/AUDIT.md](docs/AUDIT.md) | Earlier system audit |
 | [docs/STUDY_GUIDE.md](docs/STUDY_GUIDE.md) | Domain notes on IELTS scoring |
 
