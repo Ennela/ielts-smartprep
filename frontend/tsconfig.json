@@ -5,6 +5,20 @@
     "lib": ["ES2023", "DOM"],
     "types": ["vite/client"],
     "skipLibCheck": true,
+
+    /*
+     * allowJs lets .jsx/.js participate in module resolution, but checkJs is
+     * deliberately left off. Consequence worth knowing before trusting the
+     * "tsc" step in "npm run build": it only type-checks the 10 .ts files under
+     * src/api/. The other 70 .js/.jsx files -- nearly the whole UI -- are not
+     * checked at all.
+     *
+     * Measured cost of switching checkJs on: 7,645 errors across 71 files.
+     * 6,542 of those (86%) exist only because @types/react and @types/react-dom
+     * are absent from package.json; the remaining ~1,100 are genuine and would
+     * mean typing props on essentially every component. That is its own
+     * project, not something to slip into a cleanup pass.
+     */
     "allowJs": true,
     "jsx": "react-jsx",
 
