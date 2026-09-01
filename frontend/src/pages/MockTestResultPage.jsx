@@ -33,6 +33,8 @@ export default function MockTestResultPage() {
   const [writingTab, setWritingTab] = useState('task1'); // 'task1' or 'task2'
   const [feedbackSubTab, setFeedbackSubTab] = useState('errors'); // 'errors' or 'rewrite' or 'essay'
   const [activeReadingQuiz, setActiveReadingQuiz] = useState(0);
+  const [regrading, setRegrading] = useState(false);
+  const [regradeError, setRegradeError] = useState('');
   
   const pollTimerRef = useRef(null);
 
@@ -43,6 +45,22 @@ export default function MockTestResultPage() {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     };
   }, [submissionId]);
+
+  // AI grading can fail on a transient Gemini outage, which used to strand the exam in
+  // FAILED for good. loadResult() re-reads the submission and restarts polling once the
+  // retry is queued.
+  const handleRegrade = async () => {
+    setRegrading(true);
+    setRegradeError('');
+    try {
+      await mockTestApi.regradeWriting(submissionId);
+      await loadResult();
+    } catch (err) {
+      setRegradeError(err.response?.data?.message || 'Could not restart grading. Please try again.');
+    } finally {
+      setRegrading(false);
+    }
+  };
 
   const loadResult = async () => {
     try {
@@ -165,7 +183,14 @@ export default function MockTestResultPage() {
           <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', marginBottom: '24px' }}>
             An unexpected error occurred during AI evaluation. Your listening and reading scores are saved, but writing could not be completed.
           </p>
-          <button className="btn btn-primary" onClick={() => navigate('/mock-tests')} style={{ width: '100%' }}>
+          {regradeError && (
+            <p style={{ color: 'var(--error)', fontSize: '0.85rem', marginBottom: '12px' }}>{regradeError}</p>
+          )}
+          <button className="btn btn-primary" onClick={handleRegrade} disabled={regrading}
+                  style={{ width: '100%', marginBottom: '10px' }}>
+            {regrading ? 'Restarting…' : 'Try grading again'}
+          </button>
+          <button className="btn btn-secondary" onClick={() => navigate('/mock-tests')} style={{ width: '100%' }}>
             Return to Exam Lobby
           </button>
         </div>

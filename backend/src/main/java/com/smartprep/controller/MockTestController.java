@@ -138,6 +138,21 @@ public class MockTestController {
      * Check writing evaluation status (polling endpoint).
      * GET /api/v1/mock-tests/submissions/{submissionId}/status
      */
+    /**
+     * Retry AI writing evaluation after it failed.
+     * POST /api/v1/mock-tests/submissions/{submissionId}/regrade
+     */
+    @PostMapping("/submissions/{submissionId}/regrade")
+    @Operation(summary = "Retry a failed writing evaluation",
+            description = "Re-runs AI grading for a submission stuck in FAILED, reusing the stored answers")
+    public ResponseEntity<ApiResponse<Void>> regradeWriting(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long submissionId) {
+        mockTestService.regradeWriting(user.getUserId(), submissionId);
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(ApiResponse.ok(null, "Grading restarted."));
+    }
+
     @GetMapping("/submissions/{submissionId}/status")
     @Operation(summary = "Get mock test evaluation grading status")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getGradingStatus(

@@ -375,6 +375,54 @@ public class MockTestService {
     /**
      * Get Mock Test Submission details
      */
+    /**
+     * Re-run AI writing evaluation for a submission whose grading failed.
+     * <p>
+     * A transient Gemini outage used to strand a submission in FAILED for good: the
+     * listening and reading scores were already computed and saved, but the writing band
+     * could never be produced and there was no way to ask for another attempt. The essays
+     * are not stored on the submission itself, so they are read back from the session's
+     * progress JSON — the same source the original submit used.
+     */
+    @Transactional
+    public void regradeWriting(Long userId, Long submissionId) {
+        MockTestSubmission sub = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Submission not found with id: " + submissionId));
+
+        if (!sub.getUser().getUserId().equals(userId)) {
+            throw new ResourceNotFoundException("Submission not found with id: " + submissionId);
+        }
+
+        if (sub.getStatus() != SubmissionStatus.FAILED) {
+            throw new IllegalStateException(
+                    "Only a failed grading can be retried. Current status: " + sub.getStatus());
+        }
+
+        MockTestSession session = sessionRepository.findById(sub.getSessionId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "The exam session for this submission is no longer available, so the essays cannot be recovered."));
+
+        Map<String, String> answersMap = new HashMap<>();
+        try {
+            String progressJson = session.getProgressJson();
+            if (progressJson != null && !progressJson.trim().isEmpty()) {
+                answersMap = objectMapper.readValue(progressJson, new TypeReference<Map<String, String>>() {});
+            }
+        } catch (Exception e) {
+            log.error("Failed to parse progress JSON while re-grading submission {}", submissionId, e);
+            throw new IllegalStateException("The stored answers for this exam could not be read.");
+        }
+
+        String task1Essay = answersMap.getOrDefault("w_task1", "");
+        String task2Essay = answersMap.getOrDefault("w_task2", "");
+
+        sub.setStatus(SubmissionStatus.GRADING);
+        submissionRepository.save(sub);
+
+        log.info("Re-grading writing for submission {}", submissionId);
+        asyncGrader.gradeWritingSubmissionsAsync(submissionId, task1Essay, task2Essay);
+    }
+
     @Transactional(readOnly = true)
     public MockTestSubmissionResponse getSubmission(Long userId, Long submissionId) {
         MockTestSubmission sub = submissionRepository.findById(submissionId)
