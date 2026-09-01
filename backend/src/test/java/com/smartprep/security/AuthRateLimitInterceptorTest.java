@@ -132,13 +132,37 @@ class AuthRateLimitInterceptorTest {
     // ── X-Forwarded-For IP resolution ─────────────────────────────────────
 
     @Test
-    @DisplayName("should resolve client IP from X-Forwarded-For header (first IP)")
-    void xff_resolvesFirstIp() {
+    @DisplayName("should resolve client IP from the rightmost X-Forwarded-For entry")
+    void xff_resolvesNearestProxyEntry() {
         when(request.getHeader("X-Forwarded-For")).thenReturn("203.0.113.50, 70.41.3.18, 150.172.238.178");
 
         String ip = interceptor.resolveClientIp(request);
 
-        assertEquals("203.0.113.50", ip);
+        assertEquals("150.172.238.178", ip);
+    }
+
+    /**
+     * The leftmost entry is whatever the caller chose to send. Keying on it let a single
+     * host evade the per-IP bucket by varying the header on every request.
+     */
+    @Test
+    @DisplayName("a client-supplied X-Forwarded-For cannot choose the rate-limit key")
+    void xff_forgedPrefixIsIgnored() {
+        when(request.getHeader("X-Forwarded-For")).thenReturn("1.2.3.4, 198.51.100.7");
+
+        assertEquals("198.51.100.7", interceptor.resolveClientIp(request));
+
+        when(request.getHeader("X-Forwarded-For")).thenReturn("9.9.9.9, 198.51.100.7");
+
+        assertEquals("198.51.100.7", interceptor.resolveClientIp(request));
+    }
+
+    @Test
+    @DisplayName("should use the single entry nginx writes when it overwrites the header")
+    void xff_singleEntry() {
+        when(request.getHeader("X-Forwarded-For")).thenReturn("198.51.100.7");
+
+        assertEquals("198.51.100.7", interceptor.resolveClientIp(request));
     }
 
     @Test

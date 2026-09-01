@@ -255,12 +255,20 @@ V40 kills the password but keeps the row, including `role = 'ADMIN'` and the add
 mail delivery to that address can set a new password and obtain an administrator account.
 Deleting or renaming the row would close this.
 
-**5.5 — The per-IP limit is spoofable.**
-`AuthRateLimitInterceptor.resolveClientIp` takes the **leftmost** value of `X-Forwarded-For`.
-nginx is configured with `$proxy_add_x_forwarded_for`, which *appends* to the incoming
-header rather than replacing it, so a client-supplied value survives and becomes the bucket
-key. An attacker can vary it per request and bypass the per-IP limits entirely. The
-per-username lockout (§4) is what limits the damage.
+**5.5 — The per-IP limit was spoofable — fixed.**
+`AuthRateLimitInterceptor.resolveClientIp` took the **leftmost** value of `X-Forwarded-For`
+while nginx used `$proxy_add_x_forwarded_for`, which *appends* to the incoming header rather
+than replacing it. A client-supplied value therefore survived on the left and became the
+bucket key, so one host could vary it per request and bypass the per-IP limits entirely.
+
+Fixed on both sides. nginx now overwrites the header with `$remote_addr`, so a caller cannot
+contribute to it at all; and the interceptor reads the **rightmost** entry, which is written
+by the proxy nearest the application and is correct whether or not a proxy appends. Both are
+needed: the nginx change fixes the deployment, the interceptor change means the application
+is not relying on one line of proxy config to be safe.
+
+This assumes exactly one trusted proxy. Exposing the backend port directly to untrusted
+clients would let a caller pick its own key again.
 
 **5.6 — Unauthenticated requests bypass the AI limiter.**
 `RateLimitInterceptor` returns `true` when it cannot identify a user, deferring to Spring
