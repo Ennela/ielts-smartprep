@@ -1,6 +1,6 @@
 import type { AxiosResponse } from 'axios';
 import axiosClient from './axiosClient';
-import type { ApiResponse, Quiz, QuizSubmissionResult, PaginatedResult } from './types';
+import type { ApiResponse, Quiz, ReadingResult, SpringPage } from './types';
 
 interface GetTemplatesParams {
   page: number;
@@ -16,16 +16,16 @@ const readingApi = {
     getQuiz: (quizId: number | string): Promise<AxiosResponse<ApiResponse<Quiz>>> =>
         axiosClient.get(`/reading/${quizId}`),
 
-    getResult: (quizId: number | string): Promise<AxiosResponse<ApiResponse<QuizSubmissionResult>>> =>
+    getResult: (quizId: number | string): Promise<AxiosResponse<ApiResponse<ReadingResult>>> =>
         axiosClient.get(`/reading/${quizId}/result`),
 
-    submitQuiz: (quizId: number | string, answers: Record<number, string>, attemptId?: number | null, autoSubmitted?: boolean): Promise<AxiosResponse<ApiResponse<QuizSubmissionResult>>> =>
+    submitQuiz: (quizId: number | string, answers: Record<number, string>, attemptId?: number | null, autoSubmitted?: boolean): Promise<AxiosResponse<ApiResponse<ReadingResult>>> =>
         axiosClient.post(`/reading/${quizId}/submit`, { answers, attemptId: attemptId || undefined, autoSubmitted: autoSubmitted || false }),
 
-    getHistory: (page = 0, size = 10): Promise<AxiosResponse<ApiResponse<PaginatedResult<any>>>> =>
+    getHistory: (page = 0, size = 10): Promise<AxiosResponse<ApiResponse<any[]>>> =>
         axiosClient.get('/reading/history', { params: { page, size } }),
 
-    getTemplates: (topic?: string, difficulty?: string, page = 0, size = 10): Promise<AxiosResponse<ApiResponse<PaginatedResult<any>>>> => {
+    getTemplates: (topic?: string, difficulty?: string, page = 0, size = 10): Promise<AxiosResponse<ApiResponse<SpringPage<Quiz>>>> => {
         const params: GetTemplatesParams = { page, size };
         if (topic) params.topic = topic;
         if (difficulty) params.difficulty = difficulty;
