@@ -1,28 +1,55 @@
 import { useState, useEffect } from 'react';
-import { useParams, useLocation } from 'react-router-dom';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import listeningApi from '../api/listeningApi';
 import AiVocabularyButton from '../components/vocab/AiVocabularyButton';
 
 export default function ListeningResultPage() {
   const { testId } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
 
-  const [result] = useState(location.state || null);
+  const [result, setResult] = useState(location.state || null);
+  const [loading, setLoading] = useState(!location.state);
+  const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('answers');
   const [vocabData, setVocabData] = useState(null);
   const [vocabLoading, setVocabLoading] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState({});
   const [aiLoading, setAiLoading] = useState({});
 
+  // Arriving straight after a submit carries the result in router state. Arriving from the
+  // history list, a refresh, or a pasted link carries nothing — previously that left the
+  // page spinning forever, so fetch the result instead.
   useEffect(() => {
-    if (!result && testId) {
-      // If no state passed, could fetch from API in the future
-    }
+    if (result || !testId) return;
+    let cancelled = false;
+    setLoading(true);
+    listeningApi.getTestResult(testId)
+      .then(res => { if (!cancelled) setResult(res.data.data); })
+      .catch(err => {
+        if (!cancelled) setError(err.response?.data?.message || 'Could not load this result.');
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [testId, result]);
 
-  if (!result) return (
+  if (loading) return (
     <div className="listening-page">
       <div className="loading-spinner"><div className="spinner" /></div>
+    </div>
+  );
+
+  if (error || !result) return (
+    <div className="listening-page">
+      <div className="loading-screen">
+        <div>
+          <p style={{ color: 'var(--color-error)' }}>{error || 'Result not found.'}</p>
+          <button className="btn btn-primary" onClick={() => navigate('/listening/history')}
+                  style={{ marginTop: 16 }}>
+            Back to History
+          </button>
+        </div>
+      </div>
     </div>
   );
 
