@@ -50,7 +50,11 @@ services:
       SENTRY_DSN: ${SENTRY_DSN:-}
       SENTRY_ENV: production
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health/liveness"]
+      # wget, not curl: the runtime stage is eclipse-temurin:17-jre-alpine, which ships
+      # wget but not curl. The probe failed on every run since it was written, so the
+      # container reported unhealthy even while the application was serving fine — and
+      # any depends_on: service_healthy or CD health gate gets stuck on it.
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/actuator/health/liveness"]
       interval: 30s
       timeout: 10s
       retries: 3
