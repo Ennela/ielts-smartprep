@@ -6,6 +6,8 @@ import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "listening_questions")
@@ -20,6 +22,7 @@ public class ListeningQuestion {
     private ListeningPart part;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     // 30, not 15: MATCHING_SENTENCE_ENDINGS is 25 characters. See V45.
     @Column(nullable = false, length = 30)
     private QuestionType questionType;

@@ -6,6 +6,8 @@ import lombok.*;
 import com.smartprep.model.enums.Role;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "users")
@@ -46,6 +48,7 @@ public class User {
     private BigDecimal targetListeningScore;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 20)
     @Builder.Default
     private Role role = Role.STUDENT;

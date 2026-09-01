@@ -5,6 +5,8 @@ import com.smartprep.model.enums.WritingTaskType;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "writing_rubric_criteria")
@@ -19,10 +21,12 @@ public class WritingRubricCriterion {
     private Long id;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "task_type", nullable = false, length = 10)
     private WritingTaskType taskType;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "criterion_name", nullable = false, length = 30)
     private RubricCriterionName criterionName;
 

@@ -6,6 +6,8 @@ import com.smartprep.model.enums.WritingTaskType;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "writing_prompts")
@@ -19,6 +21,7 @@ public class WritingPrompt {
     private String promptText;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 50)
     private EssayType essayType;
 
@@ -29,6 +32,7 @@ public class WritingPrompt {
     private String visualData;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "content_status", nullable = false, length = 20)
     @Builder.Default
     private ContentStatus contentStatus = ContentStatus.DRAFT;
@@ -40,6 +44,7 @@ public class WritingPrompt {
     private String seedKey;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "task_type", nullable = false, length = 10)
     private WritingTaskType taskType;
 

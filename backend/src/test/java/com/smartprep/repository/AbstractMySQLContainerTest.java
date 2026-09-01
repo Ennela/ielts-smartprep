@@ -27,18 +27,12 @@ public abstract class AbstractMySQLContainerTest {
         registry.add("spring.datasource.username", MYSQL::getUsername);
         registry.add("spring.datasource.password", MYSQL::getPassword);
         registry.add("spring.flyway.enabled", () -> "true");
-        // TODO(B-65): switch to "validate" once the enum JDBC-type mapping is settled.
-        //
-        // This should be "validate" so the suite asserts entities still match the Flyway
-        // schema — with "none" it stayed green while the two drifted apart for many
-        // migrations, and only the prod profile (which does validate) caught it.
-        //
-        // Flipping it now turns the whole integration suite red for a reason unrelated to
-        // the tests: Hibernate 6 maps @Enumerated(STRING) to a native MySQL ENUM, while
-        // every migration creates VARCHAR. V45 normalised the columns, but setting
-        // hibernate.type.preferred_enum_jdbc_type=VARCHAR in application.yml and
-        // application-test.yml did not take effect — validation still expects ENUM.
-        // Leaving a red suite behind would cost more than it documents.
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
+        // validate, not none: this asserts every entity still matches the Flyway schema.
+        // With "none" the suite stayed green while the two drifted apart across many
+        // migrations — 16 columns had become native MySQL ENUM while others stayed VARCHAR
+        // — and nothing caught it until the prod profile, which does validate, refused to
+        // start. Set here rather than in application-test.yml because @DynamicPropertySource
+        // takes precedence over the yml files.
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
     }
 }

@@ -9,6 +9,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "reading_quizzes")
@@ -23,10 +25,12 @@ public class ReadingQuiz {
     private User user;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 20)
     private Topic topic;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 20)
     private Difficulty difficulty;
 
@@ -56,6 +60,7 @@ public class ReadingQuiz {
     private String moduleType = "ACADEMIC";
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "content_status", nullable = false, length = 20)
     @Builder.Default
     private ContentStatus contentStatus = ContentStatus.DRAFT;

@@ -6,6 +6,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.util.ArrayList;
 import java.util.List;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "listening_parts")
@@ -28,6 +30,7 @@ public class ListeningPart {
     private String audioUrl;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 10)
     @Builder.Default
     private AudioStatus audioStatus = AudioStatus.PENDING;
@@ -38,6 +41,7 @@ public class ListeningPart {
     private Integer durationSeconds;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "content_status", nullable = false, length = 20)
     @Builder.Default
     private ContentStatus contentStatus = ContentStatus.DRAFT;

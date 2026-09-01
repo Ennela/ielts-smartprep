@@ -6,6 +6,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 /**
  * Server-authoritative exam attempt record.
@@ -30,6 +32,7 @@ public class ExamAttempt {
     private User user;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 15)
     private SkillType skillType;
 
@@ -46,6 +49,7 @@ public class ExamAttempt {
     private LocalDateTime deadline;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 15)
     @Builder.Default
     private SessionStatus status = SessionStatus.IN_PROGRESS;
