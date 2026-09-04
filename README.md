@@ -15,7 +15,7 @@ full mock tests, AI-assisted writing evaluation, and progress tracking.
 |---|---|
 | Frontend | React 19, Vite, TailwindCSS, React Router 7, TanStack Query |
 | Backend | Java 17, Spring Boot 3.2.5, Spring Security, JPA/Hibernate 6.4 |
-| Database | MySQL 8.0, Flyway (45 migrations) |
+| Database | MySQL 8.0, Flyway (46 migrations) |
 | Cache / rate limiting | Redis (Bucket4j, distributed) |
 | Object storage | MinIO (S3-compatible) — listening audio, avatars |
 | Text-to-speech | edge-tts, as a Python FastAPI sidecar |
@@ -63,7 +63,7 @@ python scripts/check_env.py
 docker compose up -d --build
 ```
 
-Flyway applies all 45 migrations on first boot, including the Cambridge 19 seed content, so
+Flyway applies all 46 migrations on first boot, including the Cambridge 19 seed content, so
 there is content to practise with immediately. Wait for the backend to report healthy:
 
 ```bash

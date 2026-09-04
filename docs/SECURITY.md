@@ -61,8 +61,10 @@ SELECT username, email, role, password_hash FROM users WHERE username = 'admin';
 | `password_hash` is still a BCrypt string | The password was changed before V40 ran. Confirm a real person owns the account and that it is not still `admin123`. |
 | No row | V11 never ran against this database. |
 
-The row is **not deleted** and still carries `role = 'ADMIN'`. See [§5.4](#5-known-gaps-and-accepted-risks)
-for the consequence of that.
+V40 left the row itself in place, still carrying `role = 'ADMIN'`. That was its own problem
+— a disabled credential is not a removed identity — and it is closed separately by
+`V46__remove_legacy_default_admin.sql`. See [§5.4](#5-known-gaps-and-accepted-risks), which
+also explains what that delete cascades to and when to rename the account instead.
 
 ---
 
@@ -254,11 +256,21 @@ than merely that something was thrown.
 and appends `N attempt(s) remaining` only for accounts that exist. Either signal separates a
 real account from a fabricated one, and unknown usernames are never subject to lockout.
 
-**5.4 — The legacy admin row still exists.**
-V40 kills the password but keeps the row, including `role = 'ADMIN'` and the address
-`admin@smartprep.local`. `PasswordResetService` looks users up by email, so whoever controls
-mail delivery to that address can set a new password and obtain an administrator account.
-Deleting or renaming the row would close this.
+**5.4 — The legacy admin row still existed — removed.**
+V40 killed the password but kept the row, including `role = 'ADMIN'` and the address
+`admin@smartprep.local`. `PasswordResetService` looks users up by email, so whoever
+controlled mail delivery to that address could set a new password and obtain an
+administrator account. Disabling a credential is not the same as removing an identity.
+
+`V46__remove_legacy_default_admin.sql` deletes the row. Two details are worth knowing before
+applying it elsewhere. Almost every foreign key into `users` is `ON DELETE CASCADE`, so this
+also deletes everything that account owns — and it is not always dormant: on the machine
+this was written for it held 45 vocabulary items, 22 reading quizzes, 16 score-history rows,
+6 essays and 2 listening tests. The migration carries the query to check that first, and the
+`UPDATE` to rename the identity instead if the data is worth keeping. Separately,
+`exam_attempts.user_id` is `NO ACTION` rather than `CASCADE`, so those rows are deleted
+explicitly; left in place they would abort the delete on a constraint violation and stop
+Flyway, and with it application startup.
 
 **5.5 — The per-IP limit was spoofable — fixed.**
 `AuthRateLimitInterceptor.resolveClientIp` took the **leftmost** value of `X-Forwarded-For`
