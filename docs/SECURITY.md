@@ -237,8 +237,11 @@ Password reset tokens live under the `pwd-reset:` prefix with a **15 minute** TT
 
 ## 5. Known gaps and accepted risks
 
-Documented rather than hidden. Entries marked *fixed* were closed after this document
-first listed them; the rest are open.
+Documented rather than hidden. Every entry below was found by auditing this codebase and
+written down before it was fixed; all eight have since been closed. They are kept rather
+than deleted because the record of what was wrong, and why it was wrong, is worth more
+than a section saying nothing is. One of them (§5.7) is closed by a deliberate decision
+not to apply a limit, with the reasoning recorded.
 
 **5.1 and 5.2 — resource-existence leaks on vocabulary and answer ids — fixed.**
 `VocabularyService.reviewVocabulary` and `deleteVocabulary` used to throw
@@ -252,10 +255,25 @@ All three now throw the same exception with the same message as a genuine miss, 
 pattern in `MockTestService` (§3), and the tests assert the messages are identical rather
 than merely that something was thrown.
 
-**5.3 — Login allows user enumeration.**
-`UserService.login` throws for an unknown username *before* calling `recordFailedAttempt`,
-and appends `N attempt(s) remaining` only for accounts that exist. Either signal separates a
-real account from a fabricated one, and unknown usernames are never subject to lockout.
+**5.3 — Login allowed user enumeration — fixed.**
+`UserService.login` threw for an unknown username *before* calling `recordFailedAttempt`,
+and appended `N attempt(s) remaining` only for accounts that existed. Either signal
+separated a real account from a fabricated one, and unknown usernames were never subject to
+lockout, so probing for valid names was unlimited.
+
+Three things had to change together, because fixing only the visible one would have left the
+hole open:
+
+- The two failures now throw the identical message. A test asserts they are equal rather
+  than asserting either one's wording, since equality is the actual property.
+- A failed attempt is recorded for unknown usernames too. That subjects username probing to
+  the same 5-per-15-minutes lockout, and it is also what lets the remaining-attempts figure
+  appear in both messages instead of only one.
+- The supplied password is hashed against a placeholder when no account exists. Without
+  this the cases stay separable by response time no matter how well the messages match:
+  BCrypt at cost 12 takes on the order of 250ms, while a missing row returns in about 1ms.
+  The placeholder is derived from the injected encoder at startup, so it always carries the
+  configured cost factor.
 
 **5.4 — The legacy admin identity was still live — retired.**
 V40 killed the password but left the identity in place, including `role = 'ADMIN'` and the
