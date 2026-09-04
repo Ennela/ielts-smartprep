@@ -62,9 +62,10 @@ SELECT username, email, role, password_hash FROM users WHERE username = 'admin';
 | No row | V11 never ran against this database. |
 
 V40 left the row itself in place, still carrying `role = 'ADMIN'`. That was its own problem
-— a disabled credential is not a removed identity — and it is closed separately by
-`V46__remove_legacy_default_admin.sql`. See [§5.4](#5-known-gaps-and-accepted-risks), which
-also explains what that delete cascades to and when to rename the account instead.
+— a disabled credential is not a retired identity — and it is closed separately by
+`V46__retire_legacy_default_admin_identity.sql`, which renames the account to an
+unresolvable address. See [§5.4](#5-known-gaps-and-accepted-risks) for why it renames
+instead of deleting.
 
 ---
 
@@ -256,21 +257,22 @@ than merely that something was thrown.
 and appends `N attempt(s) remaining` only for accounts that exist. Either signal separates a
 real account from a fabricated one, and unknown usernames are never subject to lockout.
 
-**5.4 — The legacy admin row still existed — removed.**
-V40 killed the password but kept the row, including `role = 'ADMIN'` and the address
-`admin@smartprep.local`. `PasswordResetService` looks users up by email, so whoever
-controlled mail delivery to that address could set a new password and obtain an
-administrator account. Disabling a credential is not the same as removing an identity.
+**5.4 — The legacy admin identity was still live — retired.**
+V40 killed the password but left the identity in place, including `role = 'ADMIN'` and the
+address `admin@smartprep.local`. `PasswordResetService` looks users up by email, so anyone
+able to receive mail at that published address could set a new password and obtain an
+administrator account. Disabling a credential is not the same as retiring an identity.
 
-`V46__remove_legacy_default_admin.sql` deletes the row. Two details are worth knowing before
-applying it elsewhere. Almost every foreign key into `users` is `ON DELETE CASCADE`, so this
-also deletes everything that account owns — and it is not always dormant: on the machine
-this was written for it held 45 vocabulary items, 22 reading quizzes, 16 score-history rows,
-6 essays and 2 listening tests. The migration carries the query to check that first, and the
-`UPDATE` to rename the identity instead if the data is worth keeping. Separately,
-`exam_attempts.user_id` is `NO ACTION` rather than `CASCADE`, so those rows are deleted
-explicitly; left in place they would abort the delete on a constraint violation and stop
-Flyway, and with it application startup.
+`V46__retire_legacy_default_admin_identity.sql` renames it to `legacy-admin@invalid`.
+`.invalid` is reserved by RFC 2606 as permanently unresolvable, so the password-reset route
+is closed by construction rather than by hoping nobody registers the domain.
+
+It renames rather than deletes deliberately. Almost every foreign key into `users` is
+`ON DELETE CASCADE`, so deleting the row would take everything the account owns with it —
+and it was not dormant: on the database this was written against it held 45 vocabulary
+items, 22 reading quizzes, 16 score-history rows, 6 essays and 2 listening tests. The
+account keeps its role, its password and its history; only the published identity goes. The
+migration carries the `UPDATE` to substitute a real address.
 
 **5.5 — The per-IP limit was spoofable — fixed.**
 `AuthRateLimitInterceptor.resolveClientIp` took the **leftmost** value of `X-Forwarded-For`
