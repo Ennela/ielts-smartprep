@@ -5,6 +5,8 @@ import com.smartprep.model.enums.SkillType;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "mock_test_sessions")
@@ -27,10 +29,12 @@ public class MockTestSession {
     private MockTest mockTest;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 20)
     private SessionStatus status;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "current_section", nullable = false, length = 20)
     private SkillType currentSection;
 

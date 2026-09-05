@@ -74,7 +74,7 @@ public class WritingGradingService {
         int maxRetries = 3;
         for (int i = 0; i < maxRetries; i++) {
             try {
-                gradingJson = geminiClient.generateAndParse(
+                gradingJson = geminiClient.gradeAndParse(
                         systemPrompt,
                         userPrompt,
                         aiResponse -> {
@@ -126,7 +126,7 @@ public class WritingGradingService {
         JsonNode rewriteJson = null;
         for (int i = 0; i < maxRetries; i++) {
             try {
-                rewriteJson = geminiClient.generateAndParse(
+                rewriteJson = geminiClient.gradeAndParse(
                         rewriteSystemPrompt,
                         rewriteUserPrompt,
                         aiResponse -> {

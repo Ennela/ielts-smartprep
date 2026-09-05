@@ -96,20 +96,6 @@ public class MockTestController {
     }
 
     /**
-     * Start or resume a session for a specific mock test.
-     * POST /api/v1/mock-tests/{id}/start
-     */
-    @PostMapping("/{id}/start")
-    @Operation(summary = "Start or resume a mock test session")
-    public ResponseEntity<ApiResponse<MockTestSessionResponse>> startMockTest(
-            @AuthenticationPrincipal User user,
-            @PathVariable Long id) {
-        MockTestSessionResponse session = mockTestService.startOrResumeSession(user.getUserId(), id);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.ok(session, "Mock test session initiated successfully"));
-    }
-
-    /**
      * Get the current active session of the user.
      * GET /api/v1/mock-tests/sessions/current
      */
@@ -136,35 +122,6 @@ public class MockTestController {
     }
 
     /**
-     * Transition to the next exam section (Listening -> Reading -> Writing).
-     * POST /api/v1/mock-tests/sessions/{sessionId}/next-section
-     */
-    @PostMapping("/sessions/{sessionId}/next-section")
-    @Operation(summary = "Transition to the next exam section")
-    public ResponseEntity<ApiResponse<MockTestSessionResponse>> nextSection(
-            @AuthenticationPrincipal User user,
-            @PathVariable Long sessionId,
-            @Valid @RequestBody MockTestProgressRequest request) {
-        MockTestSessionResponse session = mockTestService.nextSection(user.getUserId(), sessionId, request);
-        return ResponseEntity.ok(ApiResponse.ok(session, "Section transitioned successfully"));
-    }
-
-    /**
-     * Submit the exam for evaluation.
-     * POST /api/v1/mock-tests/sessions/{sessionId}/submit
-     */
-    @PostMapping("/sessions/{sessionId}/submit")
-    @Operation(summary = "Submit mock test for grading", description = "Submits all sections, initiating asynchronous AI writing grading")
-    public ResponseEntity<ApiResponse<MockTestSubmissionResponse>> submitExam(
-            @AuthenticationPrincipal User user,
-            @PathVariable Long sessionId,
-            @Valid @RequestBody MockTestSubmitRequest request) {
-        MockTestSubmissionResponse submission = mockTestService.submitExam(user.getUserId(), sessionId, request);
-        return ResponseEntity.status(HttpStatus.ACCEPTED)
-                .body(ApiResponse.ok(submission, "Exam submitted successfully. AI evaluation is grading."));
-    }
-
-    /**
      * Get the detailed submission report.
      * GET /api/v1/mock-tests/submissions/{submissionId}
      */
@@ -181,6 +138,21 @@ public class MockTestController {
      * Check writing evaluation status (polling endpoint).
      * GET /api/v1/mock-tests/submissions/{submissionId}/status
      */
+    /**
+     * Retry AI writing evaluation after it failed.
+     * POST /api/v1/mock-tests/submissions/{submissionId}/regrade
+     */
+    @PostMapping("/submissions/{submissionId}/regrade")
+    @Operation(summary = "Retry a failed writing evaluation",
+            description = "Re-runs AI grading for a submission stuck in FAILED, reusing the stored answers")
+    public ResponseEntity<ApiResponse<Void>> regradeWriting(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long submissionId) {
+        mockTestService.regradeWriting(user.getUserId(), submissionId);
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(ApiResponse.ok(null, "Grading restarted."));
+    }
+
     @GetMapping("/submissions/{submissionId}/status")
     @Operation(summary = "Get mock test evaluation grading status")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getGradingStatus(

@@ -7,6 +7,7 @@ import com.smartprep.model.entity.ScoreHistory;
 import com.smartprep.model.entity.User;
 import com.smartprep.model.enums.SkillType;
 import com.smartprep.repository.ScoreHistoryRepository;
+import com.smartprep.service.util.IeltsScoringUtils;
 import com.smartprep.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -221,18 +222,16 @@ public class StatsService {
         }
     }
 
+    /**
+     * Rounds to the nearest half band, delegating to the shared implementation.
+     * <p>
+     * This was a fourth copy of the official rounding rule. The null/zero guard is kept
+     * because callers rely on an unscaled {@code BigDecimal.ZERO} here, which is not
+     * equal to the {@code 0.0} the shared method would return.
+     */
     private BigDecimal roundToIeltsBand(BigDecimal score) {
         if (score == null || score.compareTo(BigDecimal.ZERO) == 0) return BigDecimal.ZERO;
-        double val = score.doubleValue();
-        double base = Math.floor(val);
-        double fractional = val - base;
-        if (fractional < 0.25) {
-            return BigDecimal.valueOf(base).setScale(1, RoundingMode.HALF_UP);
-        } else if (fractional < 0.75) {
-            return BigDecimal.valueOf(base + 0.5).setScale(1, RoundingMode.HALF_UP);
-        } else {
-            return BigDecimal.valueOf(base + 1.0).setScale(1, RoundingMode.HALF_UP);
-        }
+        return IeltsScoringUtils.roundOverallBand(score);
     }
 
     // Simple cache entry

@@ -6,6 +6,8 @@ import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "reading_questions")
@@ -20,6 +22,7 @@ public class ReadingQuestion {
     private ReadingQuiz quiz;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(nullable = false, length = 30)
     private QuestionType questionType;
 
@@ -68,6 +71,8 @@ public class ReadingQuestion {
     private Integer evidenceOffset;
 
     private Integer evidenceLength;
+
+    private Integer evidenceParagraphIndex;
 
     @Builder.Default
     @Column(nullable = false)

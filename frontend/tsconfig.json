@@ -5,6 +5,24 @@
     "lib": ["ES2023", "DOM"],
     "types": ["vite/client"],
     "skipLibCheck": true,
+
+    /*
+     * allowJs lets .jsx/.js participate in module resolution, but checkJs is
+     * deliberately left off. Consequence worth knowing before trusting the
+     * "tsc" step in "npm run build": it only type-checks the 10 .ts files under
+     * src/api/. The other 70 .js/.jsx files -- nearly the whole UI -- are not
+     * checked at all.
+     *
+     * Measured cost of switching checkJs on: 1,535 errors across 79 files. Mostly
+     * TS2339 (reading a property off an untyped API response) and TS7006/TS7031
+     * (component props and callback parameters with no declared type), so clearing
+     * them means typing props across essentially the whole UI. That is its own
+     * project, not something to slip into a cleanup pass.
+     *
+     * The first measurement here was 7,645 errors. Declaring @types/react and
+     * @types/react-dom, which were missing from package.json entirely, removed 80%
+     * of that without anyone writing a type.
+     */
     "allowJs": true,
     "jsx": "react-jsx",
 

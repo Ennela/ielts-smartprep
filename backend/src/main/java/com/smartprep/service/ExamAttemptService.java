@@ -104,6 +104,22 @@ public class ExamAttemptService {
     }
 
     /**
+     * True when the attempt exists, belongs to this user, and has already been submitted.
+     * <p>
+     * Grading services use this as an idempotency key before creating result records.
+     * {@link #completeAttemptInternal} is idempotent on the attempt itself, but it runs
+     * after grading, so it cannot stop a resubmission from writing a second set of
+     * results. Returns false for an unknown or non-owned attempt so the caller falls
+     * through to its normal not-found handling.
+     */
+    @Transactional(readOnly = true)
+    public boolean isAlreadySubmitted(Long attemptId, Long userId) {
+        return attemptRepository.findByAttemptIdAndUserUserId(attemptId, userId)
+                .map(attempt -> attempt.getStatus() == SessionStatus.SUBMITTED)
+                .orElse(false);
+    }
+
+    /**
      * Complete an attempt (mark as SUBMITTED).
      * Idempotent: if already SUBMITTED, returns existing without error.
      */

@@ -7,9 +7,11 @@ import com.smartprep.dto.response.*;
 import com.smartprep.exception.ResourceNotFoundException;
 import com.smartprep.model.entity.*;
 import com.smartprep.model.enums.Difficulty;
+import com.smartprep.model.enums.MockTestDifficulty;
 import com.smartprep.model.enums.QuestionType;
 import com.smartprep.model.enums.Topic;
 import com.smartprep.model.enums.EssayType;
+import com.smartprep.model.enums.WritingTaskType;
 import com.smartprep.repository.*;
 import com.smartprep.service.util.QuestionOptionMapper;
 import lombok.RequiredArgsConstructor;
@@ -134,6 +136,7 @@ public class AdminService {
         WritingPrompt prompt = WritingPrompt.builder()
                 .promptText(request.getPromptText())
                 .essayType(EssayType.valueOf(request.getEssayType().toUpperCase()))
+                .taskType(WritingTaskType.valueOf(request.getTaskType().toUpperCase()))
                 .imageUrl(request.getImageUrl())
                 .build();
         return writingPromptRepository.save(prompt);
@@ -144,6 +147,7 @@ public class AdminService {
                 .orElseThrow(() -> new ResourceNotFoundException("Writing prompt not found: " + promptId));
         prompt.setPromptText(request.getPromptText());
         prompt.setEssayType(EssayType.valueOf(request.getEssayType().toUpperCase()));
+        prompt.setTaskType(WritingTaskType.valueOf(request.getTaskType().toUpperCase()));
         prompt.setImageUrl(request.getImageUrl());
         return writingPromptRepository.save(prompt);
     }
@@ -405,7 +409,7 @@ public class AdminService {
         MockTest mockTest = MockTest.builder()
                 .title(request.getTitle())
                 .description(request.getDescription())
-                .difficulty(Difficulty.valueOf(request.getDifficulty().toUpperCase()))
+                .difficulty(MockTestDifficulty.valueOf(request.getDifficulty().toUpperCase()))
                 .listeningParts(listeningParts)
                 .readingQuizzes(readingQuizzes)
                 .writingPrompts(writingPrompts)
@@ -437,7 +441,7 @@ public class AdminService {
 
         mockTest.setTitle(request.getTitle());
         mockTest.setDescription(request.getDescription());
-        mockTest.setDifficulty(Difficulty.valueOf(request.getDifficulty().toUpperCase()));
+        mockTest.setDifficulty(MockTestDifficulty.valueOf(request.getDifficulty().toUpperCase()));
         mockTest.setListeningParts(listeningParts);
         mockTest.setReadingQuizzes(readingQuizzes);
         mockTest.setWritingPrompts(writingPrompts);

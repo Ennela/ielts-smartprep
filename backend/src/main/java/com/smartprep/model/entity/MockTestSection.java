@@ -3,6 +3,8 @@ package com.smartprep.model.entity;
 import com.smartprep.model.enums.SkillType;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "mock_test_sections")
@@ -22,6 +24,7 @@ public class MockTestSection {
     private MockTest mockTest;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "section_type", nullable = false, length = 20)
     private SkillType sectionType;
 

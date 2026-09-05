@@ -27,6 +27,12 @@ public abstract class AbstractMySQLContainerTest {
         registry.add("spring.datasource.username", MYSQL::getUsername);
         registry.add("spring.datasource.password", MYSQL::getPassword);
         registry.add("spring.flyway.enabled", () -> "true");
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
+        // validate, not none: this asserts every entity still matches the Flyway schema.
+        // With "none" the suite stayed green while the two drifted apart across many
+        // migrations — 16 columns had become native MySQL ENUM while others stayed VARCHAR
+        // — and nothing caught it until the prod profile, which does validate, refused to
+        // start. Set here rather than in application-test.yml because @DynamicPropertySource
+        // takes precedence over the yml files.
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
     }
 }

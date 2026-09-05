@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -87,8 +88,10 @@ public class ListeningController {
      */
     @GetMapping("/{testId}/result")
     public ResponseEntity<ApiResponse<ListeningTestResponse>> getTestResult(
+            @AuthenticationPrincipal User user,
             @PathVariable Long testId) {
-        return ResponseEntity.ok(ApiResponse.ok(listeningQueryService.getTestResult(testId)));
+        return ResponseEntity.ok(ApiResponse.ok(
+                listeningQueryService.getTestResult(testId, user.getUserId())));
     }
 
     /**
@@ -143,7 +146,11 @@ public class ListeningController {
     /**
      * Manually trigger audio generation for a listening part.
      * POST /api/v1/listening/{partId}/generate-audio
+     * <p>
+     * Authoring operation, restricted to admins: it starts a billable TTS job for an
+     * arbitrary part id. Students previously reached it with any authenticated token.
      */
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{partId}/generate-audio")
     public ResponseEntity<ApiResponse<Map<String, String>>> generateAudio(@PathVariable Long partId) {
         listeningAudioService.generateAudio(partId);

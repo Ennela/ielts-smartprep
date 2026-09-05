@@ -9,6 +9,7 @@ import com.smartprep.model.entity.ReadingQuestion;
 import com.smartprep.model.entity.ReadingQuiz;
 import com.smartprep.model.entity.WritingPrompt;
 import com.smartprep.model.enums.SkillType;
+import com.smartprep.model.enums.WritingTaskType;
 import com.smartprep.repository.ListeningPartRepository;
 import com.smartprep.repository.MockTestRepository;
 import com.smartprep.repository.ReadingQuizRepository;
@@ -66,7 +67,7 @@ class AdminDeletionSafetyTest {
 
     @Test
     void deleteWritingPromptArchivesWithoutPhysicalDelete() {
-        WritingPrompt prompt = WritingPrompt.builder().promptId(42L).build();
+        WritingPrompt prompt = WritingPrompt.builder().promptId(42L).taskType(WritingTaskType.TASK_1).build();
         when(writingPromptRepository.findById(42L)).thenReturn(Optional.of(prompt));
 
         adminService.deleteWritingPrompt(42L);
@@ -81,7 +82,7 @@ class AdminDeletionSafetyTest {
     void deleteMockTestArchivesWithoutRemovingSharedContent() {
         ReadingQuiz quiz = ReadingQuiz.builder().quizId(43L).build();
         ListeningPart part = ListeningPart.builder().partId(44L).build();
-        WritingPrompt prompt = WritingPrompt.builder().promptId(45L).build();
+        WritingPrompt prompt = WritingPrompt.builder().promptId(45L).taskType(WritingTaskType.TASK_1).build();
         MockTestSection section = MockTestSection.builder()
                 .sectionId(46L)
                 .sectionType(SkillType.READING)
@@ -152,7 +153,7 @@ class AdminDeletionSafetyTest {
     void restoreClearsSoftDeleteMarkerForEveryArchivableContentType() {
         java.time.LocalDateTime archivedAt = java.time.LocalDateTime.now();
         ReadingQuiz quiz = ReadingQuiz.builder().quizId(52L).deletedAt(archivedAt).build();
-        WritingPrompt prompt = WritingPrompt.builder().promptId(53L).deletedAt(archivedAt).build();
+        WritingPrompt prompt = WritingPrompt.builder().promptId(53L).taskType(WritingTaskType.TASK_1).deletedAt(archivedAt).build();
         MockTest mockTest = MockTest.builder().mockTestId(54L).deletedAt(archivedAt).build();
         ListeningPart part = ListeningPart.builder().partId(55L).deletedAt(archivedAt).build();
         when(readingQuizRepository.findIncludingDeletedById(52L)).thenReturn(Optional.of(quiz));

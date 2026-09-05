@@ -292,7 +292,7 @@ export default function ProfilePage() {
   const avatarSrc = avatarPreview || (user?.avatarUrl
     ? (user.avatarUrl.startsWith('http') 
         ? user.avatarUrl 
-        : (import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1').replace('/api/v1', '') + user.avatarUrl)
+        : (import.meta.env.VITE_API_URL || '/api/v1').replace('/api/v1', '') + user.avatarUrl)
     : '/assets/avatars/avatar_sarah.png');
 
   // --- Skeleton Screen Loading States ---

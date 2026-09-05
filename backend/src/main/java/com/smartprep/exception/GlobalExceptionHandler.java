@@ -92,6 +92,22 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(message, "DATA_INTEGRITY_VIOLATION"));
     }
 
+    /**
+     * Safety net for authorization failures.
+     * <p>
+     * Ownership checks should raise {@link ResourceNotFoundException} so a caller cannot
+     * tell "exists but is not yours" from "does not exist". This handler exists so that a
+     * {@code SecurityException} raised anywhere still returns 403 rather than falling into
+     * the catch-all below, which answered 500 and paged Sentry for what is a routine client
+     * error.
+     */
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<ApiResponse<Void>> handleSecurity(SecurityException ex) {
+        log.warn("Authorization failure: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error("Access denied", "ACCESS_DENIED"));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception ex) {
         log.error("Unhandled exception", ex);

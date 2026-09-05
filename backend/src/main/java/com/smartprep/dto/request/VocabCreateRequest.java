@@ -21,7 +21,7 @@ public class VocabCreateRequest {
 
     private String example;
     private String collocation;
-    private String sourceSkill; // e.g. READING, LISTENING, WRITING, SPEAKING
+    private String sourceSkill; // e.g. READING, LISTENING, WRITING
     private String sourceRef;
     private String cefrLevel;
 }

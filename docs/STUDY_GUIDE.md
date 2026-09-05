@@ -21,7 +21,7 @@
 **Ngôn ngữ:**
 
 - [ ] Class / interface / enum / abstract, access modifier (`public`/`private`/`protected`), `static`, `final`.
-- [ ] Interface vs implementation — repo dùng pattern này thật: [VocabSourceResolver.java](../backend/src/main/java/com/smartprep/service/vocab/VocabSourceResolver.java) có 4 class implement ([ReadingSourceResolver](../backend/src/main/java/com/smartprep/service/vocab/ReadingSourceResolver.java), Listening/Writing/Speaking tương tự).
+- [ ] Interface vs implementation — repo dùng pattern này thật: [VocabSourceResolver.java](../backend/src/main/java/com/smartprep/service/vocab/VocabSourceResolver.java) có 3 class implement ([ReadingSourceResolver](../backend/src/main/java/com/smartprep/service/vocab/ReadingSourceResolver.java), Listening/Writing tương tự).
 - [ ] Exception: `try/catch/finally`, **checked vs unchecked** (`Exception` vs `RuntimeException`) — mở [../backend/src/main/java/com/smartprep/exception/](../backend/src/main/java/com/smartprep/exception/) xem các exception tự định nghĩa extends gì, tự hỏi vì sao chọn loại đó (câu này nối thẳng sang rollback rule ở buổi 3).
 - [ ] Generics: đọc trôi chảy kiểu lồng nhau — ví dụ thật trong [WritingController.java](../backend/src/main/java/com/smartprep/controller/WritingController.java): `ResponseEntity<ApiResponse<List<WritingPromptResponse>>>` — nói được ai bọc ai, mỗi lớp vỏ để làm gì.
 - [ ] Collections: `List`/`Map`/`Set`, `ArrayList`/`HashMap`, vòng lặp, `Map.Entry`.

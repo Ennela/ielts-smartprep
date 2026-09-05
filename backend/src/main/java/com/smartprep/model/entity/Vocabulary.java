@@ -4,6 +4,8 @@ import com.smartprep.model.enums.SkillType;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "vocabulary")
@@ -57,6 +59,7 @@ public class Vocabulary {
     private LocalDateTime dueDate = LocalDateTime.now();
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     @Column(name = "source_skill", length = 50)
     private SkillType sourceSkill;
 

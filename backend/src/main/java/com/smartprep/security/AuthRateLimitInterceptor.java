@@ -94,14 +94,29 @@ public class AuthRateLimitInterceptor implements HandlerInterceptor {
     }
 
     /**
-     * Resolve client IP from {@code X-Forwarded-For} header (Nginx reverse proxy),
-     * falling back to {@code remoteAddr}.
+     * Resolve the client IP used as the rate-limit key, falling back to
+     * {@code remoteAddr} when no {@code X-Forwarded-For} is present.
+     * <p>
+     * Takes the <em>rightmost</em> entry, not the leftmost. A caller can send its own
+     * {@code X-Forwarded-For}, and an appending proxy keeps that value and adds the real
+     * peer after it — so the leftmost entry is attacker-chosen. Reading it meant one host
+     * could vary the header per request and never exhaust a bucket. The rightmost entry is
+     * written by the proxy closest to this application and is the only one a caller cannot
+     * influence.
+     * <p>
+     * This assumes exactly one trusted proxy in front of the application, which is what
+     * {@code frontend/nginx.conf} sets up; it also overwrites the header rather than
+     * appending, so in the deployed topology there is only ever one entry. Exposing the
+     * backend port directly to untrusted clients would defeat both measures.
      */
     String resolveClientIp(HttpServletRequest request) {
         String xff = request.getHeader("X-Forwarded-For");
         if (xff != null && !xff.isBlank()) {
-            // X-Forwarded-For: client, proxy1, proxy2 — take the leftmost (original client)
-            return xff.split(",")[0].trim();
+            String[] hops = xff.split(",");
+            String nearest = hops[hops.length - 1].trim();
+            if (!nearest.isEmpty()) {
+                return nearest;
+            }
         }
         return request.getRemoteAddr();
     }

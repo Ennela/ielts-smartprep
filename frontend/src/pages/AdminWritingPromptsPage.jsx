@@ -84,6 +84,7 @@ export default function AdminWritingPromptsPage() {
       const payload = {
         promptText: form.promptText.trim(),
         essayType: form.essayType,
+        taskType: TASK1_TYPES.includes(form.essayType) ? 'TASK_1' : 'TASK_2',
         imageUrl: form.imageUrl.trim() || null,
       };
       if (editing) {

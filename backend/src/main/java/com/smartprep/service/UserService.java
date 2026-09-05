@@ -9,12 +9,14 @@ import com.smartprep.exception.AccountLockedException;
 import com.smartprep.exception.ResourceNotFoundException;
 import com.smartprep.model.entity.User;
 import com.smartprep.repository.UserRepository;
+import jakarta.annotation.PostConstruct;
 import com.smartprep.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +29,19 @@ public class UserService {
     private final TokenService tokenService;
     private final LoginLockoutService loginLockoutService;
     private final EmailVerificationService emailVerificationService;
+
+    /**
+     * Hash used in place of a real one when the requested username does not exist, so that a
+     * failed login costs the same work either way. Derived from the injected encoder rather
+     * than hardcoded so it always carries the configured cost factor; computed once at
+     * startup because that costs one BCrypt round, not one per request.
+     */
+    private String absentAccountHash;
+
+    @PostConstruct
+    void initAbsentAccountHash() {
+        absentAccountHash = passwordEncoder.encode("no-account-exists-with-this-username");
+    }
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
@@ -70,15 +85,28 @@ public class UserService {
             throw new AccountLockedException(remainingSec, loginLockoutService.getMaxAttempts());
         }
 
-        User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new IllegalArgumentException("Invalid username or password"));
+        Optional<User> account = userRepository.findByUsername(request.getUsername());
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+        // Hash the supplied password against something in every case, including when no such
+        // account exists. Returning early on a missing row would answer "does this username
+        // exist?" by response time alone: BCrypt at cost 12 takes roughly a quarter of a
+        // second, while a missing row comes back in about a millisecond. Identical error
+        // messages would hide nothing against a caller with a stopwatch.
+        String hashToCheck = account.map(User::getPasswordHash).orElse(absentAccountHash);
+        boolean passwordMatches = passwordEncoder.matches(request.getPassword(), hashToCheck);
+
+        if (account.isEmpty() || !passwordMatches) {
+            // Counted for unknown usernames too, so the lockout applies to username probing
+            // rather than only to attacks on accounts that happen to be real -- and so the
+            // remaining-attempts figure below exists in both cases and cannot be used to
+            // tell them apart.
             loginLockoutService.recordFailedAttempt(request.getUsername());
             int remaining = loginLockoutService.getRemainingAttempts(request.getUsername());
             throw new IllegalArgumentException(
                     "Invalid username or password. " + remaining + " attempt(s) remaining.");
         }
+
+        User user = account.get();
 
         // Successful login — clear fail counter
         loginLockoutService.resetAttempts(request.getUsername());

@@ -69,7 +69,7 @@ describe('axiosClient auth refresh flow', () => {
     });
 
     expect(axiosPost).toHaveBeenCalledWith(
-      'http://localhost:8080/api/v1/auth/refresh',
+      '/api/v1/auth/refresh',
       {},
       { headers: { 'Content-Type': 'application/json' }, withCredentials: true }
     );

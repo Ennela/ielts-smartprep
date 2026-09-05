@@ -101,7 +101,9 @@ public class VocabularyService {
                 .orElseThrow(() -> new ResourceNotFoundException("Vocabulary item not found"));
 
         if (!vocab.getUser().getUserId().equals(userId)) {
-            throw new IllegalArgumentException("You are not authorized to review this vocabulary item");
+            // Same exception and message as a genuine miss: a caller must not be able to tell
+            // "exists but is not yours" from "does not exist". Matches MockTestService.
+            throw new ResourceNotFoundException("Vocabulary item not found");
         }
 
         sm2Service.updateReview(vocab, grade);
@@ -116,7 +118,7 @@ public class VocabularyService {
                 .map(v -> v.getWord().toLowerCase().trim())
                 .collect(Collectors.toSet());
 
-        if (skillTypeStr.equalsIgnoreCase("MOCK")) {
+        if (skillTypeStr.equalsIgnoreCase("MOCK_TEST")) {
             MockTestSubmission submission = mockTestSubmissionRepository.findById(sourceId)
                     .filter(s -> s.getUser() != null && s.getUser().getUserId().equals(userId))
                     .orElseThrow(() -> new ResourceNotFoundException("Mock test submission not found with ID: " + sourceId));
@@ -303,7 +305,9 @@ public class VocabularyService {
                 .orElseThrow(() -> new ResourceNotFoundException("Vocabulary item not found"));
 
         if (!vocab.getUser().getUserId().equals(userId)) {
-            throw new IllegalArgumentException("You are not authorized to delete this vocabulary item");
+            // Same exception and message as a genuine miss: a caller must not be able to tell
+            // "exists but is not yours" from "does not exist". Matches MockTestService.
+            throw new ResourceNotFoundException("Vocabulary item not found");
         }
 
         vocabularyRepository.delete(vocab);

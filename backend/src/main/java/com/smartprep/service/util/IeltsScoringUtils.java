@@ -172,6 +172,36 @@ public class IeltsScoringUtils {
     }
 
     /**
+     * Scale a raw score from a shorter paper onto the official 40-question scale.
+     * <p>
+     * Practice papers are rarely 40 questions — a single reading passage is 13, a single
+     * listening part is 10. Converting the proportion first is what lets every path share
+     * one band table instead of inventing a second, shorter one.
+     */
+    private static int scaleToFortyQuestions(int correctCount, int totalQuestions) {
+        if (totalQuestions <= 0) return 0;
+        int bounded = Math.min(Math.max(correctCount, 0), totalQuestions);
+        if (totalQuestions == 40) return bounded;
+        return (int) Math.round(((double) bounded / totalQuestions) * 40.0);
+    }
+
+    /**
+     * Calculate IELTS Listening Band Score for a paper of any length.
+     * The raw score is scaled onto the 40-question table first.
+     */
+    public static BigDecimal calculateListeningBand(int correctCount, int totalQuestions) {
+        return calculateListeningBand(scaleToFortyQuestions(correctCount, totalQuestions));
+    }
+
+    /**
+     * Calculate IELTS Reading Band Score for a paper of any length.
+     * The raw score is scaled onto the 40-question table first.
+     */
+    public static BigDecimal calculateReadingBand(int correctCount, int totalQuestions, String moduleType) {
+        return calculateReadingBand(scaleToFortyQuestions(correctCount, totalQuestions), moduleType);
+    }
+
+    /**
      * Check if a Listening answer matches correctly.
      */
     public static boolean isListeningCorrect(String correct, String userAnswer, String questionType) {

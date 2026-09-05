@@ -9,6 +9,7 @@ import com.smartprep.exception.ResourceNotFoundException;
 import com.smartprep.model.entity.*;
 import com.smartprep.model.enums.*;
 import com.smartprep.repository.*;
+import com.smartprep.config.ExamDurationConfig;
 import com.smartprep.service.ai.MockTestAsyncGrader;
 import com.smartprep.service.util.IeltsScoringUtils;
 import com.smartprep.service.util.QuestionOptionMapper;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -34,6 +36,10 @@ public class MockTestService {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
     private final MockTestAsyncGrader asyncGrader;
+    private final ExamDurationConfig durationConfig;
+
+    /** Grace window after a section deadline in which a client's answers are still accepted. */
+    private static final int SUBMIT_GRACE_SECONDS = 60;
 
     /**
      * Get all available Mock Tests
@@ -117,7 +123,9 @@ public class MockTestService {
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found with id: " + sessionId));
 
         if (!session.getUser().getUserId().equals(userId)) {
-            throw new SecurityException("Unauthorized access to this session");
+            // Same exception and message as a genuine miss: a caller must not be able to tell
+            // "exists but is not yours" from "does not exist". Matches ReviewService.
+            throw new ResourceNotFoundException("Session not found with id: " + sessionId);
         }
 
         return mapToSessionResponse(session);
@@ -132,16 +140,20 @@ public class MockTestService {
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found with id: " + sessionId));
 
         if (!session.getUser().getUserId().equals(userId)) {
-            throw new SecurityException("Unauthorized access to this session");
+            // Same exception and message as a genuine miss: a caller must not be able to tell
+            // "exists but is not yours" from "does not exist". Matches ReviewService.
+            throw new ResourceNotFoundException("Session not found with id: " + sessionId);
         }
 
         if (session.getStatus() != SessionStatus.IN_PROGRESS) {
             throw new IllegalStateException("Cannot update progress on a completed/expired session");
         }
 
+        // Answers come from the client; the clock does not. request.getTimeRemainingSeconds()
+        // and request.getCurrentSection() are deliberately ignored — honouring them let a
+        // caller grant itself unlimited time or skip ahead simply by posting different values.
         session.setProgressJson(request.getProgressJson());
-        session.setTimeRemainingSeconds(request.getTimeRemainingSeconds());
-        session.setCurrentSection(request.getCurrentSection());
+        session.setTimeRemainingSeconds(serverTimeRemainingSeconds(session));
         session = sessionRepository.save(session);
 
         return mapToSessionResponse(session);
@@ -156,7 +168,9 @@ public class MockTestService {
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found with id: " + sessionId));
 
         if (!session.getUser().getUserId().equals(userId)) {
-            throw new SecurityException("Unauthorized access to this session");
+            // Same exception and message as a genuine miss: a caller must not be able to tell
+            // "exists but is not yours" from "does not exist". Matches ReviewService.
+            throw new ResourceNotFoundException("Session not found with id: " + sessionId);
         }
 
         if (session.getStatus() != SessionStatus.IN_PROGRESS) {
@@ -202,15 +216,37 @@ public class MockTestService {
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found with id: " + sessionId));
 
         if (!session.getUser().getUserId().equals(userId)) {
-            throw new SecurityException("Unauthorized access to this session");
+            // Same exception and message as a genuine miss: a caller must not be able to tell
+            // "exists but is not yours" from "does not exist". Matches ReviewService.
+            throw new ResourceNotFoundException("Session not found with id: " + sessionId);
         }
 
         if (session.getStatus() != SessionStatus.IN_PROGRESS) {
             throw new IllegalStateException("This exam has already been submitted or expired");
         }
 
+        // A full mock test is only complete after the final section. Without this a caller
+        // could submit while still on LISTENING and have the test graded with no Reading or
+        // Writing answers at all. The frontend only ever submits from WRITING; earlier
+        // sections go through nextSection.
+        if (session.getCurrentSection() != SkillType.WRITING) {
+            throw new IllegalStateException(
+                    "Cannot submit before the final section. Current section: " + session.getCurrentSection());
+        }
+
         // Update session
-        session.setProgressJson(request.getProgressJson());
+        // Past the deadline the client's answers are no longer accepted, but the submission
+        // itself still succeeds using the last progress saved in time — rejecting it outright
+        // would discard work that was done legitimately. The grace window covers auto-submit
+        // latency at the moment the timer hits zero.
+        boolean lateSubmission = LocalDateTime.now().isAfter(
+                currentSectionDeadline(session).plusSeconds(SUBMIT_GRACE_SECONDS));
+        if (lateSubmission) {
+            log.warn("Late submit for session {}: deadline was {}, keeping last saved progress",
+                    sessionId, currentSectionDeadline(session));
+        } else {
+            session.setProgressJson(request.getProgressJson());
+        }
         session.setStatus(SessionStatus.SUBMITTED);
         session.setTimeRemainingSeconds(0);
         sessionRepository.save(session);
@@ -268,7 +304,8 @@ public class MockTestService {
             listeningTestParts.add(testPart);
         }
 
-        BigDecimal listeningBand = IeltsScoringUtils.calculateListeningBand(listeningCorrect);
+        BigDecimal listeningBand = IeltsScoringUtils.calculateListeningBand(
+                listeningCorrect, totalListeningQuestions);
         listeningTest.setTotalQuestions(totalListeningQuestions);
         listeningTest.setCorrectAnswers(listeningCorrect);
         listeningTest.setScore(listeningBand);
@@ -288,7 +325,15 @@ public class MockTestService {
                 }
             }
         }
-        BigDecimal readingBand = IeltsScoringUtils.calculateReadingBand(readingCorrect);
+        // Use the paper's real module type: Academic and General Training diverge below
+        // band 8.0, so assuming Academic silently mis-scored any GT mock test.
+        String readingModuleType = mockTest.getReadingQuizzes().stream()
+                .map(ReadingQuiz::getModuleType)
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElse("ACADEMIC");
+        BigDecimal readingBand = IeltsScoringUtils.calculateReadingBand(
+                readingCorrect, totalReadingQuestions, readingModuleType);
 
         // 3. Create placeholder MockTestSubmission record in state GRADING
         MockTestSubmission submission = MockTestSubmission.builder()
@@ -330,13 +375,63 @@ public class MockTestService {
     /**
      * Get Mock Test Submission details
      */
+    /**
+     * Re-run AI writing evaluation for a submission whose grading failed.
+     * <p>
+     * A transient Gemini outage used to strand a submission in FAILED for good: the
+     * listening and reading scores were already computed and saved, but the writing band
+     * could never be produced and there was no way to ask for another attempt. The essays
+     * are not stored on the submission itself, so they are read back from the session's
+     * progress JSON — the same source the original submit used.
+     */
+    @Transactional
+    public void regradeWriting(Long userId, Long submissionId) {
+        MockTestSubmission sub = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Submission not found with id: " + submissionId));
+
+        if (!sub.getUser().getUserId().equals(userId)) {
+            throw new ResourceNotFoundException("Submission not found with id: " + submissionId);
+        }
+
+        if (sub.getStatus() != SubmissionStatus.FAILED) {
+            throw new IllegalStateException(
+                    "Only a failed grading can be retried. Current status: " + sub.getStatus());
+        }
+
+        MockTestSession session = sessionRepository.findById(sub.getSessionId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "The exam session for this submission is no longer available, so the essays cannot be recovered."));
+
+        Map<String, String> answersMap = new HashMap<>();
+        try {
+            String progressJson = session.getProgressJson();
+            if (progressJson != null && !progressJson.trim().isEmpty()) {
+                answersMap = objectMapper.readValue(progressJson, new TypeReference<Map<String, String>>() {});
+            }
+        } catch (Exception e) {
+            log.error("Failed to parse progress JSON while re-grading submission {}", submissionId, e);
+            throw new IllegalStateException("The stored answers for this exam could not be read.");
+        }
+
+        String task1Essay = answersMap.getOrDefault("w_task1", "");
+        String task2Essay = answersMap.getOrDefault("w_task2", "");
+
+        sub.setStatus(SubmissionStatus.GRADING);
+        submissionRepository.save(sub);
+
+        log.info("Re-grading writing for submission {}", submissionId);
+        asyncGrader.gradeWritingSubmissionsAsync(submissionId, task1Essay, task2Essay);
+    }
+
     @Transactional(readOnly = true)
     public MockTestSubmissionResponse getSubmission(Long userId, Long submissionId) {
         MockTestSubmission sub = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Submission not found with id: " + submissionId));
 
         if (!sub.getUser().getUserId().equals(userId)) {
-            throw new SecurityException("Unauthorized access to this report");
+            // Same exception and message as a genuine miss: a caller must not be able to tell
+            // "exists but is not yours" from "does not exist". Matches ReviewService.
+            throw new ResourceNotFoundException("Submission not found with id: " + submissionId);
         }
 
         MockTestSession session = sessionRepository.findById(sub.getSessionId()).orElse(null);
@@ -391,7 +486,9 @@ public class MockTestService {
                             .passageText(quiz.getPassageText())
                             .correctAnswers(correctCount)
                             .totalQuestions(questionResults.size())
-                            .bandScore(IeltsScoringUtils.calculateReadingBand(correctCount))
+                            .bandScore(IeltsScoringUtils.calculateReadingBand(
+                                    correctCount, questionResults.size(),
+                                    quiz.getModuleType() != null ? quiz.getModuleType() : "ACADEMIC"))
                             .questions(questionResults)
                             .build();
                 })
@@ -485,6 +582,40 @@ public class MockTestService {
                 .build();
     }
 
+    /** Configured length of one section, falling back to the IDP standard for that skill. */
+    private int sectionDurationSeconds(MockTestSession session, SkillType section) {
+        return session.getMockTest().getSections().stream()
+                .filter(s -> s.getSectionType() == section)
+                .map(MockTestSection::getDurationSeconds)
+                .findFirst()
+                .orElseGet(() -> durationConfig.getDefaultDuration(section));
+    }
+
+    /** When the current section must end. Derived from persisted state, never from the client. */
+    private LocalDateTime currentSectionDeadline(MockTestSession session) {
+        LocalDateTime sectionStart = session.getSectionStartedAt() != null
+                ? session.getSectionStartedAt()
+                : session.getStartedAt();
+        return sectionStart.plusSeconds(sectionDurationSeconds(session, session.getCurrentSection()));
+    }
+
+    /**
+     * Seconds left in the current section according to the server clock, floored at zero.
+     * <p>
+     * This replaces trusting {@code timeRemainingSeconds} as sent by the client, which
+     * previously let a caller keep a session alive indefinitely by posting an inflated value.
+     */
+    private int serverTimeRemainingSeconds(MockTestSession session) {
+        long remaining = Duration.between(LocalDateTime.now(), currentSectionDeadline(session)).getSeconds();
+        return (int) Math.max(0, remaining);
+    }
+
+    /** True once the current section's deadline has passed, allowing a small submit grace period. */
+    private boolean isSectionExpired(MockTestSession session) {
+        return LocalDateTime.now().isAfter(
+                currentSectionDeadline(session).plusSeconds(ExamDurationConfig.DEADLINE_BUFFER_SECONDS));
+    }
+
     private MockTestSessionResponse mapToSessionResponse(MockTestSession session) {
         MockTestSessionResponse.MockTestSessionResponseBuilder builder = MockTestSessionResponse.builder()
                 .sessionId(session.getSessionId())
@@ -571,6 +702,7 @@ public class MockTestService {
                 .promptId(prompt.getPromptId())
                 .promptText(prompt.getPromptText())
                 .essayType(prompt.getEssayType().name())
+                .taskType(prompt.getTaskType() != null ? prompt.getTaskType().name() : null)
                 .imageUrl(prompt.getImageUrl())
                 .build();
     }

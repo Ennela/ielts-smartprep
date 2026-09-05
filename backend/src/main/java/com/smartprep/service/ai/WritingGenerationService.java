@@ -10,6 +10,7 @@ import com.smartprep.model.entity.User;
 import com.smartprep.model.entity.WritingPrompt;
 import com.smartprep.model.enums.EssayType;
 import com.smartprep.model.enums.Topic;
+import com.smartprep.model.enums.WritingTaskType;
 import com.smartprep.repository.UserRepository;
 import com.smartprep.repository.WritingPromptRepository;
 import lombok.RequiredArgsConstructor;
@@ -128,6 +129,7 @@ public class WritingGenerationService {
         WritingPrompt t1Prompt = WritingPrompt.builder()
                 .promptText(t1Text)
                 .essayType(t1Type)
+                .taskType(WritingTaskType.TASK_1)
                 .visualData(t1VisualData)
                 .build();
         t1Prompt = promptRepository.save(t1Prompt);
@@ -140,6 +142,7 @@ public class WritingGenerationService {
         WritingPrompt t2Prompt = WritingPrompt.builder()
                 .promptText(t2Text)
                 .essayType(t2Type)
+                .taskType(WritingTaskType.TASK_2)
                 .build();
         t2Prompt = promptRepository.save(t2Prompt);
 
@@ -148,6 +151,7 @@ public class WritingGenerationService {
                         .promptId(t1Prompt.getPromptId())
                         .promptText(t1Prompt.getPromptText())
                         .essayType(t1Prompt.getEssayType().name())
+                        .taskType(t1Prompt.getTaskType() != null ? t1Prompt.getTaskType().name() : null)
                         .imageUrl(t1Prompt.getImageUrl())
                         .visualData(t1Prompt.getVisualData())
                         .build(),
@@ -155,6 +159,7 @@ public class WritingGenerationService {
                         .promptId(t2Prompt.getPromptId())
                         .promptText(t2Prompt.getPromptText())
                         .essayType(t2Prompt.getEssayType().name())
+                        .taskType(t2Prompt.getTaskType() != null ? t2Prompt.getTaskType().name() : null)
                         .imageUrl(t2Prompt.getImageUrl())
                         .visualData(t2Prompt.getVisualData())
                         .build()

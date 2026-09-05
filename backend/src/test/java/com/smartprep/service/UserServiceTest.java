@@ -189,14 +189,59 @@ class UserServiceTest {
         }
 
         @Test
-        @DisplayName("should throw on non-existent username")
+        @DisplayName("should throw on non-existent username and count it against the lockout")
         void login_userNotFound() {
             LoginRequest request = createLoginRequest("ghost", "pass");
             when(loginLockoutService.isLocked("ghost")).thenReturn(false);
             when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
+            when(passwordEncoder.matches(eq("pass"), any())).thenReturn(false);
+            when(loginLockoutService.getRemainingAttempts("ghost")).thenReturn(4);
 
             assertThrows(IllegalArgumentException.class,
                     () -> userService.login(request));
+
+            // Unknown usernames used to skip this, so probing for valid names was unlimited.
+            verify(loginLockoutService).recordFailedAttempt("ghost");
+        }
+
+        /**
+         * An unknown username still has to be hashed against something, or the two cases are
+         * separable by response time however carefully the messages are matched.
+         */
+        @Test
+        @DisplayName("should still perform a password comparison when the account is absent")
+        void login_userNotFound_stillHashes() {
+            LoginRequest request = createLoginRequest("ghost", "pass");
+            when(loginLockoutService.isLocked("ghost")).thenReturn(false);
+            when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
+            when(passwordEncoder.matches(eq("pass"), any())).thenReturn(false);
+            when(loginLockoutService.getRemainingAttempts("ghost")).thenReturn(4);
+
+            assertThrows(IllegalArgumentException.class, () -> userService.login(request));
+
+            verify(passwordEncoder).matches(eq("pass"), any());
+        }
+
+        /**
+         * The property under test is that the two failures are indistinguishable. Asserting
+         * the messages are equal is the point; asserting either one's wording is not.
+         */
+        @Test
+        @DisplayName("wrong password and unknown username produce the identical message")
+        void login_failuresAreIndistinguishable() {
+            when(loginLockoutService.isLocked(anyString())).thenReturn(false);
+            when(loginLockoutService.getRemainingAttempts(anyString())).thenReturn(4);
+            when(passwordEncoder.matches(eq("pass"), any())).thenReturn(false);
+
+            when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(existingUser));
+            String wrongPassword = assertThrows(IllegalArgumentException.class,
+                    () -> userService.login(createLoginRequest("testuser", "pass"))).getMessage();
+
+            when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
+            String unknownUser = assertThrows(IllegalArgumentException.class,
+                    () -> userService.login(createLoginRequest("ghost", "pass"))).getMessage();
+
+            assertEquals(wrongPassword, unknownUser);
         }
     }
 

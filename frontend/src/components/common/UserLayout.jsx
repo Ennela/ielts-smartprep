@@ -124,7 +124,7 @@ export default function UserLayout() {
                 <img 
                   alt="User avatar" 
                   className="w-full h-full object-cover" 
-                  src={user?.avatarUrl ? (user.avatarUrl.startsWith('http') ? user.avatarUrl : (import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1').replace('/api/v1', '') + user.avatarUrl) : '/assets/avatars/avatar_sarah.png'}
+                  src={user?.avatarUrl ? (user.avatarUrl.startsWith('http') ? user.avatarUrl : (import.meta.env.VITE_API_URL || '/api/v1').replace('/api/v1', '') + user.avatarUrl) : '/assets/avatars/avatar_sarah.png'}
                   onError={(e) => {
                     // Fallback to initials if image fails to load
                     e.currentTarget.style.display = 'none';

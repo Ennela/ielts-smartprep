@@ -3,6 +3,7 @@ package com.smartprep.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartprep.dto.request.LoginRequest;
 import com.smartprep.repository.AbstractMySQLContainerTest;
+import com.smartprep.service.LoginLockoutService;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.BucketConfiguration;
 import io.github.bucket4j.distributed.BucketProxy;
@@ -38,8 +39,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * HTTP 429 with the standard {@code ApiResponse} error body when the
  * request limit is exceeded on {@code /api/v1/auth/login}.
  * <p>
- * Uses a mocked {@link ProxyManager} so no real Redis is needed,
+ * Uses a mocked {@link ProxyManager} so no real Redis is needed for the rate limiter,
  * while the full MVC pipeline (interceptor → controller → exception handler) is exercised.
+ * <p>
+ * {@link LoginLockoutService} is mocked for the same reason: it is a second, independent
+ * Redis consumer that {@code UserService.login} calls before authentication, so leaving it
+ * real made every request fail with {@code RedisConnectionFailureException} and return 500
+ * instead of the expected status.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
@@ -62,6 +68,9 @@ class AuthRateLimitIntegrationTest extends AbstractMySQLContainerTest {
 
     @MockBean
     private ProxyManager<String> proxyManager;
+
+    @MockBean
+    private LoginLockoutService loginLockoutService;
 
     @Test
     @DisplayName("should return HTTP 429 with RATE_LIMIT_EXCEEDED error when login rate limit is exceeded")

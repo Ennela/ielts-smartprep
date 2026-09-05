@@ -11,6 +11,8 @@ import { useToast } from '../context/ToastContext';
 const TASK1_TYPES = ['LINE_GRAPH', 'BAR_CHART', 'PIE_CHART', 'TABLE', 'MAP', 'DIAGRAM'];
 
 const SESSION_KEY_PREFIX = 'writing_single_attemptId_';
+// Mirrors the draft mechanism ReadingContext already uses for quiz answers.
+const DRAFT_KEY_PREFIX = 'writing_essay_draft_';
 
 const GRADING_CRITERIA = [
   {
@@ -118,9 +120,11 @@ export default function WritingEditorPage() {
 
         // Create new attempt if none found
         if (!attempt) {
+          const task1 = TASK1_TYPES.includes(prompt.essayType);
           const res = await attemptApi.startAttempt({
             skillType: 'WRITING',
             examReferenceIds: JSON.stringify([Number(promptId)]),
+            ...(task1 ? { durationOverride: 1200 } : {}),
           });
           attempt = res.data.data;
         }
@@ -144,6 +148,50 @@ export default function WritingEditorPage() {
   }, [prompt, promptId, isPreview]);
 
   // ── Auto-submit when timer expires ──
+  // ── Draft persistence ──
+  // An essay is the most expensive thing a user can lose here, and nothing protected it:
+  // a refresh or a crash discarded everything typed since the page loaded.
+  const draftKey = DRAFT_KEY_PREFIX + promptId;
+
+  // Restore once the prompt is loaded, and only if nothing has been typed yet.
+  useEffect(() => {
+    if (!prompt || isPreview) return;
+    try {
+      const draft = localStorage.getItem(draftKey);
+      if (draft) {
+        setEssayText(prev => (prev ? prev : draft));
+      }
+    } catch (e) {
+      console.warn('Could not restore draft', e);
+    }
+  }, [prompt, isPreview, draftKey]);
+
+  // Persist as the user types, debounced so we are not writing on every keystroke.
+  useEffect(() => {
+    if (!prompt || isPreview) return;
+    const id = setTimeout(() => {
+      try {
+        if (essayText) localStorage.setItem(draftKey, essayText);
+      } catch (e) {
+        console.warn('Could not save draft', e);
+      }
+    }, 1000);
+    return () => clearTimeout(id);
+  }, [essayText, prompt, isPreview, draftKey]);
+
+  // Warn before leaving with unsaved work. Submitting clears the draft first, so a
+  // successful submit does not trigger this.
+  useEffect(() => {
+    if (isPreview) return;
+    const onBeforeUnload = (e) => {
+      if (!essayTextRef.current || submittingRef.current) return;
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [isPreview]);
+
   const handleAutoSubmit = useCallback(() => {
     if (submittingRef.current) return;
     submittingRef.current = true;
@@ -168,6 +216,7 @@ export default function WritingEditorPage() {
       writingApi.gradeEssay(Number(promptId), currentEssay)
         .then(res => {
           sessionStorage.removeItem(sessionKey);
+      try { localStorage.removeItem(DRAFT_KEY_PREFIX + promptId); } catch { /* ignore */ }
           navigate(`/writing/result/${res.data.data.submissionId}`, { replace: true });
         })
         .catch(() => {
@@ -176,14 +225,18 @@ export default function WritingEditorPage() {
           submittingRef.current = false;
         });
     } else {
-      // Not enough words — notify user but don't block
+      // Not enough words to grade. The draft has just been discarded above, so this
+      // is the only place the word count is ever reported — held for 12s rather than
+      // the 4s default so it stays readable after the redirect below. ToastProvider
+      // sits outside <Routes>, so the toast survives navigating away.
       sessionStorage.removeItem(sessionKey);
-      alert(`⏰ Time is up! Your essay has ${currentWordCount} words (minimum: ${isTask1 ? 150 : 250}). The essay was not graded because it did not meet the minimum word count.`);
+      try { localStorage.removeItem(DRAFT_KEY_PREFIX + promptId); } catch { /* ignore */ }
+      triggerWarningToast(`Time is up! Your essay has ${currentWordCount} words (minimum: ${isTask1 ? 150 : 250}). The essay was not graded because it did not meet the minimum word count.`, 12000);
       setGrading(false);
       submittingRef.current = false;
       navigate('/writing', { replace: true });
     }
-  }, [attemptId, promptId, isTask1, navigate]);
+  }, [attemptId, promptId, isTask1, navigate, triggerWarningToast]);
 
   // ── Server-authoritative countdown timer ──
   const { timeLeft, isWarning, isCritical, formattedTime, stopTimer } = useExamTimer({
@@ -230,6 +283,7 @@ export default function WritingEditorPage() {
       }
 
       sessionStorage.removeItem(sessionKey);
+      try { localStorage.removeItem(DRAFT_KEY_PREFIX + promptId); } catch { /* ignore */ }
       navigate(`/writing/result/${res.data.data.submissionId}`);
     } catch (err) {
       setError(err.response?.data?.message || 'Grading failed. Please try again.');
@@ -344,7 +398,7 @@ export default function WritingEditorPage() {
               : 'Suggested: ~40 minutes for Task 2 (Essay)'}
           </span>
           <span style={{ color: 'var(--outline)' }}>·</span>
-          <span>Total: 60 minutes</span>
+          <span>Total: {isTask1 ? 20 : 60} minutes</span>
         </div>
       )}
 

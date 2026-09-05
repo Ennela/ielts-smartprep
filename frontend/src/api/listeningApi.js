@@ -14,9 +14,6 @@ const listeningApi = {
     getPartById: (partId) =>
         axiosClient.get(`/listening/parts/${partId}`),
 
-    startMockTest: () =>
-        axiosClient.post('/listening/mock-test/start'),
-
     assembleMockTest: () =>
         axiosClient.get('/listening/mock-test'),
 
@@ -27,14 +24,11 @@ const listeningApi = {
             autoSubmitted: autoSubmitted || false,
         }),
 
-    submitMockTest: (testId, answers) =>
-        axiosClient.post(`/listening/mock-test/${testId}/submit`, { answers }),
-
-    submitPractice: (partId, answers) =>
-        axiosClient.post('/listening/practice/submit', { partId, answers }),
-
     getHistory: () =>
         axiosClient.get('/listening/history'),
+
+    getTestResult: (testId) =>
+        axiosClient.get(`/listening/${testId}/result`),
 
     analyzeQuestion: (questionId) =>
         axiosClient.post(`/listening/ai-analyze/${questionId}`),

@@ -44,8 +44,15 @@ public class RateLimitInterceptor implements HandlerInterceptor {
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         String userId = extractUserId(request);
         if (userId == null) {
-            // If we can't identify user, let Spring Security handle auth
-            return true;
+            // Fail closed. Every path this interceptor is registered on requires
+            // authentication, so a missing principal means either a misconfiguration or a
+            // path that was opened up without revisiting this list. Letting the request
+            // through unmetered was the wrong default: these endpoints spend money at
+            // Gemini, and the quota is per user, so an unidentified caller has no quota to
+            // spend rather than an unlimited one.
+            log.warn("Unauthenticated request reached the AI rate limiter: {}", request.getRequestURI());
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return false;
         }
 
         // 1. Check daily AI request limit first

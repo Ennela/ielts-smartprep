@@ -26,6 +26,11 @@ services:
     env_file:
       - .env
     environment:
+      # Without this the prod profile never loads and application-prod.yml is inert:
+      # Swagger stays public, cookies lose the Secure flag, the dev CSP is served and
+      # ddl-auto falls back to none. Requires CORS_ALLOWED_ORIGINS to be set.
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
@@ -45,7 +50,11 @@ services:
       SENTRY_DSN: ${SENTRY_DSN:-}
       SENTRY_ENV: production
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health/liveness"]
+      # wget, not curl: the runtime stage is eclipse-temurin:17-jre-alpine, which ships
+      # wget but not curl. The probe failed on every run since it was written, so the
+      # container reported unhealthy even while the application was serving fine — and
+      # any depends_on: service_healthy or CD health gate gets stuck on it.
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/actuator/health/liveness"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -77,6 +86,15 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
+      # The application does not connect as root. Without these two, a fresh volume comes up
+      # with root as its only account and the backend dies on "Access denied" -- which is
+      # exactly what happened when this volume was recreated: the app user had only ever
+      # existed because someone made it by hand, so the stack could not be rebuilt from
+      # scratch. Pointing them at the datasource variables keeps one source of truth for the
+      # credential. MySQL rejects MYSQL_USER=root, so leave SPRING_DATASOURCE_USERNAME as a
+      # non-root name.
+      MYSQL_USER: ${SPRING_DATASOURCE_USERNAME}
+      MYSQL_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:

@@ -38,6 +38,9 @@ const mockTestApi = {
   getGradingStatus: (submissionId) => 
     axiosClient.get(`/mock-tests/submissions/${submissionId}/status`),
 
+  regradeWriting: (submissionId) =>
+    axiosClient.post(`/mock-tests/submissions/${submissionId}/regrade`),
+
   getHistory: () => 
     axiosClient.get('/mock-tests/history')
 };
