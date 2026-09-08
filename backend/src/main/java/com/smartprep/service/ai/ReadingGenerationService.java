@@ -52,7 +52,27 @@ public class ReadingGenerationService {
             Difficulty.PASSAGE_3, 1500
     );
 
-    @Transactional
+    /**
+     * Deliberately not {@code @Transactional}.
+     *
+     * <p>This method calls Gemini, which is allowed 65 seconds per attempt and up to three
+     * attempts with exponential backoff, and the parse-failure path can call it a second
+     * time. Wrapped in a transaction, all of that ran while holding a pooled database
+     * connection, so concurrent generation exhausted the pool and blocked every unrelated
+     * request in the application.
+     *
+     * <p>Without the annotation each repository call takes and returns a connection on its
+     * own, and none is held across the network wait --
+     * {@code ConnectionHoldingIntegrationTest} asserts exactly that property.
+     *
+     * <p>Two consequences worth knowing. Lazy associations still resolve in the fallback
+     * path, which clones a template quiz, because {@code spring.jpa.open-in-view} keeps an
+     * EntityManager open for the request; that setting is now explicit in application.yml
+     * rather than an accidental default. And the three-passage path now commits each quiz
+     * as it is saved instead of all three together -- these are independent artifacts with
+     * no invariant between them, so a partial result is stray content rather than
+     * inconsistent data.
+     */
     public ReadingQuizResponse generateQuiz(Long userId, ReadingGenerateRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));

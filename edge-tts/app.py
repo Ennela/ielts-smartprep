@@ -47,6 +47,8 @@ ALLOWED_VOICES = {
 VOICE_PATTERN = re.compile(r"^[a-z]{2,3}-[A-Z]{2}-[A-Za-z0-9]+Neural$")
 RATE_PATTERN = re.compile(r"^([+-])(\d{1,3})%$")
 
+HEALTH_PATH = "/health"
+
 app = FastAPI(title="Edge TTS API Wrapper")
 
 request_history = defaultdict(deque)
@@ -84,6 +86,12 @@ async def validation_exception_handler(_request: Request, exc: RequestValidation
 
 @app.middleware("http")
 async def protect_service(request: Request, call_next):
+    # The health probe is exempt on purpose. It runs on a fixed interval from the container
+    # runtime, so counting it against the per-IP budget would let the probe itself starve
+    # the synthesis quota for anything else sharing that source address.
+    if request.url.path == HEALTH_PATH:
+        return await call_next(request)
+
     query_size = len(request.scope.get("query_string", b""))
     content_length = request.headers.get("content-length")
     if query_size > MAX_REQUEST_BYTES or (
@@ -122,6 +130,18 @@ app.add_middleware(
     allow_methods=["GET"],
     allow_headers=["Accept", "Content-Type"],
 )
+
+
+@app.get(HEALTH_PATH)
+async def health():
+    """Liveness probe for the container runtime.
+
+    Deliberately shallow: it reports that the process is accepting requests, nothing more.
+    Reaching out to Microsoft's speech endpoint to prove synthesis works would make the
+    container restart whenever that upstream had a bad minute, which is worse than serving
+    a 502 from /synthesize for the same minute.
+    """
+    return {"status": "ok"}
 
 
 @app.get("/synthesize")

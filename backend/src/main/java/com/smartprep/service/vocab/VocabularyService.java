@@ -111,7 +111,15 @@ public class VocabularyService {
         return toResponse(vocab);
     }
 
-    @Transactional(readOnly = true)
+    /**
+     * Not transactional. Every branch below gathers source text and then hands it to Gemini,
+     * so a read-only transaction here held a pooled connection for the whole AI round trip.
+     *
+     * <p>The lazy walks through the mock test -- reading quizzes, listening parts, writing
+     * submissions -- still resolve, through the open-in-view EntityManager rather than
+     * through this transaction. They cost one connection acquisition each instead of
+     * sharing one, which is the right trade against pinning a connection for 65 seconds.
+     */
     public List<VocabAiService.SuggestedVocab> suggestVocabulary(Long userId, String skillTypeStr, Long sourceId) {
         Set<String> existingWords = vocabularyRepository.findByUserUserIdOrderByCreatedAtDesc(userId)
                 .stream()

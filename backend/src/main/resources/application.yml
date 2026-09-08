@@ -1,16 +1,81 @@
 server:
   port: 8080
+  # Let in-flight requests finish instead of being cut off mid-response when the container
+  # is replaced. A deploy recreates the backend, and without this an exam submission in
+  # progress at that moment simply dies.
+  shutdown: graceful
+  tomcat:
+    threads:
+      # 100, not the default 200. Threads are only useful to the point where they have
+      # something to be scheduled on; past that they cost about 1 MB of stack each, and the
+      # production container is capped at 1.5 GB. Requests that touch the database queue on
+      # the 20-connection pool below long before 100 threads are exhausted, so the extra 100
+      # would buy queueing, not throughput.
+      max: 100
+      min-spare: 10
+    # Requests wait here rather than being refused during a burst.
+    accept-count: 100
+    max-connections: 2000
+    # How long an idle keep-alive connection may hold a thread waiting for the next request.
+    connection-timeout: 20s
 
 spring:
+  lifecycle:
+    # Upper bound on the graceful shutdown above, chosen to sit inside the deploy script's
+    # health-wait budget rather than to be generous.
+    timeout-per-shutdown-phase: 30s
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/ielts_smartprep}
     username: ${SPRING_DATASOURCE_USERNAME:root}
     password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: SmartPrepPool
+      # 20 rather than the default 10. The two async executors alone can ask for 15
+      # connections (taskExecutor 10 + ttsExecutor 5) before a single HTTP request is
+      # served, so the default pool could be fully consumed by background work. 20 still
+      # leaves ample headroom under MySQL's default max_connections of 151.
+      maximum-pool-size: 20
+      minimum-idle: 5
+      # Fail in 10 seconds rather than the default 30. A request that has already waited
+      # ten seconds for a connection has failed as far as the user is concerned; spending
+      # twenty more only holds a Tomcat thread while it does.
+      connection-timeout: 10000
+      validation-timeout: 3000
+      idle-timeout: 600000
+      # Recycle well inside MySQL's 8-hour wait_timeout so the pool never hands out a
+      # connection the server has already dropped.
+      max-lifetime: 1200000
+      # Log a stack trace for any connection held longer than 30 seconds.
+      #
+      # This is a diagnostic aimed at a known problem, not a general safety net: four AI
+      # entry points still call Gemini inside a transaction (ReadingGenerationService,
+      # WritingGenerationService, ListeningGenerationService and
+      # WritingService.evaluateAndSaveSubmission), and each will trip this warning under
+      # load. That is the intended signal -- it names the offending call site in the log.
+      # MockTestAsyncGrader used to be the fifth and worst; it no longer holds a connection
+      # across its Gemini calls.
+      leak-detection-threshold: 30000
   jpa:
     hibernate:
       ddl-auto: none
     show-sql: false
+    # Explicit, and load-bearing rather than merely inherited.
+    #
+    # The AI endpoints are deliberately not @Transactional, because a transaction there held
+    # a pooled connection for the whole Gemini round trip. Several of them still walk lazy
+    # associations afterwards -- cloning a template quiz in the Reading fallback, gathering
+    # transcripts across a mock test in suggestVocabulary -- and it is open-in-view that
+    # keeps an EntityManager available for those, now that no transaction does.
+    #
+    # Turning this off is therefore not a free tidy-up: it would break those paths with
+    # LazyInitializationException. It also silences Spring Boot's warning about relying on
+    # the default, which is how this was configured before: by accident.
+    #
+    # Note this does not undo the fix. open-in-view keeps the EntityManager open, not a
+    # connection -- ConnectionHoldingIntegrationTest asserts that a non-transactional read
+    # returns its connection to the pool immediately.
+    open-in-view: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
@@ -22,6 +87,19 @@ spring:
     redis:
       host: ${SPRING_REDIS_HOST:localhost}
       port: ${SPRING_REDIS_PORT:6379}
+      # Blank by default: a Redis with no requirepass rejects AUTH outright, so sending an
+      # empty credential would break every local and CI run. Both Redis clients skip
+      # authentication entirely when this is blank -- see RateLimitConfig, which builds its
+      # own Lettuce client for Bucket4j and has to be kept in step with this property.
+      password: ${SPRING_REDIS_PASSWORD:}
+      # Lettuce defaults its command timeout to 60 seconds. Redis here is a container on
+      # the same host serving sub-millisecond reads, so 60 seconds is not a timeout, it is
+      # a hang -- and these commands sit on the request path for token checks and rate
+      # limits. Five seconds is far beyond any healthy response and still fails fast.
+      # RateLimitConfig reads the same two properties for the separate Lettuce client it
+      # builds for Bucket4j, so the two cannot drift apart.
+      timeout: ${SPRING_REDIS_TIMEOUT:5s}
+      connect-timeout: ${SPRING_REDIS_CONNECT_TIMEOUT:3s}
     web:
       pageable:
         default-page-size: 20
@@ -52,12 +130,23 @@ app:
   gemini:
     api-key: ${GEMINI_API_KEY}
     base-url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash
+    # Waiting for a response, and waiting for a lease from the connection pool.
     timeout-seconds: 60
+    # Establishing the socket, which the timeout above does not cover. Without it an
+    # endpoint that accepts no connections falls back to the OS TCP retry behaviour and can
+    # block a thread for minutes past every other timeout here.
+    connect-timeout-seconds: 10
     max-retries: 3
   tts:
     enabled: ${TTS_ENABLED:true}
     edge-tts-url: ${EDGE_TTS_URL:http://localhost:8000}
     speaking-rate: -8%  # edge-tts rate offset format (-8% matches standard IELTS speed)
+    # The sidecar streams from Microsoft's speech endpoint, so a request can legitimately
+    # take tens of seconds. The read timeout is therefore a bound rather than a tight one --
+    # what matters is that one exists, because RestTemplate's default is to wait forever and
+    # a hung call permanently consumed one of ttsExecutor's five threads.
+    connect-timeout-seconds: 5
+    read-timeout-seconds: 120
   minio:
     endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
     access-key: ${MINIO_ACCESS_KEY}

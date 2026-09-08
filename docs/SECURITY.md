@@ -344,3 +344,110 @@ the browser needed CORS, the `X-Forwarded-For` handling in §5.5 never applied t
 traffic, and the app only worked when opened on the machine running it. Both the vite dev
 server and this nginx already proxy `/api`, so the SPA now uses a relative `/api/v1` and
 every request is same-origin.
+
+**5.9 — Every backing service was published to the network — fixed.**
+`docker-compose.yml` published MySQL (3306), Redis (6379), MinIO (9000/9001), edge-tts
+(8000) and the backend (8080) with bare mappings such as `"6379:6379"`. A bare mapping
+binds `0.0.0.0`, and Docker implements it as a DNAT rule that `ufw` does not filter — so
+on any host with a routable address these were reachable from the network, including a
+Redis with no `requirepass` holding every live refresh token.
+
+Two changes, because the two files have different jobs. `docker-compose.prod.yml` publishes
+nothing except Caddy's 80/443; MySQL, Redis, MinIO and edge-tts sit on an internal Docker
+network with no host binding at all. `docker-compose.yml` keeps its ports for local tooling
+but binds them to `127.0.0.1`, which leaves every local workflow working and removes the
+network exposure.
+
+**5.10 — Redis was unauthenticated, and its eviction policy could sign users out — fixed.**
+Redis holds refresh-token JTIs, the access-token blacklist, login lockout counters, the
+rate-limit buckets and the AI content cache. It ran with no password.
+
+`requirepass` is now set in production and reaches both Redis clients — Spring's, through
+`spring.data.redis.password`, and the separate Lettuce client `RateLimitConfig` builds for
+Bucket4j. Both had to change together: the limiter fails closed, so authenticating one and
+not the other would have turned every rate-limited endpoint into an error. A blank password
+still means no authentication, because a Redis without `requirepass` rejects `AUTH`
+outright and local development runs without one.
+
+The eviction policy changed from `allkeys-lru` to `volatile-ttl`, which is a security
+property rather than a tuning preference. Every key this application writes carries a TTL,
+so under LRU the ranking is by how recently a key was *read* — and a refresh token is
+written once at login and then not touched for hours, which makes it one of the best LRU
+eviction candidates, while a busy AI cache entry looks hot. Under memory pressure LRU would
+therefore have signed users out to preserve regenerable cache. `volatile-ttl` evicts the key
+expiring soonest instead, which puts one-minute rate-limit buckets and 24-hour cache ahead
+of 7-day token state.
+
+**5.11 — Outbound calls had no timeout, one of them literally none — fixed.**
+`TtsService` built its client with `new RestTemplate()`. `SimpleClientHttpRequestFactory`
+defaults both connect and read timeouts to zero, meaning wait forever. That client calls the
+edge-tts sidecar, which streams from Microsoft's speech endpoint, so an unresponsive
+upstream blocked the calling thread permanently — and audio generation runs on a five-thread
+executor, so five such calls ended audio generation for the lifetime of the process, silently.
+
+Also closed: the Gemini client bounded its response and pool-lease waits but not the TCP
+connect, which falls back to the operating system's retry behaviour and can hold a thread
+for minutes past every configured timeout; the S3 client had no `apiCallTimeout`, so retries
+could extend one upload without any ceiling; and the Redis command timeout was Lettuce's
+60-second default on a service answering in under a millisecond, on the request path for
+token checks.
+
+**5.12 — AI calls held a database connection — all fixed.**
+Gemini is allowed 65 seconds per attempt with up to three attempts and exponential backoff.
+Any transaction wrapping such a call holds a pooled database connection for that whole time,
+so enough concurrent AI work exhausts the pool and blocks every unrelated request in the
+application — a denial of service reachable through ordinary use of the product, needing no
+attacker at all.
+
+`MockTestAsyncGrader` was the worst: one transaction spanning **two** Gemini calls, running
+on an executor with ten threads, against a pool that then had ten connections. It could take
+the entire pool on its own.
+
+Twelve entry points had the pattern. A reflective sweep over the service layer found four
+that manual review had missed, including two `@Transactional(readOnly = true)` methods —
+read-only still checks a connection out — and two reached only indirectly, through a caller
+whose own transaction propagated into them. `WritingAssemblyService.submitFullWriting` was
+one of those: fixing the method it called would have achieved nothing, because the caller's
+transaction still enclosed both Gemini calls.
+
+All of them are now read → commit → call the AI holding nothing → write in a second short
+transaction. Where rows had to land together they still do; only the network call left the
+transaction. The transactional writes sit on dedicated beans because Spring applies
+`@Transactional` through a proxy, so a call between two methods of the same bean would
+bypass it and the annotation would read correctly while doing nothing.
+
+Two tests keep it that way, because this failure is invisible: re-adding `@Transactional`
+breaks no behaviour and passes every functional test, it just reinstates the outage under
+load. `AiTransactionBoundaryTest` asserts no Gemini-calling method is transactional and that
+the persistence beans still are; `ConnectionHoldingIntegrationTest` asserts the property the
+approach rests on — that a non-transactional read hands its connection straight back, while
+a transactional block holds one until commit.
+
+One related fix fell out of it. `ReviewService.explainAnswer` catches a Gemini failure and
+sets a placeholder message without saving it — but under a transaction, dirty checking
+flushed that placeholder anyway, and the cache check at the top of the method then returned
+it forever. A single transient AI failure permanently denied that answer a real explanation.
+With no transaction, the code now does what it was written to do.
+
+**5.13 — MinIO runs as its root account — accepted, with the reasoning.**
+The backend authenticates to MinIO with `MINIO_ROOT_USER`/`MINIO_ROOT_PASSWORD`, the
+instance's administrative credentials, when all it needs is read and write on one bucket.
+A scoped service account with a bucket-limited policy would be the correct shape.
+
+It is accepted for now rather than hidden, because the exposure is bounded by things that
+*are* enforced: MinIO has no published port and sits on an internal Docker network that the
+SPA's nginx cannot even resolve, the web console is switched off outright
+(`MINIO_BROWSER=off` — omitting `--console-address` does not disable it, it merely moves it
+to a port of MinIO's choosing), and the bucket is private by default, with audio and avatars
+served through the backend at `/api/v1/...` rather than directly from storage. So reaching
+these credentials requires code execution inside the backend container, at which point the
+credentials are readable from its environment regardless of their scope.
+
+Closing it properly means provisioning a service account at deploy time (`mc admin user
+add` plus a bucket policy), which is operational setup rather than a code change.
+
+**Object lifecycle: deliberately none.** Generated listening audio accumulates without
+expiry, and that is intentional — `listening_parts.audio_url` rows reference these objects
+indefinitely, so a lifecycle rule that expired them would leave working exam content
+pointing at missing audio. Storage growth is bounded by content volume, not by traffic, and
+the volume is a named Docker volume that survives container replacement.

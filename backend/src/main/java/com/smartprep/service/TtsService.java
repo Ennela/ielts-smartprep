@@ -3,9 +3,11 @@ package com.smartprep.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
 import jakarta.annotation.PostConstruct;
+import java.time.Duration;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -26,6 +28,12 @@ public class TtsService {
 
     @Value("${app.tts.speaking-rate:-8%}")
     private String speakingRate;
+
+    @Value("${app.tts.connect-timeout-seconds:5}")
+    private int connectTimeoutSeconds;
+
+    @Value("${app.tts.read-timeout-seconds:120}")
+    private int readTimeoutSeconds;
 
     private RestTemplate restTemplate;
 
@@ -49,8 +57,25 @@ public class TtsService {
             log.info("Edge TTS is disabled via configuration");
             return;
         }
-        restTemplate = new RestTemplate();
-        log.info("Edge TTS service initialized. Target URL: {}", edgeTtsUrl);
+        // Timeouts, because a bare `new RestTemplate()` has none.
+        //
+        // SimpleClientHttpRequestFactory defaults both connect and read timeouts to zero,
+        // which means wait forever. The sidecar this calls streams audio from Microsoft's
+        // speech endpoint, so "the upstream stopped answering" is a real event -- and when
+        // it happened, the calling thread was blocked permanently. Audio generation runs on
+        // ttsExecutor, which has five threads and a bounded queue: five such calls and no
+        // audio is ever generated again, with nothing in the logs to say why, until the
+        // application is restarted.
+        //
+        // The read timeout is generous rather than tight. A single synthesis request covers
+        // one speaker segment and legitimately takes tens of seconds; the goal here is a
+        // bound, not a tight one.
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout((int) Duration.ofSeconds(connectTimeoutSeconds).toMillis());
+        factory.setReadTimeout((int) Duration.ofSeconds(readTimeoutSeconds).toMillis());
+        restTemplate = new RestTemplate(factory);
+        log.info("Edge TTS service initialized. Target URL: {} (connect timeout {}s, read timeout {}s)",
+                edgeTtsUrl, connectTimeoutSeconds, readTimeoutSeconds);
     }
 
     /**

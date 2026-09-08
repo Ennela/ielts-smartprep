@@ -1,0 +1,60 @@
+# TLS edge for the production stack.
+#
+# This is the only container that publishes a port. Everything else — the SPA, the API,
+# MySQL, Redis, MinIO and the TTS sidecar — is reachable only on the internal Docker
+# networks, so the attack surface facing the internet is this file.
+#
+# Certificates are obtained and renewed automatically from Let's Encrypt, and HTTP is
+# redirected to HTTPS, both by default. That requires APP_DOMAIN to resolve to this host
+# and ports 80 and 443 to be reachable; set APP_DOMAIN=localhost to fall back to Caddy's
+# internal CA when trying the stack out without a domain.
+
+{
+	# Where Let's Encrypt sends expiry warnings.
+	email {$ACME_EMAIL}
+}
+
+{$APP_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		# The one security header frontend/nginx.conf deliberately omits. That nginx
+		# listens on plain HTTP behind this proxy, so it cannot know whether TLS is in
+		# use and has no business asserting HSTS. This is the TLS edge, so it does.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# The rest — CSP, nosniff, X-Frame-Options, Referrer-Policy — are set by nginx on
+		# the documents and assets they actually protect, and by Spring Security on API
+		# responses. They are not repeated here.
+		-Server
+	}
+
+	# The API goes straight to the backend rather than through the SPA's nginx.
+	#
+	# This is not a shortcut, it is a correctness requirement. nginx.conf overwrites
+	# X-Forwarded-For with its own peer address, and the backend's auth rate limiter keys
+	# on the rightmost entry of that header. Chained behind this proxy, nginx's peer is
+	# always Caddy — so every login attempt on the internet would land in one shared
+	# bucket, and one caller could exhaust the login budget for everybody. Proxying here
+	# keeps exactly one trusted hop in front of the backend, which is what that limiter
+	# was written for.
+	#
+	# It stays same-origin either way: the browser only ever talks to this host, so
+	# /api/v1/... is the same origin as the page that calls it.
+	handle /api/* {
+		reverse_proxy backend:8080 {
+			# Set, not append. Caddy appends by default, which would leave a
+			# caller-supplied value in the header for the backend to read.
+			header_up X-Forwarded-For {remote_host}
+		}
+	}
+
+	# Everything else is the SPA, served by nginx with its CSP and cache headers.
+	#
+	# Note what this means for /actuator: there is no route for it, so it lands here and
+	# nginx answers with index.html. That is the intended outcome -- the actuator endpoints
+	# are for the deploy script, which reaches them over the internal Docker network, and
+	# for nobody on the internet. A visitor gets the app, not a health report.
+	handle {
+		reverse_proxy frontend:80
+	}
+}

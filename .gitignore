@@ -12,6 +12,7 @@ frontend/dist/
 .env
 .env.*
 !.env.example
+!.env.prod.example
 *.env.local
 
 # Credentials and local secret configuration

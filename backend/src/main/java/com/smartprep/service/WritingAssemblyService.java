@@ -2,28 +2,20 @@ package com.smartprep.service;
 
 import com.smartprep.dto.request.WritingSubmitFullRequest;
 import com.smartprep.dto.response.WritingFullResultResponse;
-import com.smartprep.dto.response.WritingGradeResponse;
+import com.smartprep.service.ai.WritingGradingService.GradingResult;
 import com.smartprep.dto.response.WritingPromptResponse;
 import com.smartprep.exception.ResourceNotFoundException;
 import com.smartprep.exception.WordCountTooLowException;
-import com.smartprep.model.entity.ScoreHistory;
 import com.smartprep.model.entity.User;
-import com.smartprep.model.entity.ExamAttempt;
 import com.smartprep.model.entity.WritingFullSubmission;
 import com.smartprep.model.entity.WritingPrompt;
-import com.smartprep.model.entity.WritingSubmission;
-import com.smartprep.model.enums.SkillType;
-import com.smartprep.repository.ScoreHistoryRepository;
 import com.smartprep.repository.UserRepository;
 import com.smartprep.repository.WritingFullSubmissionRepository;
 import com.smartprep.repository.WritingPromptRepository;
-import com.smartprep.repository.WritingSubmissionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -36,13 +28,11 @@ import java.util.stream.Collectors;
 public class WritingAssemblyService {
 
     private final WritingPromptRepository promptRepository;
-    private final ScoreHistoryRepository scoreHistoryRepository;
     private final UserRepository userRepository;
     private final WritingService writingService;
+    private final WritingGradingPersistence gradingPersistence;
     private final WritingQueryService writingQueryService;
     private final WritingFullSubmissionRepository writingFullSubmissionRepository;
-    private final WritingSubmissionRepository writingSubmissionRepository;
-    private final ExamAttemptService examAttemptService;
 
     private static final int MIN_WORD_COUNT_TASK1 = 150;
     private static final int MIN_WORD_COUNT_TASK2 = 250;
@@ -83,9 +73,21 @@ public class WritingAssemblyService {
         );
     }
 
-    @Transactional
+    /**
+     * Deliberately not {@code @Transactional}.
+     *
+     * <p>This was the worst remaining instance of the pattern: one transaction spanning
+     * <em>two</em> Gemini calls, each allowed 65 seconds with up to three attempts. A single
+     * full-test submission could hold a pooled database connection for minutes.
+     *
+     * <p>The order is now read, grade, write. Both essays are graded with nothing checked
+     * out of the pool, and every row this produces — the two submissions, the completed exam
+     * attempt, the aggregate row and the score history — is still written in one transaction
+     * inside {@link WritingGradingPersistence#saveFullWriting}, so a sitting cannot be left
+     * half recorded.
+     */
     public WritingFullResultResponse submitFullWriting(Long userId, WritingSubmitFullRequest request) {
-        User user = userRepository.findById(userId)
+        userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         int w1 = countWords(request.getTask1EssayText());
@@ -93,65 +95,22 @@ public class WritingAssemblyService {
         validateMinimumWordCount(w1, MIN_WORD_COUNT_TASK1, "Task 1");
         validateMinimumWordCount(w2, MIN_WORD_COUNT_TASK2, "Task 2");
 
-        // Delegate individual grading to WritingService
-        WritingGradeResponse res1 = writingService.evaluateAndSaveSubmission(user, request.getTask1PromptId(), request.getTask1EssayText(), w1);
-        WritingGradeResponse res2 = writingService.evaluateAndSaveSubmission(user, request.getTask2PromptId(), request.getTask2EssayText(), w2);
+        WritingPrompt prompt1 = promptRepository.findById(request.getTask1PromptId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Writing prompt not found: " + request.getTask1PromptId()));
+        WritingPrompt prompt2 = promptRepository.findById(request.getTask2PromptId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Writing prompt not found: " + request.getTask2PromptId()));
 
-        BigDecimal weightedSum = res1.getOverallBand().add(res2.getOverallBand().multiply(BigDecimal.valueOf(2)));
-        BigDecimal average = weightedSum.divide(BigDecimal.valueOf(3), 4, RoundingMode.HALF_UP);
-        BigDecimal overallWritingBand = com.smartprep.service.util.IeltsScoringUtils.roundOverallBand(average);
+        // Both AI calls happen here, with no transaction open.
+        GradingResult result1 = writingService.gradeOnly(
+                prompt1.getPromptText(), request.getTask1EssayText(), true);
+        GradingResult result2 = writingService.gradeOnly(
+                prompt2.getPromptText(), request.getTask2EssayText(), false);
 
-        // Persist individual submissions reference
-        WritingSubmission sub1 = writingSubmissionRepository.findById(res1.getSubmissionId())
-                .orElseThrow(() -> new ResourceNotFoundException("Task 1 submission not found after creation"));
-        WritingSubmission sub2 = writingSubmissionRepository.findById(res2.getSubmissionId())
-                .orElseThrow(() -> new ResourceNotFoundException("Task 2 submission not found after creation"));
-
-        // Complete exam attempt if provided (must happen BEFORE building fullSub)
-        ExamAttempt completedAttempt = null;
-        boolean autoSubmitted = request.getAutoSubmitted() != null && request.getAutoSubmitted();
-        if (request.getAttemptId() != null) {
-            completedAttempt = examAttemptService.completeAttemptInternal(
-                    request.getAttemptId(), userId, autoSubmitted,
-                    request.getTimeSpentTask1(), request.getTimeSpentTask2());
-        }
-
-        Integer timeSpentSeconds = completedAttempt != null ? completedAttempt.getTimeSpentSeconds() : null;
-        Integer timeSpentTask1 = request.getTimeSpentTask1();
-        Integer timeSpentTask2 = request.getTimeSpentTask2();
-
-        WritingFullSubmission fullSub = WritingFullSubmission.builder()
-                .user(user)
-                .task1Submission(sub1)
-                .task2Submission(sub2)
-                .overallBand(overallWritingBand)
-                .timeSpentSeconds(timeSpentSeconds)
-                .timeSpentTask1(timeSpentTask1)
-                .timeSpentTask2(timeSpentTask2)
-                .autoSubmitted(autoSubmitted)
-                .build();
-        fullSub = writingFullSubmissionRepository.save(fullSub);
-
-        ScoreHistory history = ScoreHistory.builder()
-                .user(user).skillType(SkillType.WRITING).score(overallWritingBand)
-                .timeSpentSeconds(timeSpentSeconds)
-                .timeSpentTask1(timeSpentTask1)
-                .timeSpentTask2(timeSpentTask2)
-                .autoSubmitted(autoSubmitted)
-                .build();
-        scoreHistoryRepository.save(history);
-
-        return WritingFullResultResponse.builder()
-                .id(fullSub.getId())
-                .overallWritingBand(overallWritingBand)
-                .task1Result(res1)
-                .task2Result(res2)
-                .submittedAt(fullSub.getSubmittedAt())
-                .timeSpentSeconds(timeSpentSeconds)
-                .timeSpentTask1(timeSpentTask1)
-                .timeSpentTask2(timeSpentTask2)
-                .autoSubmitted(autoSubmitted)
-                .build();
+        return gradingPersistence.saveFullWriting(
+                userId, request, w1, w2, result1, result2,
+                writingService.errorsOf(result1), writingService.errorsOf(result2));
     }
 
     @Transactional(readOnly = true)

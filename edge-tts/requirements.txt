@@ -1,0 +1,9 @@
+# Pinned so an image rebuilt six months from now is the same image.
+#
+# `pip install fastapi uvicorn edge-tts` resolved to whatever was newest on the day the
+# build ran, which meant two builds of the same commit could ship different code. These are
+# the versions that unpinned resolution produced at the time of pinning, so nothing about
+# the running service changes — only its repeatability.
+fastapi==0.141.1
+uvicorn==0.52.4
+edge-tts==7.2.8

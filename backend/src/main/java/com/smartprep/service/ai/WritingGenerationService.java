@@ -12,11 +12,9 @@ import com.smartprep.model.enums.EssayType;
 import com.smartprep.model.enums.Topic;
 import com.smartprep.model.enums.WritingTaskType;
 import com.smartprep.repository.UserRepository;
-import com.smartprep.repository.WritingPromptRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Random;
@@ -27,7 +25,7 @@ import java.util.Random;
 public class WritingGenerationService {
 
     private final GeminiClient geminiClient;
-    private final WritingPromptRepository promptRepository;
+    private final WritingPromptPersistence promptPersistence;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
@@ -77,7 +75,15 @@ public class WritingGenerationService {
             Ensure no extra text, no markdown fences, and only valid JSON is returned.
             """;
 
-    @Transactional
+    /**
+     * Deliberately not {@code @Transactional} -- see the note on
+     * {@code ReadingGenerationService.generateQuiz}. The Gemini call in the middle of this
+     * method used to run while holding a pooled database connection.
+     *
+     * <p>The two prompts are still written together: {@link WritingPromptPersistence} keeps
+     * that one short transaction, so a failure on Task 2 cannot leave a stray Task 1 prompt
+     * behind. It just no longer spans the network call.
+     */
     public List<WritingPromptResponse> generatePromptPair(Long userId, WritingGenerateRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -132,7 +138,6 @@ public class WritingGenerationService {
                 .taskType(WritingTaskType.TASK_1)
                 .visualData(t1VisualData)
                 .build();
-        t1Prompt = promptRepository.save(t1Prompt);
 
         // Extract and map Task 2
         String t2Text = t2Node.path("promptText").asText("Task 2 essay prompt");
@@ -144,7 +149,11 @@ public class WritingGenerationService {
                 .essayType(t2Type)
                 .taskType(WritingTaskType.TASK_2)
                 .build();
-        t2Prompt = promptRepository.save(t2Prompt);
+
+        // Both rows in one short transaction, after the AI call rather than around it.
+        List<WritingPrompt> saved = promptPersistence.savePair(t1Prompt, t2Prompt);
+        t1Prompt = saved.get(0);
+        t2Prompt = saved.get(1);
 
         return List.of(
                 WritingPromptResponse.builder()
