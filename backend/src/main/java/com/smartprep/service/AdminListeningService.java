@@ -13,6 +13,7 @@ import com.smartprep.repository.ListeningPartRepository;
 import com.smartprep.service.util.QuestionOptionMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -122,6 +123,9 @@ public class AdminListeningService {
     /**
      * Update an existing listening part's details, questions, and options.
      */
+    // Questions and answer keys may change here, and cached mock-test analytics were
+    // computed against the old ones; see AdminService.updateReadingQuiz.
+    @CacheEvict(cacheNames = MockTestAnalyticsCalculator.CACHE_NAME, allEntries = true)
     @Transactional
     public AdminListeningPartResponse updatePart(Long partId, AdminListeningPartRequest request, String username) {
         ListeningPart part = partRepository.findById(partId)

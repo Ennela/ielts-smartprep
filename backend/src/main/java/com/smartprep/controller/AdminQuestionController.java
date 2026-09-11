@@ -7,6 +7,8 @@ import com.smartprep.repository.ListeningQuestionRepository;
 import com.smartprep.repository.ReadingQuestionRepository;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
+import com.smartprep.service.MockTestAnalyticsCalculator;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,6 +32,8 @@ public class AdminQuestionController {
     }
 
     @PostMapping("/{category}/{id}/verify")
+    // Can rewrite a correct answer, which cached mock-test analytics were graded against.
+    @CacheEvict(cacheNames = MockTestAnalyticsCalculator.CACHE_NAME, allEntries = true)
     public ResponseEntity<ApiResponse<Void>> verifyQuestion(
             @PathVariable String category,
             @PathVariable Long id,
