@@ -1,0 +1,142 @@
+/*
+ * Layout for the mock test result page. The page used to fix its grids inline
+ * (1.2fr 2fr, repeat(3, 1fr), a 65vh two-pane reading review), which cannot collapse on a
+ * phone. These classes carry the same desktop layout and stack below 720px.
+ */
+
+.page {
+  padding: 16px;
+}
+
+.content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.review-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+}
+
+.review-sub {
+  font-size: 0.85rem;
+  color: var(--on-surface-variant);
+  margin: 0 0 16px 0;
+}
+
+.skill-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid var(--outline-variant);
+  margin-bottom: 24px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.skill-tab {
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.skill-tab.active {
+  border-bottom-color: var(--primary);
+  color: var(--primary);
+}
+
+.writing-score-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.reading-review {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.reading-pane {
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-xl);
+  padding: 16px;
+  max-height: 70vh;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.reading-passage {
+  flex: 1.2;
+}
+
+.reading-questions {
+  flex: 1;
+}
+
+.listening-card {
+  padding: 24px 16px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+@media (min-width: 720px) {
+  .page {
+    padding: 32px;
+  }
+
+  .title {
+    font-size: 2rem;
+  }
+
+  .skill-tab {
+    padding: 12px 24px;
+    font-size: 1rem;
+  }
+
+  .writing-score-grid {
+    grid-template-columns: 1fr 2fr;
+    gap: 32px;
+    margin-bottom: 32px;
+  }
+
+  .reading-review {
+    flex-direction: row;
+    gap: 32px;
+    min-height: 65vh;
+  }
+
+  .reading-pane {
+    padding: 28px;
+    max-height: 75vh;
+  }
+}

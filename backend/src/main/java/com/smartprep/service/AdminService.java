@@ -15,6 +15,7 @@ import com.smartprep.model.enums.WritingTaskType;
 import com.smartprep.repository.*;
 import com.smartprep.service.util.QuestionOptionMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -268,6 +269,12 @@ public class AdminService {
         return toAdminReadingQuizResponse(saved);
     }
 
+    // Editing a paper after candidates have sat it changes what their cached result
+    // analytics were computed against, so the whole analytics cache is dropped. Admin edits
+    // are rare and a rebuild is a dozen queries on the next open; targeting only the
+    // affected submissions would need the reverse mapping paper -> submissions and is not
+    // worth it.
+    @CacheEvict(cacheNames = MockTestAnalyticsCalculator.CACHE_NAME, allEntries = true)
     @Transactional
     public AdminReadingQuizResponse updateReadingQuiz(Long quizId, AdminReadingQuizRequest request) {
         ReadingQuiz quiz = readingQuizRepository.findById(quizId)
@@ -419,6 +426,9 @@ public class AdminService {
         return mapToMockTestResponse(saved);
     }
 
+    // Recomposing a mock test changes which parts and passages a past sitting is graded
+    // against; see updateReadingQuiz.
+    @CacheEvict(cacheNames = MockTestAnalyticsCalculator.CACHE_NAME, allEntries = true)
     @Transactional
     public MockTestResponse updateMockTest(Long mockTestId, AdminMockTestRequest request) {
         MockTest mockTest = mockTestRepository.findById(mockTestId)

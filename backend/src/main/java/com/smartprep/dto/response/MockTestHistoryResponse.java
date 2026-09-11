@@ -14,5 +14,9 @@ public class MockTestHistoryResponse {
     private String title;
     private SubmissionStatus status;
     private BigDecimal overallBand;
+    private BigDecimal listeningScore;
+    private BigDecimal readingScore;
+    /** Null until the asynchronous essay grade has landed; never the placeholder zero. */
+    private BigDecimal writingScore;
     private LocalDateTime submittedAt;
 }

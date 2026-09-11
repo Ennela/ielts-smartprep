@@ -28,6 +28,15 @@ spring:
     redis:
       host: localhost
       port: 6379
+      # Fail fast if a test ever reaches for a Redis that is not there. Lettuce's default
+      # connect timeout is 10 seconds, which would turn one stray cache or rate-limit call
+      # into a ten-second stall per test rather than an immediate, visible failure.
+      timeout: 2s
+      connect-timeout: 1s
+  # Honoured now that CacheConfig's Redis manager is conditional on cache.type=redis: the
+  # analytics cache becomes a no-op here and no test needs a Redis server. The one test that
+  # wants a real Redis (MockTestAnalyticsRedisCacheIntegrationTest) switches this back on
+  # itself and starts a container.
   cache:
     type: none
 

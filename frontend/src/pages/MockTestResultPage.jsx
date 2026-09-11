@@ -2,6 +2,8 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import mockTestApi from '../api/mockTestApi';
 import AiVocabularyButton from '../components/vocab/AiVocabularyButton';
+import MockTestAnalyticsDashboard from '../components/mocktest/MockTestAnalyticsDashboard';
+import styles from '../styles/MockTestResult.module.css';
 
 const CRITERIA_EXPLANATIONS = [
   {
@@ -27,6 +29,8 @@ export default function MockTestResultPage() {
   const navigate = useNavigate();
 
   const [result, setResult] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
+  const [analyticsError, setAnalyticsError] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [skillTab, setSkillTab] = useState('writing'); // 'writing', 'reading', 'listening'
@@ -62,6 +66,19 @@ export default function MockTestResultPage() {
     }
   };
 
+  // Fetched separately from the submission so a failure here degrades to "analytics
+  // unavailable" rather than taking the whole report down with it.
+  const loadAnalytics = async () => {
+    try {
+      const res = await mockTestApi.getAnalytics(submissionId);
+      setAnalytics(res.data?.data || null);
+      setAnalyticsError('');
+    } catch (err) {
+      setAnalytics(null);
+      setAnalyticsError(err.response?.data?.message || 'Result analytics could not be loaded.');
+    }
+  };
+
   const loadResult = async () => {
     try {
       const res = await mockTestApi.getSubmission(submissionId);
@@ -75,6 +92,9 @@ export default function MockTestResultPage() {
         if (pollTimerRef.current) {
           clearInterval(pollTimerRef.current);
           pollTimerRef.current = null;
+        }
+        if (data && data.status === 'COMPLETED') {
+          loadAnalytics();
         }
       }
     } catch (err) {
@@ -95,6 +115,9 @@ export default function MockTestResultPage() {
           if (data.status !== 'GRADING') {
             clearInterval(pollTimerRef.current);
             pollTimerRef.current = null;
+            if (data.status === 'COMPLETED') {
+              loadAnalytics();
+            }
           }
         }
       } catch (err) {
@@ -239,8 +262,8 @@ export default function MockTestResultPage() {
   const currentReadingQuiz = readingResults[activeReadingQuiz];
 
   return (
-    <div className="writing-result-page" style={{ padding: '32px' }}>
-      <div className="writing-result-content" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <div className={`writing-result-page ${styles.page}`}>
+      <div className={`writing-result-content ${styles.content}`}>
         
         {/* Back Button */}
         <button className="btn-back" onClick={() => navigate('/mock-tests')} id="back-to-lobby" style={{ marginBottom: '24px' }}>
@@ -249,141 +272,47 @@ export default function MockTestResultPage() {
         </button>
 
         {/* Header with Unified AI Vocabulary Trigger */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-          <h1 style={{ fontSize: '2rem', fontWeight: 700, margin: 0 }}>Mock Test Assessment Report</h1>
+        <div className={styles.header}>
+          <h1 className={styles.title}>Mock Test Assessment Report</h1>
           {result.submissionId && (
             <AiVocabularyButton skillType="MOCK_TEST" sourceId={result.submissionId} />
           )}
         </div>
 
-        {/* ── Section Scores Summary ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 2fr', gap: '32px', marginBottom: '40px' }}>
-          
-          {/* Circular Overall Band */}
-          <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px' }}>
-            <div className="overall-score-circle" style={{ position: 'relative', width: '150px', height: '150px' }}>
-              <svg viewBox="0 0 120 120" width="150" height="150">
-                <circle cx="60" cy="60" r="52" fill="none" stroke="var(--outline-variant)" strokeWidth="8" />
-                <circle
-                  cx="60"
-                  cy="60"
-                  r="52"
-                  fill="none"
-                  stroke="url(#mockGrad)"
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  strokeDasharray={`${getScorePercent(result.overallBand) * 3.27} 327`}
-                  transform="rotate(-90 60 60)"
-                  style={{ transition: 'stroke-dasharray 1s ease' }}
-                />
-                <defs>
-                  <linearGradient id="mockGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#003fb1" />
-                    <stop offset="100%" stopColor="#006c4a" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div className="overall-score-text" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <span className="overall-band" style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--primary)' }}>
-                  {result.overallBand?.toFixed(1) || '—'}
-                </span>
-                <span className="overall-label" style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--outline)' }}>
-                  Overall Band
-                </span>
-              </div>
-            </div>
+        {/* ── Result analytics: Summary → Skill breakdown → Weakness → Progress → Next step ── */}
+        {analytics ? (
+          <MockTestAnalyticsDashboard analytics={analytics} onReviewSkill={setSkillTab} />
+        ) : (
+          <div className="card" style={{ padding: '20px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            {analyticsError ? (
+              <>
+                <span style={{ color: 'var(--error)', fontSize: '0.9rem' }}>{analyticsError}</span>
+                <button className="btn btn-outline btn-sm" onClick={loadAnalytics}>Retry</button>
+              </>
+            ) : (
+              <>
+                <span className="spinner" style={{ width: 16, height: 16 }} />
+                <span style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>Loading result analytics…</span>
+              </>
+            )}
           </div>
+        )}
 
-          {/* Section Band Details Grid */}
-          <div className="card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '20px', padding: '32px' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, borderBottom: '1px solid var(--outline-variant)', paddingBottom: '8px' }}>
-              Individual Skills Breakdown
-            </h3>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-              {/* Listening card */}
-              <div 
-                style={{ background: 'var(--surface-container-low)', padding: '16px', borderRadius: 'var(--radius-lg)', textAlign: 'center', cursor: 'pointer' }}
-                onClick={() => setSkillTab('listening')}
-              >
-                <span className="material-symbols-outlined" style={{ color: 'var(--primary)', marginBottom: '4px' }}>headphones</span>
-                <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--outline)', textTransform: 'uppercase' }}>Listening</p>
-                <p style={{ fontSize: '1.6rem', fontWeight: 700, margin: '4px 0' }}>{result.listeningScore?.toFixed(1) || '—'}</p>
-                <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Score: {result.listeningCorrectAnswers || 0}/40</p>
-              </div>
-
-              {/* Reading card */}
-              <div 
-                style={{ background: 'var(--surface-container-low)', padding: '16px', borderRadius: 'var(--radius-lg)', textAlign: 'center', cursor: 'pointer' }}
-                onClick={() => setSkillTab('reading')}
-              >
-                <span className="material-symbols-outlined" style={{ color: 'var(--secondary)', marginBottom: '4px' }}>menu_book</span>
-                <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--outline)', textTransform: 'uppercase' }}>Reading</p>
-                <p style={{ fontSize: '1.6rem', fontWeight: 700, margin: '4px 0' }}>{result.readingScore?.toFixed(1) || '—'}</p>
-                <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Score: {result.readingCorrectAnswers || 0}/40</p>
-              </div>
-
-              {/* Writing card */}
-              <div 
-                style={{ background: 'var(--surface-container-low)', padding: '16px', borderRadius: 'var(--radius-lg)', textAlign: 'center', cursor: 'pointer' }}
-                onClick={() => setSkillTab('writing')}
-              >
-                <span className="material-symbols-outlined" style={{ color: 'var(--tertiary-container)', marginBottom: '4px' }}>edit_note</span>
-                <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--outline)', textTransform: 'uppercase' }}>Writing</p>
-                <p style={{ fontSize: '1.6rem', fontWeight: 700, margin: '4px 0' }}>{result.writingScore?.toFixed(1) || '—'}</p>
-                <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Weighted Average</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <h2 className={styles['review-title']}>Detailed review</h2>
+        <p className={styles['review-sub']}>Every question and essay from this sitting, with the correct answers and feedback.</p>
 
         {/* ── Skill Navigation Tabs ── */}
-        <div className="skill-tabs" style={{ display: 'flex', gap: '8px', borderBottom: '2px solid var(--outline-variant)', marginBottom: '32px' }}>
-          <button
-            onClick={() => setSkillTab('writing')}
-            style={{
-              padding: '12px 24px',
-              fontSize: '1rem',
-              fontWeight: 600,
-              background: 'transparent',
-              border: 'none',
-              borderBottom: skillTab === 'writing' ? '3px solid var(--primary)' : '3px solid transparent',
-              color: skillTab === 'writing' ? 'var(--primary)' : 'var(--on-surface-variant)',
-              cursor: 'pointer'
-            }}
-          >
-            Writing Report
-          </button>
-          <button
-            onClick={() => setSkillTab('reading')}
-            style={{
-              padding: '12px 24px',
-              fontSize: '1rem',
-              fontWeight: 600,
-              background: 'transparent',
-              border: 'none',
-              borderBottom: skillTab === 'reading' ? '3px solid var(--primary)' : '3px solid transparent',
-              color: skillTab === 'reading' ? 'var(--primary)' : 'var(--on-surface-variant)',
-              cursor: 'pointer'
-            }}
-          >
-            Reading Report
-          </button>
-          <button
-            onClick={() => setSkillTab('listening')}
-            style={{
-              padding: '12px 24px',
-              fontSize: '1rem',
-              fontWeight: 600,
-              background: 'transparent',
-              border: 'none',
-              borderBottom: skillTab === 'listening' ? '3px solid var(--primary)' : '3px solid transparent',
-              color: skillTab === 'listening' ? 'var(--primary)' : 'var(--on-surface-variant)',
-              cursor: 'pointer'
-            }}
-          >
-            Listening Report
-          </button>
+        <div className={styles['skill-tabs']}>
+          {[['writing', 'Writing Report'], ['reading', 'Reading Report'], ['listening', 'Listening Report']].map(([key, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setSkillTab(key)}
+              className={`${styles['skill-tab']} ${skillTab === key ? styles.active : ''}`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
         {/* ── WRITING TAB CONTENT ── */}
@@ -412,7 +341,7 @@ export default function MockTestResultPage() {
             {activeWritingSub ? (
               <div>
                 {/* Writing Sub-Score Breakdown */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '32px', marginBottom: '32px' }}>
+                <div className={styles['writing-score-grid']}>
                   <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
                     <div style={{ textAlign: 'center' }}>
                       <p style={{ fontSize: '0.8rem', color: 'var(--outline)', textTransform: 'uppercase', fontWeight: 600 }}>Task Band Score</p>
@@ -602,9 +531,9 @@ export default function MockTestResultPage() {
                 </div>
 
                 {currentReadingQuiz && (
-                  <div style={{ display: 'flex', gap: '32px', minHeight: '65vh' }}>
+                  <div className={styles['reading-review']}>
                     {/* Left side: Highlighted Passage */}
-                    <div style={{ flex: 1.2, background: 'var(--surface-container-lowest)', border: '1px solid var(--outline-variant)', borderRadius: 'var(--radius-xl)', padding: '28px', maxHeight: '75vh', overflowY: 'auto' }}>
+                    <div className={`${styles['reading-pane']} ${styles['reading-passage']}`}>
                       <h2 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: '16px', color: 'var(--primary)' }}>
                         {currentReadingQuiz.topic}
                       </h2>
@@ -614,7 +543,7 @@ export default function MockTestResultPage() {
                     </div>
 
                     {/* Right side: Questions List & Corrections */}
-                    <div style={{ flex: 1, background: 'var(--surface-container-lowest)', border: '1px solid var(--outline-variant)', borderRadius: 'var(--radius-xl)', padding: '28px', maxHeight: '75vh', overflowY: 'auto' }}>
+                    <div className={`${styles['reading-pane']} ${styles['reading-questions']}`}>
                       <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '20px', borderBottom: '1px solid var(--outline-variant)', paddingBottom: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span>Questions & Answers</span>
                         <span style={{ fontSize: '0.8rem', color: 'var(--secondary)', background: 'rgba(0,108,74,0.08)', padding: '4px 8px', borderRadius: 'var(--radius-sm)' }}>
@@ -686,7 +615,7 @@ export default function MockTestResultPage() {
 
         {/* ── LISTENING TAB CONTENT ── */}
         {skillTab === 'listening' && (
-          <div className="card" style={{ padding: '40px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', maxWidth: '640px', margin: '0 auto' }}>
+          <div className={`card ${styles['listening-card']}`}>
             <span className="material-symbols-outlined" style={{ fontSize: '64px', color: 'var(--primary)' }}>headphones</span>
             
             <div>

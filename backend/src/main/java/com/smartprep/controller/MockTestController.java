@@ -4,6 +4,7 @@ import com.smartprep.dto.request.MockTestProgressRequest;
 import com.smartprep.dto.request.MockTestSubmitRequest;
 import com.smartprep.dto.response.*;
 import com.smartprep.model.entity.User;
+import com.smartprep.service.MockTestAnalyticsService;
 import com.smartprep.service.MockTestService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,6 +24,7 @@ import java.util.Map;
 public class MockTestController {
 
     private final MockTestService mockTestService;
+    private final MockTestAnalyticsService analyticsService;
 
     /**
      * Get all available Mock Tests.
@@ -132,6 +134,21 @@ public class MockTestController {
             @PathVariable Long submissionId) {
         MockTestSubmissionResponse submission = mockTestService.getSubmission(user.getUserId(), submissionId);
         return ResponseEntity.ok(ApiResponse.ok(submission));
+    }
+
+    /**
+     * Result analytics for one submission: bands, per-question-type and per-part accuracy,
+     * deterministic weakness detection, the attempt timeline and next steps.
+     * GET /api/v1/mock-tests/submissions/{submissionId}/analytics
+     */
+    @GetMapping("/submissions/{submissionId}/analytics")
+    @Operation(summary = "Get result analytics for a mock test submission",
+            description = "Skill bands, question-level accuracy, weakness detection, progress across attempts and recommended next steps. Writing analytics appear once grading has completed.")
+    public ResponseEntity<ApiResponse<MockTestAnalyticsResponse>> getAnalytics(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long submissionId) {
+        MockTestAnalyticsResponse analytics = analyticsService.getAnalytics(user.getUserId(), submissionId);
+        return ResponseEntity.ok(ApiResponse.ok(analytics));
     }
 
     /**

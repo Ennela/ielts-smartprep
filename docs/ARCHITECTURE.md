@@ -225,8 +225,9 @@ Quy ước cột **Auth**:
 | POST | `/api/v1/mock-tests/sessions/{sessionId}/next-section` | JWT | `@Valid MockTestProgressRequest` | `MockTestSessionResponse` | `controller/MockTestController.java:142-150` |
 | POST | `/api/v1/mock-tests/sessions/{sessionId}/submit` | JWT | `@Valid MockTestSubmitRequest` | 202 — cùng logic với `/finish` | `controller/MockTestController.java:156-165` |
 | GET | `/api/v1/mock-tests/submissions/{submissionId}` | JWT | `@PathVariable` | `MockTestSubmissionResponse` | `controller/MockTestController.java:171-178` |
+| GET | `/api/v1/mock-tests/submissions/{submissionId}/analytics` | JWT | `@PathVariable` + userId từ principal (sai chủ → 404 cùng message với "không tồn tại") | `MockTestAnalyticsResponse`: `summary` (overall 3 kỹ năng, `speakingIncluded=false`), `skills`, `listening.byPart/byQuestionType/wrongQuestions`, `reading.byQuestionType/wrongQuestions`, `writing.criteria` (TR/CC/LR/GRA, Task 2 nhân đôi; `null` khi chưa COMPLETED), `weaknesses`, `progress` (timeline các lần COMPLETED + delta), `recommendations` (≤3). Tính on-read, **không AI**, ngưỡng weak/developing/strong đọc từ `app.analytics.*` (`config/AnalyticsThresholdConfig.java`). Phần question-level được cache Redis theo key `submissionId:status`, TTL 1h (`service/MockTestAnalyticsCalculator.java`, `config/CacheConfig.java`) | `controller/MockTestController.java:144-152` |
 | GET | `/api/v1/mock-tests/submissions/{submissionId}/status` | JWT | `@PathVariable` | `Map` {status, overallBand} — endpoint để FE poll | `controller/MockTestController.java:184-195` |
-| GET | `/api/v1/mock-tests/history` | JWT | — | `List<MockTestHistoryResponse>` | `controller/MockTestController.java:201-207` |
+| GET | `/api/v1/mock-tests/history` | JWT | — | `List<MockTestHistoryResponse>` (có thêm `listeningScore`/`readingScore`/`writingScore`; `writingScore` là `null` cho tới khi COMPLETED) | `controller/MockTestController.java:201-207` |
 
 ### C.6. Các controller còn lại của user
 
