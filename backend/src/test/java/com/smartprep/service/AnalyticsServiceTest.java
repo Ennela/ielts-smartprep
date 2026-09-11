@@ -2,9 +2,9 @@ package com.smartprep.service;
 
 import com.smartprep.model.entity.ScoreHistory;
 import com.smartprep.model.entity.User;
-import com.smartprep.model.entity.UserAnswer;
 import com.smartprep.model.enums.SkillType;
 import com.smartprep.repository.ScoreHistoryRepository;
+import com.smartprep.repository.UserAnswerRepository;
 import com.smartprep.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +18,10 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,6 +32,9 @@ public class AnalyticsServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private UserAnswerRepository userAnswerRepository;
 
     @InjectMocks
     private AnalyticsService analyticsService;
@@ -109,24 +116,11 @@ public class AnalyticsServiceTest {
 
     @Test
     public void testGetWeakness_SelectsWeakestQuestionType() {
-        List<UserAnswer> readingAnswers = new ArrayList<>();
-        // MCQ: 1 correct, 2 incorrect (33.3% accuracy)
-        readingAnswers.add(UserAnswer.builder().questionType("MCQ").isCorrect(true).build());
-        readingAnswers.add(UserAnswer.builder().questionType("MCQ").isCorrect(false).build());
-        readingAnswers.add(UserAnswer.builder().questionType("MCQ").isCorrect(false).build());
-
-        // TFNG: 2 correct, 1 incorrect (66.7% accuracy)
-        readingAnswers.add(UserAnswer.builder().questionType("TFNG").isCorrect(true).build());
-        readingAnswers.add(UserAnswer.builder().questionType("TFNG").isCorrect(true).build());
-        readingAnswers.add(UserAnswer.builder().questionType("TFNG").isCorrect(false).build());
-
-        ScoreHistory readingAttempt = ScoreHistory.builder()
-                .score(new BigDecimal("6.0"))
-                .skillType(SkillType.READING)
-                .userAnswers(readingAnswers)
-                .build();
-
-        when(scoreHistoryRepository.findByUserUserIdOrderByRecordedAtDesc(1L)).thenReturn(List.of(readingAttempt));
+        // One aggregate row per question type: [type, correct, total].
+        // MCQ: 1 of 3 (33.3%), TFNG: 2 of 3 (66.7%).
+        when(userAnswerRepository.accuracyByQuestionType(1L, SkillType.READING)).thenReturn(List.<Object[]>of(
+                new Object[]{"MCQ", 1L, 3L},
+                new Object[]{"TFNG", 2L, 3L}));
 
         AnalyticsService.WeaknessDto weakness = analyticsService.getWeakness(1L, SkillType.READING);
 
@@ -136,5 +130,45 @@ public class AnalyticsServiceTest {
         assertEquals(33.3, weakness.accuracies.get("MCQ"));
         assertEquals(66.7, weakness.accuracies.get("TFNG"));
         assertTrue(weakness.recommendation.contains("MCQ"));
+        // The whole thing is one query; the per-sitting answer lists are never loaded.
+        verify(scoreHistoryRepository, never()).findByUserUserIdOrderByRecordedAtDesc(anyLong());
+    }
+
+    @Test
+    public void testGetWeakness_NoSkillFilterUsesAllSkills() {
+        when(userAnswerRepository.accuracyByQuestionType(1L)).thenReturn(List.<Object[]>of(
+                new Object[]{"FILL_BLANK", 9L, 10L}));
+
+        AnalyticsService.WeaknessDto weakness = analyticsService.getWeakness(1L, null);
+
+        assertEquals(90.0, weakness.accuracies.get("FILL_BLANK"));
+        // 90% is above the 85% bar, so it is reported but not called a weakness.
+        assertEquals("FILL_BLANK", weakness.weakestType);
+        assertFalse(weakness.recommendation.contains("thấp nhất"));
+        verify(userAnswerRepository, never()).accuracyByQuestionType(anyLong(), any());
+    }
+
+    @Test
+    public void testGetWeakness_NoAnswersYet() {
+        when(userAnswerRepository.accuracyByQuestionType(1L)).thenReturn(List.<Object[]>of());
+
+        AnalyticsService.WeaknessDto weakness = analyticsService.getWeakness(1L, null);
+
+        assertEquals("None", weakness.weakestType);
+        assertEquals(100.0, weakness.weakestAccuracy);
+        assertTrue(weakness.accuracies.isEmpty());
+    }
+
+    @Test
+    public void testGetWeakness_TieIsBrokenAlphabetically() {
+        // Both at 50%; the result used to depend on HashMap iteration order.
+        when(userAnswerRepository.accuracyByQuestionType(1L, SkillType.LISTENING)).thenReturn(List.<Object[]>of(
+                new Object[]{"SENTENCE_COMPLETION", 1L, 2L},
+                new Object[]{"MCQ", 2L, 4L}));
+
+        AnalyticsService.WeaknessDto weakness = analyticsService.getWeakness(1L, SkillType.LISTENING);
+
+        assertEquals("MCQ", weakness.weakestType);
+        assertEquals(50.0, weakness.weakestAccuracy);
     }
 }

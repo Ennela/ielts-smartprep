@@ -2,9 +2,9 @@ package com.smartprep.service;
 
 import com.smartprep.model.entity.ScoreHistory;
 import com.smartprep.model.entity.User;
-import com.smartprep.model.entity.UserAnswer;
 import com.smartprep.model.enums.SkillType;
 import com.smartprep.repository.ScoreHistoryRepository;
+import com.smartprep.repository.UserAnswerRepository;
 import com.smartprep.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 public class AnalyticsService {
 
     private final ScoreHistoryRepository scoreHistoryRepository;
+    private final UserAnswerRepository userAnswerRepository;
     private final UserRepository userRepository;
 
     public static class OverviewDto {
@@ -106,44 +107,50 @@ public class AnalyticsService {
         }).collect(Collectors.toList());
     }
 
+    /**
+     * Accuracy per question type and the weakest of them.
+     *
+     * <p>One aggregate query. This used to load every score-history row for the user and
+     * walk each one's lazy answer list -- a SELECT per sitting with no upper bound, on every
+     * dashboard open -- and then do the grouping in Java. The figures are the same; only the
+     * number of queries changed, from N+1 to 1.
+     */
     @Transactional(readOnly = true)
     public WeaknessDto getWeakness(Long userId, SkillType skillType) {
-        List<ScoreHistory> history = scoreHistoryRepository.findByUserUserIdOrderByRecordedAtDesc(userId).stream()
-                .filter(h -> skillType == null || h.getSkillType() == skillType)
-                .collect(Collectors.toList());
-
-        // Aggregate UserAnswers
-        List<UserAnswer> answers = history.stream()
-                .flatMap(h -> h.getUserAnswers().stream())
-                .collect(Collectors.toList());
+        List<Object[]> rows = skillType == null
+                ? userAnswerRepository.accuracyByQuestionType(userId)
+                : userAnswerRepository.accuracyByQuestionType(userId, skillType);
 
         WeaknessDto dto = new WeaknessDto();
         dto.accuracies = new HashMap<>();
 
-        if (answers.isEmpty()) {
+        String weakest = null;
+        double lowestAcc = 100.0;
+
+        for (Object[] row : rows) {
+            String type = (String) row[0];
+            if (type == null || type.isBlank()) {
+                continue;
+            }
+            long correct = ((Number) row[1]).longValue();
+            long total = ((Number) row[2]).longValue();
+            double acc = (double) correct / total * 100.0;
+            acc = Math.round(acc * 10.0) / 10.0;
+            dto.accuracies.put(type, acc);
+
+            // Strictly lower wins; on a tie the alphabetically first type is kept, so the
+            // answer no longer depends on hash-map iteration order.
+            if (acc < lowestAcc || (acc == lowestAcc && weakest != null && type.compareTo(weakest) < 0)) {
+                lowestAcc = acc;
+                weakest = type;
+            }
+        }
+
+        if (dto.accuracies.isEmpty()) {
             dto.weakestType = "None";
             dto.weakestAccuracy = 100.0;
             dto.recommendation = "Hãy hoàn thành thêm bài kiểm tra để chúng tôi phân tích điểm yếu của bạn.";
             return dto;
-        }
-
-        Map<String, List<UserAnswer>> grouped = answers.stream()
-                .filter(a -> a.getQuestionType() != null && !a.getQuestionType().isBlank())
-                .collect(Collectors.groupingBy(UserAnswer::getQuestionType));
-
-        String weakest = null;
-        double lowestAcc = 100.0;
-
-        for (Map.Entry<String, List<UserAnswer>> entry : grouped.entrySet()) {
-            long correct = entry.getValue().stream().filter(UserAnswer::getIsCorrect).count();
-            double acc = (double) correct / entry.getValue().size() * 100.0;
-            acc = Math.round(acc * 10.0) / 10.0;
-            dto.accuracies.put(entry.getKey(), acc);
-
-            if (acc < lowestAcc) {
-                lowestAcc = acc;
-                weakest = entry.getKey();
-            }
         }
 
         if (weakest != null && lowestAcc < 85.0) {
