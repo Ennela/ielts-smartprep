@@ -6,32 +6,27 @@ import com.smartprep.dto.request.WritingGradeRequest;
 import com.smartprep.dto.response.WritingGradeResponse;
 import com.smartprep.exception.ResourceNotFoundException;
 import com.smartprep.exception.WordCountTooLowException;
-import com.smartprep.model.entity.ScoreHistory;
-import com.smartprep.model.entity.User;
 import com.smartprep.model.entity.WritingPrompt;
-import com.smartprep.model.entity.WritingSubmission;
-import com.smartprep.model.enums.SkillType;
-import com.smartprep.repository.ScoreHistoryRepository;
 import com.smartprep.repository.UserRepository;
 import com.smartprep.repository.WritingPromptRepository;
-import com.smartprep.repository.WritingSubmissionRepository;
 import com.smartprep.service.ai.WritingGradingService;
 import com.smartprep.service.ai.WritingGradingService.GradingResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Writing orchestration: validates input, delegates AI grading to
- * {@link WritingGradingService}, and persists submissions + score history.
+ * {@link WritingGradingService}, and hands the writes to
+ * {@link WritingGradingPersistence}.
  *
  * All AI logic (Gemini calls, prompt templates, JSON parsing) lives in
- * {@code service.ai.WritingGradingService} — this class only handles
- * persistence and response mapping.
+ * {@code service.ai.WritingGradingService}. This class owns the order of
+ * operations — read, then grade, then write — which is what keeps the Gemini
+ * call outside any transaction.
  */
 @Service
 @RequiredArgsConstructor
@@ -39,11 +34,9 @@ import java.util.List;
 public class WritingService {
 
     private final WritingPromptRepository promptRepository;
-    private final WritingSubmissionRepository submissionRepository;
-    private final ScoreHistoryRepository scoreHistoryRepository;
     private final UserRepository userRepository;
     private final WritingGradingService writingGradingService;
-    private final WritingQueryService writingQueryService;
+    private final WritingGradingPersistence gradingPersistence;
     private final ObjectMapper objectMapper;
 
     private static final int MIN_WORD_COUNT_TASK1 = 150;
@@ -51,9 +44,19 @@ public class WritingService {
 
     // ========== Grading ==========
 
-    @Transactional
+    /**
+     * Deliberately not {@code @Transactional}.
+     *
+     * <p>The Gemini call below is allowed 65 seconds per attempt with up to three attempts.
+     * Inside a transaction it held a pooled database connection for that whole time, so
+     * concurrent grading exhausted the pool and blocked unrelated requests.
+     *
+     * <p>The reads happen first and commit, the AI call runs with nothing checked out, and
+     * the writes go through {@link WritingGradingPersistence} — which still commits the
+     * submission and its score-history row together, as this method used to.
+     */
     public WritingGradeResponse gradeEssay(Long userId, WritingGradeRequest request) {
-        User user = userRepository.findById(userId)
+        userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         WritingPrompt prompt = promptRepository.findById(request.getPromptId())
@@ -64,55 +67,29 @@ public class WritingService {
         int wordCount = writingGradingService.countWords(request.getEssayText());
         validateMinimumWordCount(wordCount, minWordCount, isTask1 ? "Task 1" : "Task 2");
 
-        WritingGradeResponse result = evaluateAndSaveSubmission(user, prompt, request.getEssayText(), wordCount);
+        // No transaction is open across this call, which is the point.
+        GradingResult gradingResult = writingGradingService.evaluateEssay(
+                prompt.getPromptText(), request.getEssayText(), isTask1);
 
-        // Save to score history
-        ScoreHistory history = ScoreHistory.builder()
-                .user(user).skillType(SkillType.WRITING).score(result.getOverallBand()).build();
-        scoreHistoryRepository.save(history);
-
-        return result;
+        return gradingPersistence.saveGradedEssay(
+                userId, prompt.getPromptId(), request.getEssayText(), wordCount,
+                gradingResult, parseErrorDtos(gradingResult.getErrorsJson()), true);
     }
 
     /**
-     * Evaluate a single essay via AI and persist the submission.
-     * Public so that WritingAssemblyService can call it for full-test submissions.
+     * Grade one essay without persisting anything.
+     *
+     * <p>Split out from the old {@code evaluateAndSaveSubmission} so that a caller grading
+     * two essays — full-test submission — can make both AI calls before opening a
+     * transaction, instead of holding one across both.
      */
-    @Transactional
-    public WritingGradeResponse evaluateAndSaveSubmission(User user, Long promptId, String essayText, int wordCount) {
-        WritingPrompt prompt = promptRepository.findById(promptId)
-                .orElseThrow(() -> new ResourceNotFoundException("Writing prompt not found: " + promptId));
-        return evaluateAndSaveSubmission(user, prompt, essayText, wordCount);
+    public GradingResult gradeOnly(String promptText, String essayText, boolean isTask1) {
+        return writingGradingService.evaluateEssay(promptText, essayText, isTask1);
     }
 
-    @Transactional
-    public WritingGradeResponse evaluateAndSaveSubmission(User user, WritingPrompt prompt, String essayText,
-            int wordCount) {
-        boolean isTask1 = prompt.getEssayType().isTask1();
-
-        // Delegate AI grading to service.ai.WritingGradingService
-        GradingResult gradingResult = writingGradingService.evaluateEssay(
-                prompt.getPromptText(), essayText, isTask1);
-
-        // Parse error DTOs from the serialized JSON for the response
-        List<WritingGradeResponse.ErrorDto> errors = parseErrorDtos(gradingResult.getErrorsJson());
-
-        // Persist submission
-        WritingSubmission submission = WritingSubmission.builder()
-                .user(user).prompt(prompt).essayText(essayText).wordCount(wordCount)
-                .overallBand(gradingResult.getOverallBand())
-                .taskResponseScore(gradingResult.getTaskResponse())
-                .coherenceScore(gradingResult.getCoherence())
-                .lexicalScore(gradingResult.getLexical())
-                .grammarScore(gradingResult.getGrammar())
-                .errorListJson(gradingResult.getErrorsJson())
-                .rewrittenVersion(gradingResult.getRewrittenEssay())
-                .aiFeedback(gradingResult.getGeneralFeedback())
-                .build();
-
-        submission = submissionRepository.save(submission);
-        return writingQueryService.buildGradeResponse(
-                submission, prompt, errors, gradingResult.getImprovementNotes());
+    /** Parse the error DTOs an AI grading result carries, for the response body. */
+    public List<WritingGradeResponse.ErrorDto> errorsOf(GradingResult gradingResult) {
+        return parseErrorDtos(gradingResult.getErrorsJson());
     }
 
     // ========== Private Helpers ==========

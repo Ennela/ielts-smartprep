@@ -62,7 +62,16 @@ public class ReviewService {
      * Generate AI explanation for a specific answer using Gemini.
      * Caches the explanation in the database for subsequent requests.
      */
-    @Transactional
+    /**
+     * Not transactional: the Gemini call in the middle used to hold a pooled connection.
+     *
+     * <p>One deliberate consequence. The success path saves explicitly, so caching still
+     * works. The failure path sets a placeholder message and does not save -- and now that
+     * no transaction wraps this method, dirty checking no longer persists it either. That
+     * matches what the code was written to do: previously the placeholder was flushed on
+     * commit and then returned forever by the cache check above, so one transient Gemini
+     * failure permanently denied that answer a real explanation.
+     */
     public UserAnswerResponse explainAnswer(Long historyId, Long answerId, Long userId) {
         ScoreHistory history = scoreHistoryRepository.findById(historyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Score history not found"));

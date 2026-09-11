@@ -7,12 +7,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.event.EventListener;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.*;
 
 import java.net.URI;
+import java.time.Duration;
 
 @Configuration
 @Slf4j
@@ -32,12 +34,32 @@ public class MinioConfig {
 
     @Bean
     public S3Client s3Client() {
+        // An outer bound on the whole call, which the SDK does not set for itself.
+        //
+        // The transport defaults are already sensible for a MinIO container on the same
+        // host -- ApacheHttpClient uses a 2-second connect and a 30-second socket timeout,
+        // and socket timeout is per read rather than for the whole transfer, so a
+        // multi-megabyte audio upload is in no danger from it. What the SDK leaves unset is
+        // apiCallTimeout: with retries enabled, one logical upload can otherwise run for
+        // several socket timeouts in a row with no ceiling at all.
+        //
+        // That ceiling matters because uploads run on ttsExecutor, which has five threads.
+        // A call with no upper bound occupies one of them indefinitely.
+        //
+        // Configured through ClientOverrideConfiguration rather than on the HTTP client so
+        // this stays independent of which transport is on the classpath -- apache-client is
+        // only a runtime-scope transitive dependency of s3 here, not something this module
+        // declares or should compile against.
         return S3Client.builder()
                 .endpointOverride(URI.create(endpoint))
                 .credentialsProvider(StaticCredentialsProvider.create(
                         AwsBasicCredentials.create(accessKey, secretKey)))
                 .region(Region.US_EAST_1)
                 .forcePathStyle(true)  // Required for MinIO
+                .overrideConfiguration(ClientOverrideConfiguration.builder()
+                        .apiCallTimeout(Duration.ofSeconds(120))
+                        .apiCallAttemptTimeout(Duration.ofSeconds(45))
+                        .build())
                 .build();
     }
 

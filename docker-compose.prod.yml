@@ -1,0 +1,307 @@
+# Production stack for a single Linux VPS.
+#
+# Differs from docker-compose.yml in three ways that matter:
+#
+#   1. It runs published images by immutable tag instead of building from the working
+#      directory, so what runs is exactly what CI tested.
+#   2. Only Caddy publishes ports. MySQL, Redis, MinIO, the TTS sidecar and the backend
+#      have no host bindings at all. Docker's port publishing writes DNAT rules that
+#      bypass ufw, so a published port on a VPS is on the internet whether or not the
+#      firewall says otherwise -- which is how an unauthenticated Redis ends up exposed.
+#   3. It sets restart policies, health checks, log rotation and memory limits, none of
+#      which the development file needs.
+#
+# Usage:
+#   IMAGE_TAG=<commit sha> docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+#
+# scripts/deploy.sh wraps that with validation and a health gate. Prefer it.
+
+name: ielts-smartprep-prod
+
+# Applied to every service. Without it the json-file driver grows without bound and
+# eventually fills the disk, which takes the database down with it.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  caddy:
+    image: caddy:2.11.4-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN:?APP_DOMAIN must be set (the hostname this stack serves)}
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL must be set (Let us Encrypt contact address)}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Issued certificates and the ACME account key. Losing this volume means re-issuing
+      # from Let's Encrypt, which is rate limited -- do not prune it casually.
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      frontend:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - edge-web
+      - edge-api
+
+  frontend:
+    image: ${IMAGE_REGISTRY:?IMAGE_REGISTRY must be set}/frontend:${IMAGE_TAG:?IMAGE_TAG must be a commit SHA, never latest}
+    restart: unless-stopped
+    healthcheck:
+      # busybox wget, which nginx:alpine ships. --spider would send HEAD; a plain GET
+      # discarded to /dev/null is what actually proves the SPA is being served.
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:80/index.html"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    networks:
+      - edge-web
+
+  backend:
+    image: ${IMAGE_REGISTRY}/backend:${IMAGE_TAG}
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      edge-tts:
+        condition: service_healthy
+    environment:
+      # Hardcoded, not ${SPRING_PROFILES_ACTIVE:-prod}. This file is only ever the
+      # production stack, and letting .env.prod silently select dev would re-enable
+      # Swagger, drop the Secure flag from the refresh cookie and serve the dev CSP.
+      SPRING_PROFILES_ACTIVE: prod
+      # The JVM is container-aware, but its default cap is 25% of the memory limit below,
+      # which is not enough heap for Flyway plus Hibernate on start. JAVA_TOOL_OPTIONS is
+      # read by the JVM itself, so this applies despite the exec-form ENTRYPOINT.
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=70
+      # Same origin, so CORS is not what makes the app work -- it is a deny list for
+      # everything else. The prod profile has no default for this and will not start
+      # without it.
+      CORS_ALLOWED_ORIGINS: https://${APP_DOMAIN}
+      FRONTEND_URL: https://${APP_DOMAIN}
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:?MYSQL_DATABASE must be set}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME:?must be set and must not be root}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD:?must be set}
+      JWT_SECRET: ${JWT_SECRET:?must be set, at least 32 bytes}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?must be set}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:?must be set}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?must be set}
+      MINIO_BUCKET: ${MINIO_BUCKET:-listening-audio}
+      TTS_ENABLED: ${TTS_ENABLED:-true}
+      EDGE_TTS_URL: http://edge-tts:8000
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_REDIS_PASSWORD: ${REDIS_PASSWORD:?must be set; it is also given to redis as requirepass}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      SENTRY_ENV: production
+    healthcheck:
+      # wget, not curl: the runtime stage is eclipse-temurin:17-jre-alpine, which ships
+      # wget but not curl.
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/actuator/health/liveness"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      # Generous because Flyway runs 46 migrations inside this window on a first boot.
+      start_period: 120s
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+    networks:
+      - edge-api
+      - internal
+
+  edge-tts:
+    image: ${IMAGE_REGISTRY}/edge-tts:${IMAGE_TAG}
+    restart: unless-stopped
+    environment:
+      EDGE_TTS_ENV: production
+      # Empty is correct here. Nothing in a browser calls this service -- the backend does,
+      # server side, over the internal network -- so there is no origin to allow.
+      EDGE_TTS_CORS_ALLOWED_ORIGINS: ${EDGE_TTS_CORS_ALLOWED_ORIGINS:-}
+      EDGE_TTS_ALLOWED_VOICES: ${EDGE_TTS_ALLOWED_VOICES:-en-US-GuyNeural,en-US-AriaNeural,en-GB-RyanNeural,en-GB-SoniaNeural,en-AU-WilliamNeural,en-AU-NatashaNeural}
+      EDGE_TTS_MAX_TEXT_LENGTH: ${EDGE_TTS_MAX_TEXT_LENGTH:-5000}
+      EDGE_TTS_MAX_REQUEST_BYTES: ${EDGE_TTS_MAX_REQUEST_BYTES:-20000}
+      EDGE_TTS_RATE_LIMIT_REQUESTS: ${EDGE_TTS_RATE_LIMIT_REQUESTS:-30}
+      EDGE_TTS_RATE_LIMIT_WINDOW_SECONDS: ${EDGE_TTS_RATE_LIMIT_WINDOW_SECONDS:-60}
+    healthcheck:
+      # python:3.10-slim ships neither curl nor wget, so the probe uses the standard library.
+      test: ["CMD", "python", "-c", "import urllib.request as u,sys; sys.exit(0 if u.urlopen('http://127.0.0.1:8000/health', timeout=3).status == 200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - internal
+
+  mysql:
+    image: mysql:8.0.46
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?must be set}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      # The application does not connect as root; these create its own account on a fresh
+      # volume. The image rejects MYSQL_USER=root, so SPRING_DATASOURCE_USERNAME has to be
+      # some other name.
+      MYSQL_USER: ${SPRING_DATASOURCE_USERNAME}
+      MYSQL_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      # Authenticated on purpose. An unauthenticated `mysqladmin ping` answers "alive"
+      # while the server is still initialising and refusing logins, which would let the
+      # backend start early and die on access denied.
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+    networks:
+      - internal
+
+  redis:
+    image: redis:8.10.1-alpine
+    restart: unless-stopped
+    # maxmemory matters because of the container limit below: without it the kernel OOM
+    # kills Redis outright and every refresh token in flight goes with it, where eviction
+    # degrades instead.
+    #
+    # volatile-ttl, not allkeys-lru, and the difference is not academic. Every key this
+    # application writes carries a TTL -- refresh JTIs and the blacklist 7 days, the AI
+    # content cache 24 hours, rate-limit buckets and login lockouts about a minute -- so
+    # under an LRU policy the eviction candidates are ranked by how recently they were
+    # read. A refresh token is written once at login and then not touched for hours, which
+    # makes it one of the *best* LRU candidates, while a busy AI cache entry looks hot.
+    # LRU would therefore sign users out to keep regenerable cache. volatile-ttl evicts the
+    # key expiring soonest instead, which puts rate-limit buckets and short-lived cache
+    # first and 7-day token state last -- the order we actually want, falling out of the
+    # data rather than needing per-prefix rules.
+    #
+    # 160mb under a 256M container, not 200mb: RDB snapshots fork the process, and
+    # copy-on-write means a write-heavy moment during a save can cost most of the dataset
+    # again. The headroom is what stops the kernel killing Redis mid-snapshot. The real
+    # working set here is single-digit megabytes, so this is a ceiling, not a constraint.
+    command: >-
+      redis-server
+      --requirepass ${REDIS_PASSWORD}
+      --maxmemory 160mb
+      --maxmemory-policy volatile-ttl
+    volumes:
+      # Refresh-token JTIs live here. Without a volume, restarting Redis signs every user
+      # out; the development stack accepts that, production should not.
+      - redis-data:/data
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a \"$$REDIS_PASSWORD\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    networks:
+      - internal
+
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    restart: unless-stopped
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+      # The web console is switched off rather than merely unpublished. Omitting
+      # --console-address does not disable it -- MinIO just binds it to a port of its own
+      # choosing -- and only the backend needs this service, over the S3 API. Administer
+      # it with `docker compose exec minio mc ...` instead.
+      MINIO_BROWSER: "off"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      # `mc`, not curl: curl was removed from the MinIO image, and the widely copied
+      # curl-based probe fails on every current release.
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging: *logging
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - internal
+
+volumes:
+  mysql-data:
+  minio-data:
+  redis-data:
+  caddy-data:
+  caddy-config:
+
+# Three networks, each holding exactly the pairs that need to talk.
+#
+# edge-web and edge-api are separate rather than one shared edge network, and that
+# separation is doing real work: it means the SPA's nginx cannot reach the backend at all.
+# nginx.conf still carries a /api/ proxy block for local development, and if nginx could
+# reach the backend here, a Caddyfile mistake would not fail loudly -- traffic would simply
+# take the longer path through nginx, which overwrites X-Forwarded-For with its own peer
+# address and silently collapses the per-IP auth rate limit into one global bucket. Putting
+# them on different networks makes that misconfiguration impossible instead of merely
+# unlikely.
+#
+# None is marked `internal: true`: the backend calls Gemini, SMTP and Sentry, and the TTS
+# sidecar calls Microsoft's speech endpoint, so cutting egress would break AI grading,
+# email and audio generation.
+networks:
+  edge-web:
+    driver: bridge
+  edge-api:
+    driver: bridge
+  internal:
+    driver: bridge

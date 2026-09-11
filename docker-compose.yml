@@ -1,3 +1,14 @@
+# Development stack: builds from the working tree and publishes ports for local tooling.
+# docker-compose.prod.yml is the production one -- it runs published images and publishes
+# nothing but Caddy.
+#
+# Every port below except the frontend's is bound to 127.0.0.1 rather than 0.0.0.0.
+# A bare "3306:3306" tells Docker to publish on every interface, and Docker writes that as
+# a DNAT rule that ufw does not filter -- so on any machine with a routable address, the
+# unauthenticated Redis and the database here were reachable from the network. Binding the
+# loopback address keeps every local workflow working (scripts still reach localhost:3306)
+# while making that impossible.
+
 services:
   frontend:
     build: ./frontend
@@ -13,7 +24,7 @@ services:
     build: ./backend
     restart: always
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     depends_on:
       mysql:
         condition: service_healthy
@@ -66,7 +77,7 @@ services:
     build: ./edge-tts
     restart: always
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       EDGE_TTS_ENV: production
       EDGE_TTS_CORS_ALLOWED_ORIGINS: ${EDGE_TTS_CORS_ALLOWED_ORIGINS:-}
@@ -82,7 +93,7 @@ services:
     image: mysql:8.0
     restart: always
     ports:
-      - "3306:3306"
+      - "127.0.0.1:3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -110,8 +121,8 @@ services:
     restart: always
     command: server /data --console-address ":9001"
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
@@ -124,7 +135,7 @@ services:
     image: redis:alpine
     restart: always
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     networks:
       - app-network
 

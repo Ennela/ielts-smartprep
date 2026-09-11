@@ -6,3 +6,12 @@ mvnw text eol=lf
 
 # Its Windows counterpart must keep CRLF for cmd.exe.
 mvnw.cmd text eol=crlf
+
+# Same reasoning for the deploy script, which runs under bash on the production server,
+# and for the Caddyfile and the env templates it reads. A CRLF checkout would put a
+# carriage return in APP_DOMAIN, so Caddy would try to obtain a certificate for a
+# hostname with an invisible character on the end.
+*.sh text eol=lf
+Caddyfile text eol=lf
+.env.example text eol=lf
+.env.prod.example text eol=lf

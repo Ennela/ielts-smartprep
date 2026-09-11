@@ -52,7 +52,21 @@ public class ListeningGenerationService {
 
     // ========== AI Generation ==========
 
-    @Transactional
+    /**
+     * Deliberately not {@code @Transactional} -- see the note on
+     * {@code ReadingGenerationService.generateQuiz}.
+     *
+     * <p>The four parts are generated in parallel on {@code ttsExecutor}, but this thread
+     * blocks on {@code join()} until all of them return. Under a transaction that meant a
+     * pooled connection was held for the slowest of four Gemini calls, and the transaction
+     * did not even cover the generation itself -- transactions are bound to a thread, so the
+     * work inside those futures was never part of it.
+     *
+     * <p>Removing it also closes a latent race. The loop below dispatches
+     * {@code generateAudioAsync} for each saved part; while this method was transactional
+     * that async task could start before the transaction committed and look for a row that
+     * was not visible yet. Each part now commits before its audio job is queued.
+     */
     public List<ListeningPartResponse> generateFullTest(Long userId, String topic) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -212,7 +226,7 @@ public class ListeningGenerationService {
         return clone;
     }
 
-    @Transactional
+    /** Not transactional: {@code generatePartInternal} calls Gemini. See {@link #generateFullTest}. */
     public ListeningPartResponse generatePart(Long userId, com.smartprep.dto.request.ListeningGenerateRequest request) {
         int partNumber;
         String focusQuestionType = null;
@@ -230,7 +244,7 @@ public class ListeningGenerationService {
         return generatePartInternal(userId, partNumber, request.getTopic(), focusQuestionType);
     }
 
-    @Transactional
+    /** Not transactional: {@code generatePartInternal} calls Gemini. See {@link #generateFullTest}. */
     public ListeningPartResponse generatePart(Long userId, int partNumber, String topic) {
         return generatePartInternal(userId, partNumber, topic, null);
     }
@@ -352,7 +366,15 @@ public class ListeningGenerationService {
 
     // ========== AI Post-Analysis ==========
 
-    @Transactional(readOnly = true)
+    /**
+     * Not transactional, despite being a pure read: the Gemini call at the end of this
+     * method would otherwise run while holding the connection the reads above used. A
+     * read-only transaction still checks a connection out of the pool.
+     *
+     * <p>The ownership guard still runs before the AI call, in the same order as before.
+     * Lazy access to {@code question.getPart()} resolves through the open-in-view
+     * EntityManager.
+     */
     public Map<String, Object> analyzeQuestion(Long userId, Long questionId) {
         ListeningQuestion question = questionRepository.findById(questionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Question not found"));
@@ -382,7 +404,7 @@ public class ListeningGenerationService {
         }
     }
 
-    @Transactional(readOnly = true)
+    /** Not transactional, for the same reason as {@link #analyzeQuestion}. */
     public Map<String, Object> extractVocabulary(Long userId, Long partId) {
         // contextExample quotes whole sentences from the transcript, so the same
         // already-submitted rule as analyzeQuestion applies here.

@@ -3,11 +3,9 @@ package com.smartprep.service;
 import com.smartprep.dto.request.WritingSubmitFullRequest;
 import com.smartprep.exception.WordCountTooLowException;
 import com.smartprep.model.entity.User;
-import com.smartprep.repository.ScoreHistoryRepository;
 import com.smartprep.repository.UserRepository;
 import com.smartprep.repository.WritingFullSubmissionRepository;
 import com.smartprep.repository.WritingPromptRepository;
-import com.smartprep.repository.WritingSubmissionRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,8 +18,8 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -30,13 +28,11 @@ import static org.mockito.Mockito.when;
 class WritingAssemblyServiceTest {
 
     @Mock private WritingPromptRepository promptRepository;
-    @Mock private ScoreHistoryRepository scoreHistoryRepository;
     @Mock private UserRepository userRepository;
     @Mock private WritingService writingService;
+    @Mock private WritingGradingPersistence gradingPersistence;
     @Mock private WritingQueryService writingQueryService;
     @Mock private WritingFullSubmissionRepository writingFullSubmissionRepository;
-    @Mock private WritingSubmissionRepository writingSubmissionRepository;
-    @Mock private ExamAttemptService examAttemptService;
 
     @InjectMocks
     private WritingAssemblyService writingAssemblyService;
@@ -57,9 +53,10 @@ class WritingAssemblyServiceTest {
                 () -> writingAssemblyService.submitFullWriting(1L, request));
 
         assertTrue(ex.getMessage().contains("Task 1"));
-        verify(writingService, never()).evaluateAndSaveSubmission(any(), anyLong(), any(), anyInt());
+        verify(writingService, never()).gradeOnly(any(), any(), anyBoolean());
+        verify(gradingPersistence, never())
+                .saveFullWriting(any(), any(), anyInt(), anyInt(), any(), any(), any(), any());
         verify(writingFullSubmissionRepository, never()).save(any());
-        verify(scoreHistoryRepository, never()).save(any());
     }
 
     @Test
@@ -78,9 +75,10 @@ class WritingAssemblyServiceTest {
                 () -> writingAssemblyService.submitFullWriting(1L, request));
 
         assertTrue(ex.getMessage().contains("Task 2"));
-        verify(writingService, never()).evaluateAndSaveSubmission(any(), anyLong(), any(), anyInt());
+        verify(writingService, never()).gradeOnly(any(), any(), anyBoolean());
+        verify(gradingPersistence, never())
+                .saveFullWriting(any(), any(), anyInt(), anyInt(), any(), any(), any(), any());
         verify(writingFullSubmissionRepository, never()).save(any());
-        verify(scoreHistoryRepository, never()).save(any());
     }
 
     private String words(int count) {
