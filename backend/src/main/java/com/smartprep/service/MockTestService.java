@@ -632,6 +632,9 @@ public class MockTestService {
                         .title(sub.getMockTest().getTitle())
                         .status(sub.getStatus())
                         .overallBand(sub.getOverallBand())
+                        .listeningScore(sub.getListeningScore())
+                        .readingScore(sub.getReadingScore())
+                        .writingScore(sub.getStatus() == SubmissionStatus.COMPLETED ? sub.getWritingScore() : null)
                         .submittedAt(sub.getSubmittedAt())
                         .build())
                 .collect(Collectors.toList());

@@ -5,6 +5,9 @@ import mockTestApi from '../api/mockTestApi';
 import { useToast } from '../context/ToastContext';
 import styles from '../styles/MockTest.module.css';
 
+// Listening and Reading are graded on submit; Writing is null until the AI grade lands.
+const formatBand = (band) => (band === null || band === undefined ? '—' : Number(band).toFixed(1));
+
 export default function MockTestLobbyPage() {
   const navigate = useNavigate();
   const { activeSession, startOrResumeTest, loadActiveSession, clearSession } = useMockTest();
@@ -693,16 +696,20 @@ export default function MockTestLobbyPage() {
           <div className={styles['history-header']}>
             <span>Test Title</span>
             <span>Overall Band</span>
+            <span>L · R · W</span>
             <span>Status</span>
             <span>Date & Actions</span>
           </div>
           {history.map(item => (
             <div key={item.submissionId} className={styles['history-row']}>
-              <span style={{ fontWeight: 600 }}>{item.title}</span>
+              <span className={styles['history-title']} style={{ fontWeight: 600 }}>{item.title}</span>
               <span className={styles['history-band']} style={{ color: item.status === 'COMPLETED' ? 'var(--secondary)' : 'inherit' }}>
                 {item.status === 'COMPLETED' ? (item.overallBand?.toFixed(1) || '—') : '—'}
               </span>
-              <span>
+              <span className={styles['history-skills']} title="Listening · Reading · Writing">
+                {formatBand(item.listeningScore)} · {formatBand(item.readingScore)} · {formatBand(item.writingScore)}
+              </span>
+              <span className={styles['history-status']}>
                 <span className={`${styles['status-badge']} ${
                   item.status === 'COMPLETED' ? styles['status-completed'] : 
                   item.status === 'GRADING' ? styles['status-grading'] : styles['status-writing']

@@ -345,7 +345,7 @@
 
 .history-header {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1.2fr;
+  grid-template-columns: 2fr 1fr 1.3fr 1fr 1.2fr;
   padding: 16px 24px;
   background: var(--surface-container-low);
   border-bottom: 1px solid var(--outline-variant);
@@ -356,7 +356,7 @@
 
 .history-row {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr 1.2fr;
+  grid-template-columns: 2fr 1fr 1.3fr 1fr 1.2fr;
   padding: 18px 24px;
   border-bottom: 1px solid var(--outline-variant);
   align-items: center;
@@ -376,6 +376,13 @@
 .history-band {
   font-weight: 700;
   font-size: 1.1rem;
+}
+
+.history-skills {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--on-surface-variant);
+  white-space: nowrap;
 }
 
 .status-badge {
@@ -412,4 +419,57 @@
 .date-text {
   font-size: 0.82rem;
   color: var(--on-surface-variant);
+}
+
+/* Below tablet width the five-column grid cannot fit, so each row becomes a small card:
+   title across the top, the figures in two columns with their own labels, and the
+   date + action across the bottom. The header row is redundant then and is hidden. */
+@media (max-width: 767px) {
+  .history-header {
+    display: none;
+  }
+
+  .history-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 12px;
+    padding: 16px;
+  }
+
+  .history-title,
+  .date-actions {
+    grid-column: 1 / -1;
+  }
+
+  .history-band::before,
+  .history-skills::before,
+  .history-status::before {
+    display: block;
+    font-family: var(--font-body);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--outline);
+    margin-bottom: 2px;
+  }
+
+  .history-band::before {
+    content: 'Overall';
+  }
+
+  .history-skills::before {
+    content: 'L \00B7 R \00B7 W';
+  }
+
+  .history-status::before {
+    content: 'Status';
+  }
+
+  .history-skills {
+    white-space: normal;
+  }
+
+  .date-actions {
+    flex-wrap: wrap;
+  }
 }
