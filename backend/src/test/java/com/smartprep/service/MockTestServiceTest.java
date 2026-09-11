@@ -136,7 +136,12 @@ public class MockTestServiceTest {
 
         assertNotNull(response);
         assertEquals(SkillType.READING, response.getCurrentSection());
-        assertEquals(3600, response.getTimeRemainingSeconds()); // fetched from readingSection duration
+        // Close to the configured Reading duration rather than exactly it: the response now
+        // reports the time computed from the section deadline, so the fraction of a second
+        // spent inside the call is already gone by the time it is measured.
+        assertTrue(response.getTimeRemainingSeconds() > 3595
+                        && response.getTimeRemainingSeconds() <= 3600,
+                "expected roughly the Reading duration, got " + response.getTimeRemainingSeconds());
     }
 
     @Test
@@ -163,7 +168,10 @@ public class MockTestServiceTest {
 
         assertNotNull(response);
         assertEquals(SkillType.WRITING, response.getCurrentSection());
-        assertEquals(3600, response.getTimeRemainingSeconds()); // fetched from writingSection duration
+        // See the note in testNextSection_TransitionListeningToReading.
+        assertTrue(response.getTimeRemainingSeconds() > 3595
+                        && response.getTimeRemainingSeconds() <= 3600,
+                "expected roughly the Writing duration, got " + response.getTimeRemainingSeconds());
     }
 
     @Test

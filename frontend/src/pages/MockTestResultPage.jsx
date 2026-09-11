@@ -200,8 +200,12 @@ export default function MockTestResultPage() {
 
   // ── 3. COMPLETED STATE VIEW ──
   // Extract writing details
-  const w1 = result.writingSubmission1;
-  const w2 = result.writingSubmission2;
+  // Field names follow MockTestSubmissionResponse. The page used to read
+  // writingSubmission1/2 and *Band, which the API has never sent, so the Writing panel
+  // rendered "No essay submission was registered" for every completed test and every
+  // band read as "—" while the count slot showed the band instead.
+  const w1 = result.writingTask1;
+  const w2 = result.writingTask2;
   const activeWritingSub = writingTab === 'task1' ? w1 : w2;
 
   // Safe error parser
@@ -304,8 +308,8 @@ export default function MockTestResultPage() {
               >
                 <span className="material-symbols-outlined" style={{ color: 'var(--primary)', marginBottom: '4px' }}>headphones</span>
                 <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--outline)', textTransform: 'uppercase' }}>Listening</p>
-                <p style={{ fontSize: '1.6rem', fontWeight: 700, margin: '4px 0' }}>{result.listeningBand?.toFixed(1) || '—'}</p>
-                <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Score: {result.listeningScore || 0}/40</p>
+                <p style={{ fontSize: '1.6rem', fontWeight: 700, margin: '4px 0' }}>{result.listeningScore?.toFixed(1) || '—'}</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Score: {result.listeningCorrectAnswers || 0}/40</p>
               </div>
 
               {/* Reading card */}
@@ -315,8 +319,8 @@ export default function MockTestResultPage() {
               >
                 <span className="material-symbols-outlined" style={{ color: 'var(--secondary)', marginBottom: '4px' }}>menu_book</span>
                 <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--outline)', textTransform: 'uppercase' }}>Reading</p>
-                <p style={{ fontSize: '1.6rem', fontWeight: 700, margin: '4px 0' }}>{result.readingBand?.toFixed(1) || '—'}</p>
-                <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Score: {result.readingScore || 0}/40</p>
+                <p style={{ fontSize: '1.6rem', fontWeight: 700, margin: '4px 0' }}>{result.readingScore?.toFixed(1) || '—'}</p>
+                <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Score: {result.readingCorrectAnswers || 0}/40</p>
               </div>
 
               {/* Writing card */}
@@ -326,7 +330,7 @@ export default function MockTestResultPage() {
               >
                 <span className="material-symbols-outlined" style={{ color: 'var(--tertiary-container)', marginBottom: '4px' }}>edit_note</span>
                 <p style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--outline)', textTransform: 'uppercase' }}>Writing</p>
-                <p style={{ fontSize: '1.6rem', fontWeight: 700, margin: '4px 0' }}>{result.writingBand?.toFixed(1) || '—'}</p>
+                <p style={{ fontSize: '1.6rem', fontWeight: 700, margin: '4px 0' }}>{result.writingScore?.toFixed(1) || '—'}</p>
                 <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Weighted Average</p>
               </div>
             </div>
@@ -691,7 +695,7 @@ export default function MockTestResultPage() {
                 You correctly answered <strong>{result.listeningCorrectAnswers || 0}</strong> out of 40 questions.
               </p>
               <p style={{ fontSize: '1.3rem', fontWeight: 600, color: 'var(--on-surface)', marginTop: '16px' }}>
-                Listening Band Score: <span style={{ color: 'var(--primary)', fontSize: '1.8rem', fontWeight: 800 }}>{result.listeningBand?.toFixed(1) || '—'}</span>
+                Listening Band Score: <span style={{ color: 'var(--primary)', fontSize: '1.8rem', fontWeight: 800 }}>{result.listeningScore?.toFixed(1) || '—'}</span>
               </p>
             </div>
 

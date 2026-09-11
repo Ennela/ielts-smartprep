@@ -17,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.Duration;
@@ -40,6 +42,15 @@ public class MockTestService {
 
     /** Grace window after a section deadline in which a client's answers are still accepted. */
     private static final int SUBMIT_GRACE_SECONDS = 60;
+
+    /**
+     * How long a submission may sit in GRADING before a retry is allowed to take it over.
+     *
+     * <p>Long enough that a genuinely running grade is never stolen — two Gemini calls with a
+     * 65-second timeout and three attempts each is a few minutes at worst — and short enough
+     * that a candidate whose grading died is not left watching a spinner for the afternoon.
+     */
+    private static final int STALE_GRADING_MINUTES = 15;
 
     /**
      * Get all available Mock Tests
@@ -71,6 +82,11 @@ public class MockTestService {
             if (!session.getMockTest().getMockTestId().equals(mockTestId)) {
                 session.setStatus(SessionStatus.EXPIRED);
                 sessionRepository.save(session);
+                session = createNewSession(user, mockTestId);
+            } else if (expireIfAbandoned(session)) {
+                // Same test, but the previous attempt ran out of time while nobody was
+                // looking. It is retired rather than resumed, and the candidate starts again
+                // from the beginning instead of inheriting a dead clock.
                 session = createNewSession(user, mockTestId);
             }
         } else {
@@ -105,11 +121,24 @@ public class MockTestService {
     /**
      * Get current active session
      */
-    @Transactional(readOnly = true)
+    // Not readOnly: reading an abandoned session is what retires it.
+    //
+    // noRollbackFor is load-bearing, not defensive. This method persists EXPIRED and then
+    // throws not-found so the caller sees no active session -- and a RuntimeException
+    // leaving a @Transactional method rolls the transaction back, which silently undid the
+    // write. The log said "expiring", every subsequent request re-evaluated and re-threw,
+    // the UI looked correct, and the row never left IN_PROGRESS. Found in a browser session
+    // against a real database; a unit test with a mocked repository cannot see a rollback.
+    @Transactional(noRollbackFor = ResourceNotFoundException.class)
     public MockTestSessionResponse getActiveSession(Long userId) {
         MockTestSession session = sessionRepository.findFirstByUserUserIdAndStatusOrderByStartedAtDesc(
                 userId, SessionStatus.IN_PROGRESS
         ).orElseThrow(() -> new ResourceNotFoundException("No active mock test session found"));
+
+        if (expireIfAbandoned(session)) {
+            // It was active a moment ago only in the sense that nothing had looked at it.
+            throw new ResourceNotFoundException("No active mock test session found");
+        }
 
         return mapToSessionResponse(session);
     }
@@ -117,7 +146,8 @@ public class MockTestService {
     /**
      * Get mock test session by ID
      */
-    @Transactional(readOnly = true)
+    // Not readOnly: reading an abandoned session is what retires it.
+    @Transactional
     public MockTestSessionResponse getSessionById(Long userId, Long sessionId) {
         MockTestSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Session not found with id: " + sessionId));
@@ -127,6 +157,10 @@ public class MockTestService {
             // "exists but is not yours" from "does not exist". Matches ReviewService.
             throw new ResourceNotFoundException("Session not found with id: " + sessionId);
         }
+
+        // Returned as EXPIRED rather than hidden, so the client can say what happened
+        // instead of showing a dead exam with a zeroed clock.
+        expireIfAbandoned(session);
 
         return mapToSessionResponse(session);
     }
@@ -152,7 +186,17 @@ public class MockTestService {
         // Answers come from the client; the clock does not. request.getTimeRemainingSeconds()
         // and request.getCurrentSection() are deliberately ignored — honouring them let a
         // caller grant itself unlimited time or skip ahead simply by posting different values.
-        session.setProgressJson(request.getProgressJson());
+        //
+        // Answers are also refused once the deadline has passed, and that is not belt and
+        // braces: submitExam grades session.progressJson, so an autosave accepted after the
+        // bell would be graded on the next submit. Guarding only the submit path left this
+        // one wide open -- post the answers here, then submit an empty payload.
+        if (isSectionExpired(session)) {
+            log.warn("Late autosave for session {}: {} deadline was {}, answers not accepted",
+                    sessionId, session.getCurrentSection(), currentSectionDeadline(session));
+        } else {
+            session.setProgressJson(request.getProgressJson());
+        }
         session.setTimeRemainingSeconds(serverTimeRemainingSeconds(session));
         session = sessionRepository.save(session);
 
@@ -177,7 +221,28 @@ public class MockTestService {
             throw new IllegalStateException("Session is not in progress");
         }
 
-        // Save progress first
+        // Advancing after the deadline is refused, and the session is retired.
+        //
+        // This is the hole that made abandoning an exam profitable. Sections are timed
+        // individually and entering one starts its clock, so a candidate who walked away
+        // during Listening and came back the next day was moved on to Reading with a full
+        // fresh hour. Nothing about leaving the exam cost them anything; the section timer
+        // only bound people who stayed. A session that ran out of time on a section it never
+        // finished can no longer be continued at all.
+        //
+        // Submitting is deliberately still allowed past the deadline -- see submitExam. That
+        // grades the answers saved in time and confers no advantage, so there is no integrity
+        // reason to destroy the candidate's work as well.
+        if (isSectionExpired(session)) {
+            log.warn("Late section advance for session {}: {} deadline was {}, expiring session",
+                    sessionId, session.getCurrentSection(), currentSectionDeadline(session));
+            session.setStatus(SessionStatus.EXPIRED);
+            session.setTimeRemainingSeconds(0);
+            sessionRepository.save(session);
+            throw new IllegalStateException(
+                    "The time for this section has run out, so the exam can no longer be continued.");
+        }
+
         session.setProgressJson(request.getProgressJson());
 
         // Transition section
@@ -239,8 +304,7 @@ public class MockTestService {
         // itself still succeeds using the last progress saved in time — rejecting it outright
         // would discard work that was done legitimately. The grace window covers auto-submit
         // latency at the moment the timer hits zero.
-        boolean lateSubmission = LocalDateTime.now().isAfter(
-                currentSectionDeadline(session).plusSeconds(SUBMIT_GRACE_SECONDS));
+        boolean lateSubmission = isSectionExpired(session);
         if (lateSubmission) {
             log.warn("Late submit for session {}: deadline was {}, keeping last saved progress",
                     sessionId, currentSectionDeadline(session));
@@ -254,12 +318,20 @@ public class MockTestService {
         MockTest mockTest = session.getMockTest();
         User user = session.getUser();
 
-        // Parse answers
+        // Score the progress held on the session, not the request payload.
+        //
+        // These are the same object on a normal submit, because the branch above has just
+        // copied the request onto the session. They differ in exactly one case: a late
+        // submission, where the session deliberately keeps the last progress saved before the
+        // deadline. Reading the request here scored the late answers anyway, which made the
+        // whole late-submission guard decorative -- a caller past the deadline still had its
+        // answers graded, it simply was not told so.
+        String scoredProgressJson = session.getProgressJson();
         Map<String, String> answersMap = new HashMap<>();
         try {
-            answersMap = objectMapper.readValue(request.getProgressJson(), new TypeReference<Map<String, String>>() {});
+            answersMap = objectMapper.readValue(scoredProgressJson, new TypeReference<Map<String, String>>() {});
         } catch (Exception e) {
-            log.error("Failed to parse progress JSON on submission: {}", request.getProgressJson(), e);
+            log.error("Failed to parse progress JSON on submission for session {}", sessionId, e);
         }
 
         // 1. Calculate Listening Score Instantly
@@ -354,7 +426,7 @@ public class MockTestService {
         // 4. Kick off Asynchronous Writing Evaluation via Gemini
         String task1Essay = answersMap.getOrDefault("w_task1", "");
         String task2Essay = answersMap.getOrDefault("w_task2", "");
-        asyncGrader.gradeWritingSubmissionsAsync(submission.getSubmissionId(), task1Essay, task2Essay);
+        dispatchGradingAfterCommit(submission.getSubmissionId(), task1Essay, task2Essay);
 
         return MockTestSubmissionResponse.builder()
                 .submissionId(submission.getSubmissionId())
@@ -376,13 +448,19 @@ public class MockTestService {
      * Get Mock Test Submission details
      */
     /**
-     * Re-run AI writing evaluation for a submission whose grading failed.
+     * Re-run AI writing evaluation for a submission that never produced a writing band.
      * <p>
      * A transient Gemini outage used to strand a submission in FAILED for good: the
      * listening and reading scores were already computed and saved, but the writing band
      * could never be produced and there was no way to ask for another attempt. The essays
      * are not stored on the submission itself, so they are read back from the session's
      * progress JSON — the same source the original submit used.
+     * <p>
+     * It also covers the harder case: a submission stuck in GRADING. Grading runs on an async
+     * executor, so a process that dies mid-run — a deploy, an OOM kill, a drain that timed
+     * out — leaves the row in GRADING with nothing alive to finish it. That state used to be
+     * unrecoverable, because retrying required FAILED and nothing ever moved it there. A
+     * GRADING submission older than {@link #STALE_GRADING_MINUTES} is treated as abandoned.
      */
     @Transactional
     public void regradeWriting(Long userId, Long submissionId) {
@@ -393,9 +471,21 @@ public class MockTestService {
             throw new ResourceNotFoundException("Submission not found with id: " + submissionId);
         }
 
-        if (sub.getStatus() != SubmissionStatus.FAILED) {
+        // Claim it before doing anything else. The conditional UPDATE decides eligibility and
+        // takes ownership in one statement, so two retries racing each other cannot both
+        // queue a grading run and produce two sets of essay rows for one sitting.
+        int claimed = submissionRepository.claimForRegrade(
+                submissionId,
+                SubmissionStatus.FAILED,
+                SubmissionStatus.GRADING,
+                LocalDateTime.now().minusMinutes(STALE_GRADING_MINUTES));
+
+        if (claimed == 0) {
+            // Deliberately says nothing about which of those it was: a completed submission,
+            // a grading run still in flight, and a retry that lost a race are all "not yours
+            // to retry right now".
             throw new IllegalStateException(
-                    "Only a failed grading can be retried. Current status: " + sub.getStatus());
+                    "This submission is not waiting to be re-graded. Current status: " + sub.getStatus());
         }
 
         MockTestSession session = sessionRepository.findById(sub.getSessionId())
@@ -416,11 +506,12 @@ public class MockTestService {
         String task1Essay = answersMap.getOrDefault("w_task1", "");
         String task2Essay = answersMap.getOrDefault("w_task2", "");
 
-        sub.setStatus(SubmissionStatus.GRADING);
-        submissionRepository.save(sub);
+        // No status write here. The claim above already moved it to GRADING, and it ran with
+        // clearAutomatically, so `sub` is a stale detached copy — saving it would merge the
+        // pre-claim state back over the row and undo the claim.
 
         log.info("Re-grading writing for submission {}", submissionId);
-        asyncGrader.gradeWritingSubmissionsAsync(submissionId, task1Essay, task2Essay);
+        dispatchGradingAfterCommit(submissionId, task1Essay, task2Essay);
     }
 
     @Transactional(readOnly = true)
@@ -582,6 +673,34 @@ public class MockTestService {
                 .build();
     }
 
+    /**
+     * Queue the async writing grade only once the surrounding transaction has committed.
+     *
+     * <p>Calling the grader directly from inside {@code submitExam} or {@code regradeWriting}
+     * handed the submission id to another thread before the row was committed. That thread
+     * opens its own transaction, so under any isolation level above READ UNCOMMITTED its
+     * {@code findById} came back empty, it logged "not found", and it aborted -- leaving the
+     * submission in GRADING with nothing left to finish it. Whether that happened depended on
+     * whether the executor thread or the commit won a race, which is why it was intermittent
+     * and why it showed up in a browser session rather than in the unit tests, where the
+     * repository is a mock and there is no commit to lose to.
+     *
+     * <p>Outside a transaction -- the unit tests -- there is nothing to wait for, so the
+     * grader is called directly and those tests keep verifying the dispatch.
+     */
+    private void dispatchGradingAfterCommit(Long submissionId, String task1Essay, String task2Essay) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            asyncGrader.gradeWritingSubmissionsAsync(submissionId, task1Essay, task2Essay);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                asyncGrader.gradeWritingSubmissionsAsync(submissionId, task1Essay, task2Essay);
+            }
+        });
+    }
+
     /** Configured length of one section, falling back to the IDP standard for that skill. */
     private int sectionDurationSeconds(MockTestSession session, SkillType section) {
         return session.getMockTest().getSections().stream()
@@ -596,6 +715,15 @@ public class MockTestService {
         LocalDateTime sectionStart = session.getSectionStartedAt() != null
                 ? session.getSectionStartedAt()
                 : session.getStartedAt();
+        if (sectionStart == null) {
+            // A session that has not been through @PrePersist yet has no start time, so there
+            // is no elapsed time to subtract: its section begins now and is owed its full
+            // length. Falling through to a null here used to be impossible because only
+            // submit and advance consulted the deadline, and both run on a persisted session;
+            // the response mapper now consults it too, on a session that may have just been
+            // built.
+            sectionStart = LocalDateTime.now();
+        }
         return sectionStart.plusSeconds(sectionDurationSeconds(session, session.getCurrentSection()));
     }
 
@@ -610,20 +738,64 @@ public class MockTestService {
         return (int) Math.max(0, remaining);
     }
 
-    /** True once the current section's deadline has passed, allowing a small submit grace period. */
+    /**
+     * Retire a session that ran out of time on a section it never finished.
+     *
+     * <p>Evaluated lazily, on the paths that read a session, so an abandoned exam reaches a
+     * settled state without a scheduler. Returns whether it expired.
+     *
+     * <p>The final section is deliberately exempt. A candidate sitting in Writing when the
+     * clock runs out has no further section to gain time on, so expiring them would destroy
+     * work rather than protect the exam; their submission is still accepted and graded on the
+     * answers saved in time. Everywhere else, running out of time on an unfinished section
+     * ends the attempt -- see nextSection for why.
+     */
+    private boolean expireIfAbandoned(MockTestSession session) {
+        if (session.getStatus() != SessionStatus.IN_PROGRESS
+                || session.getCurrentSection() == SkillType.WRITING
+                || !isSectionExpired(session)) {
+            return false;
+        }
+        log.info("Expiring abandoned session {}: {} deadline was {}",
+                session.getSessionId(), session.getCurrentSection(), currentSectionDeadline(session));
+        session.setStatus(SessionStatus.EXPIRED);
+        session.setTimeRemainingSeconds(0);
+        sessionRepository.save(session);
+        return true;
+    }
+
+    /**
+     * True once the current section's deadline has passed, allowing the submit grace period.
+     *
+     * <p>The single authority on "is this session past its time". It was previously dead code
+     * using a 10-second buffer while {@code submitExam} inlined its own 60-second check, so
+     * the two disagreed about when a request was late. Everything that cares now asks here.
+     */
     private boolean isSectionExpired(MockTestSession session) {
         return LocalDateTime.now().isAfter(
-                currentSectionDeadline(session).plusSeconds(ExamDurationConfig.DEADLINE_BUFFER_SECONDS));
+                currentSectionDeadline(session).plusSeconds(SUBMIT_GRACE_SECONDS));
     }
 
     private MockTestSessionResponse mapToSessionResponse(MockTestSession session) {
+        // Recomputed from the deadline every time, not read back from the stored column.
+        //
+        // timeRemainingSeconds is only written when the client happens to autosave, so on
+        // resume the stored value is however much time was left at the last sync. Start
+        // Listening, close the tab, come back half an hour later and the server handed back
+        // the full 2400 seconds -- the timer was authoritative while you were sitting in the
+        // exam and forgiving the moment you left it. A submitted or expired session keeps its
+        // stored zero.
+        int timeRemaining = session.getStatus() == SessionStatus.IN_PROGRESS
+                ? serverTimeRemainingSeconds(session)
+                : session.getTimeRemainingSeconds();
+
         MockTestSessionResponse.MockTestSessionResponseBuilder builder = MockTestSessionResponse.builder()
                 .sessionId(session.getSessionId())
                 .mockTestId(session.getMockTest().getMockTestId())
                 .title(session.getMockTest().getTitle())
                 .status(session.getStatus())
                 .currentSection(session.getCurrentSection())
-                .timeRemainingSeconds(session.getTimeRemainingSeconds())
+                .timeRemainingSeconds(timeRemaining)
                 .startedAt(session.getStartedAt())
                 .sectionStartedAt(session.getSectionStartedAt())
                 .lastSyncedAt(session.getLastSyncedAt())

@@ -79,11 +79,14 @@ class MockTestRegradeTest {
     void regrade_failedSubmission_requeuesWithStoredEssays() {
         MockTestSubmission sub = submission(SubmissionStatus.FAILED, OWNER_ID);
         when(submissionRepository.findById(SUBMISSION_ID)).thenReturn(Optional.of(sub));
+        when(submissionRepository.claimForRegrade(eq(SUBMISSION_ID), any(), any(), any())).thenReturn(1);
         when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(sessionWithEssays()));
 
         mockTestService.regradeWriting(OWNER_ID, SUBMISSION_ID);
 
-        assertEquals(SubmissionStatus.GRADING, sub.getStatus());
+        // The move to GRADING is the claim itself now, not a later write, so that two retries
+        // cannot both pass the check and both queue a run.
+        verify(submissionRepository).claimForRegrade(eq(SUBMISSION_ID), any(), any(), any());
         verify(asyncGrader).gradeWritingSubmissionsAsync(
                 eq(SUBMISSION_ID), eq("chart essay"), eq("opinion essay"));
     }
@@ -93,6 +96,8 @@ class MockTestRegradeTest {
     void regrade_completedSubmission_isRejected() {
         when(submissionRepository.findById(SUBMISSION_ID))
                 .thenReturn(Optional.of(submission(SubmissionStatus.COMPLETED, OWNER_ID)));
+        // The conditional UPDATE matches nothing, which is how ineligibility is expressed.
+        when(submissionRepository.claimForRegrade(eq(SUBMISSION_ID), any(), any(), any())).thenReturn(0);
 
         assertThrows(IllegalStateException.class,
                 () -> mockTestService.regradeWriting(OWNER_ID, SUBMISSION_ID));
@@ -117,6 +122,7 @@ class MockTestRegradeTest {
     void regrade_missingSession_reportsClearly() {
         when(submissionRepository.findById(SUBMISSION_ID))
                 .thenReturn(Optional.of(submission(SubmissionStatus.FAILED, OWNER_ID)));
+        when(submissionRepository.claimForRegrade(eq(SUBMISSION_ID), any(), any(), any())).thenReturn(1);
         when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.empty());
 
         // mock_test_submissions.session_id has no foreign key, so the session can genuinely
