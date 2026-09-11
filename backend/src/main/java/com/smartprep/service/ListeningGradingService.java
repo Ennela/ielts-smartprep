@@ -14,6 +14,7 @@ import com.smartprep.repository.ScoreHistoryRepository;
 import com.smartprep.repository.UserRepository;
 import com.smartprep.service.util.IeltsScoringUtils;
 import com.smartprep.service.util.QuestionOptionMapper;
+import com.smartprep.service.util.UserAnswerSnapshots;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -139,19 +140,7 @@ public class ListeningGradingService {
                 questionNo++;
                 String userAns = request.getAnswers().getOrDefault(q.getQuestionId(), "");
                 boolean correct = IeltsScoringUtils.isListeningCorrect(q.getCorrectAnswer(), userAns, q.getQuestionType().name());
-                String optSnapshot = null;
-                if (q.getOptions() != null && !q.getOptions().isEmpty()) {
-                    try {
-                        optSnapshot = objectMapper.writeValueAsString(
-                                q.getOptions().stream()
-                                        .map(o -> Map.of("label", o.getLabel(), "content", o.getContent()))
-                                        .collect(Collectors.toList()));
-                    } catch (Exception e) { log.warn("Failed to serialize options: {}", e.getMessage()); }
-                }
-                userAnswerList.add(UserAnswer.builder()
-                        .scoreHistory(history).questionNo(questionNo).questionText(q.getQuestionText())
-                        .questionType(q.getQuestionType().name()).userAnswer(userAns)
-                        .correctAnswer(q.getCorrectAnswer()).isCorrect(correct).optionsJson(optSnapshot).build());
+                userAnswerList.add(UserAnswerSnapshots.forListening(history, questionNo, q, userAns, correct, objectMapper));
             }
         }
         history.setUserAnswers(userAnswerList);

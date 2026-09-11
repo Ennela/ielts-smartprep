@@ -2,12 +2,16 @@ package com.smartprep.service.ai;
 
 import com.smartprep.model.entity.MockTest;
 import com.smartprep.model.entity.MockTestSubmission;
+import com.smartprep.model.entity.ScoreHistory;
 import com.smartprep.model.entity.User;
 import com.smartprep.model.entity.WritingPrompt;
 import com.smartprep.model.entity.WritingSubmission;
+import com.smartprep.model.enums.SkillType;
 import com.smartprep.model.enums.SubmissionStatus;
 import com.smartprep.repository.MockTestSubmissionRepository;
+import com.smartprep.repository.ScoreHistoryRepository;
 import com.smartprep.repository.UserRepository;
+import com.smartprep.service.MockTestService;
 import com.smartprep.repository.WritingPromptRepository;
 import com.smartprep.repository.WritingSubmissionRepository;
 import com.smartprep.service.util.IeltsScoringUtils;
@@ -46,6 +50,7 @@ public class MockTestGradingPersistence {
     private final WritingSubmissionRepository writingSubmissionRepository;
     private final WritingPromptRepository writingPromptRepository;
     private final UserRepository userRepository;
+    private final ScoreHistoryRepository scoreHistoryRepository;
 
     /**
      * Everything the Gemini calls need, read out of the database and detached from it.
@@ -145,6 +150,21 @@ public class MockTestGradingPersistence {
         submission.setOverallBand(roundedOverallBand);
         submission.setStatus(SubmissionStatus.COMPLETED);
         submissionRepository.save(submission);
+
+        // The writing band joins the sitting's Listening and Reading rows in score_history
+        // (written at submit time by MockTestService). Guarded, because this method can run
+        // more than once for one submission -- regradeWriting re-dispatches a FAILED or
+        // stalled grade -- and a second row would count the sitting twice in every average.
+        if (!scoreHistoryRepository.existsByMockTestSubmissionSubmissionIdAndSkillType(
+                submissionId, SkillType.WRITING)) {
+            scoreHistoryRepository.save(ScoreHistory.builder()
+                    .user(user)
+                    .skillType(SkillType.WRITING)
+                    .score(roundedWritingScore)
+                    .difficulty(MockTestService.MOCK_TEST_DIFFICULTY)
+                    .mockTestSubmission(submission)
+                    .build());
+        }
 
         log.info("Asynchronous grading successfully completed for MockTestSubmission ID: {}. Overall Band: {}",
                 submissionId, roundedOverallBand);

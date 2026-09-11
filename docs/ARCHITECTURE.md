@@ -340,6 +340,7 @@ erDiagram
     users ||--o{ mock_test_submissions : "user_id CASCADE"
     users ||--o{ writing_full_submissions : "user_id CASCADE"
     users ||--o{ exam_attempts : "user_id RESTRICT"
+    mock_test_submissions ||--o{ score_history : "mock_test_submission_id SET NULL (V47)"
 
     reading_quizzes ||--o{ reading_questions : "quiz_id CASCADE"
     reading_quizzes ||--o{ reading_quizzes : "parent_template_id SET NULL"
@@ -454,8 +455,10 @@ erDiagram
         bigint user_id FK
         varchar skill_type
         decimal score
+        varchar difficulty "MOCK_TEST cho bài mock (V47)"
         timestamp recorded_at
         int time_spent_seconds "V28"
+        bigint mock_test_submission_id FK "nullable, V47"
     }
     user_answers {
         bigint answer_id PK
@@ -535,6 +538,7 @@ erDiagram
 | `vocabulary` | UNIQUE `idx_user_word(user_id,word)` | `V22:22` |
 | `writing_full_submissions` | `idx_wfs_user(user_id)` | `V26:18` |
 | `exam_attempts` | `idx_attempt_user_skill_status(user_id,skill_type,status)` | `V27:18` |
+| `score_history` | `idx_sh_mock_test_submission(mock_test_submission_id)` | `V47` |
 
 **Index trùng lặp / thừa** (5 cái): `idx_users_username`+`idx_users_email` trùng UNIQUE constraint (`V1:3-4` vs `V1:12-13`); `idx_reading_quizzes_user` trùng `idx_rq_user`; `idx_writing_submissions_user` trùng `idx_ws_user`; `idx_listening_tests_user` trùng `idx_lt_user`; `idx_score_history_user_skill` là prefix của `idx_sh_user_skill_date`.
 
@@ -723,6 +727,7 @@ sequenceDiagram
 **Điểm cần nắm:**
 - Chấm Listening/Reading là **rule-based, không dùng AI**: so đáp án bằng `IeltsScoringUtils.isListeningCorrect`/`isReadingCorrect` (`service/util/IeltsScoringUtils.java:177-241`), quy band bằng bảng tra cứng (`service/util/IeltsScoringUtils.java:17-146`). Đây là lý do chúng chạy đồng bộ được.
 - Chỉ Writing phải gọi AI nên được đẩy sang `taskExecutor` (`config/AsyncConfig.java:25-34`).
+- **Mock test ghi `score_history` như 3 bài practice** (từ V47): Listening + Reading (kèm `user_answers`) ngay trong `submitExam` (`service/MockTestService.java`, `recordSkillHistory`), Writing trong `MockTestGradingPersistence.persistResults` sau khi AI chấm xong; `difficulty = "MOCK_TEST"`, cột `mock_test_submission_id` trỏ về submission. Nhờ vậy dashboard (`/stats`), `/analytics`, `AdaptiveService` và trang review `/history/{id}/answers` thấy được mock test. Regrade Writing không tạo dòng thứ hai: `persistResults` kiểm tra `existsByMockTestSubmissionSubmissionIdAndSkillType` trước khi ghi.
 - ⚠️ `MockTestAsyncGrader` vừa `@Async` vừa `@Transactional` (`service/ai/MockTestAsyncGrader.java:28-30`) → transaction giữ connection suốt 4 Gemini call.
 - So sánh: **cùng là chấm Writing bằng AI nhưng 2 endpoint hành xử khác nhau** — `/writing/grade` chạy đồng bộ (E.1), mock test chạy async. Đây là điểm bất nhất về thiết kế đáng để giải thích khi bị hỏi.
 

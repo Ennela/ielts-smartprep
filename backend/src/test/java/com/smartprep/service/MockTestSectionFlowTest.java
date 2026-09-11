@@ -48,6 +48,7 @@ class MockTestSectionFlowTest {
     @Mock private MockTestSessionRepository sessionRepository;
     @Mock private MockTestSubmissionRepository submissionRepository;
     @Mock private ListeningTestRepository listeningTestRepository;
+    @Mock private ScoreHistoryRepository scoreHistoryRepository;
     @Mock private UserRepository userRepository;
     @Mock private ObjectMapper objectMapper;
     @Mock private MockTestAsyncGrader asyncGrader;

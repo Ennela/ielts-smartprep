@@ -13,6 +13,7 @@ import com.smartprep.config.ExamDurationConfig;
 import com.smartprep.service.ai.MockTestAsyncGrader;
 import com.smartprep.service.util.IeltsScoringUtils;
 import com.smartprep.service.util.QuestionOptionMapper;
+import com.smartprep.service.util.UserAnswerSnapshots;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,6 +36,7 @@ public class MockTestService {
     private final MockTestSessionRepository sessionRepository;
     private final MockTestSubmissionRepository submissionRepository;
     private final ListeningTestRepository listeningTestRepository;
+    private final ScoreHistoryRepository scoreHistoryRepository;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
     private final MockTestAsyncGrader asyncGrader;
@@ -338,6 +340,7 @@ public class MockTestService {
         int listeningCorrect = 0;
         int totalListeningQuestions = 0;
         List<ListeningTestPart> listeningTestParts = new ArrayList<>();
+        List<UserAnswer> listeningAnswers = new ArrayList<>();
 
         ListeningTest listeningTest = ListeningTest.builder()
                 .user(user)
@@ -359,6 +362,8 @@ public class MockTestService {
                 if (userAnswer != null) {
                     partAnswersMap.put(q.getQuestionId().toString(), userAnswer);
                 }
+                listeningAnswers.add(UserAnswerSnapshots.forListening(null, totalListeningQuestions, q,
+                        userAnswer != null ? userAnswer : "", isCorrect, objectMapper));
             }
 
             String partAnswersJson = "{}";
@@ -387,6 +392,7 @@ public class MockTestService {
         // 2. Calculate Reading Score Instantly
         int readingCorrect = 0;
         int totalReadingQuestions = 0;
+        List<UserAnswer> readingAnswers = new ArrayList<>();
         for (ReadingQuiz quiz : mockTest.getReadingQuizzes()) {
             for (ReadingQuestion q : quiz.getQuestions()) {
                 totalReadingQuestions++;
@@ -395,6 +401,8 @@ public class MockTestService {
                 if (isCorrect) {
                     readingCorrect++;
                 }
+                readingAnswers.add(UserAnswerSnapshots.forReading(null, totalReadingQuestions, q,
+                        userAnswer != null ? userAnswer : "", isCorrect, objectMapper));
             }
         }
         // Use the paper's real module type: Academic and General Training diverge below
@@ -423,7 +431,16 @@ public class MockTestService {
                 .build();
         submission = submissionRepository.save(submission);
 
-        // 4. Kick off Asynchronous Writing Evaluation via Gemini
+        // 4. Record the two rule-graded skills the way a practice test does, so the
+        // dashboard, score trends, weakness analysis and adaptive difficulty see this
+        // sitting. Until now a candidate who only sat full mock tests had an empty
+        // dashboard. Writing follows once its asynchronous grade lands, in
+        // MockTestGradingPersistence; the link to the submission is what keeps a re-run of
+        // that grade from recording the sitting twice.
+        recordSkillHistory(user, submission, SkillType.LISTENING, listeningBand, "ACADEMIC", listeningAnswers);
+        recordSkillHistory(user, submission, SkillType.READING, readingBand, readingModuleType, readingAnswers);
+
+        // 5. Kick off Asynchronous Writing Evaluation via Gemini
         String task1Essay = answersMap.getOrDefault("w_task1", "");
         String task2Essay = answersMap.getOrDefault("w_task2", "");
         dispatchGradingAfterCommit(submission.getSubmissionId(), task1Essay, task2Essay);
@@ -638,6 +655,24 @@ public class MockTestService {
                         .submittedAt(sub.getSubmittedAt())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    /** Mock test sittings are tagged with this in score_history.difficulty. */
+    public static final String MOCK_TEST_DIFFICULTY = "MOCK_TEST";
+
+    private void recordSkillHistory(User user, MockTestSubmission submission, SkillType skill,
+                                    BigDecimal band, String moduleType, List<UserAnswer> answers) {
+        ScoreHistory history = ScoreHistory.builder()
+                .user(user)
+                .skillType(skill)
+                .score(band)
+                .difficulty(MOCK_TEST_DIFFICULTY)
+                .moduleType(moduleType)
+                .mockTestSubmission(submission)
+                .build();
+        answers.forEach(a -> a.setScoreHistory(history));
+        history.setUserAnswers(answers);
+        scoreHistoryRepository.save(history);
     }
 
     // ========== Mapper Methods ==========

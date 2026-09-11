@@ -53,6 +53,14 @@ public class ScoreHistory {
     @Builder.Default
     private Boolean autoSubmitted = false;
 
+    /**
+     * The full mock test sitting this row was written for; null for practice. One row per
+     * graded skill per submission -- see V47 for why the link exists.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "mock_test_submission_id")
+    private MockTestSubmission mockTestSubmission;
+
     @OneToMany(mappedBy = "scoreHistory", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("questionNo ASC")
     @Builder.Default
