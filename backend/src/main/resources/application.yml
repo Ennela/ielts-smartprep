@@ -152,6 +152,18 @@ app:
     access-key: ${MINIO_ACCESS_KEY}
     secret-key: ${MINIO_SECRET_KEY}
     bucket: ${MINIO_BUCKET:listening-audio}
+  # Mock test result analytics: what counts as weak / developing / strong. Read by
+  # AnalyticsThresholdConfig, which is the only place these rules live.
+  analytics:
+    # Listening and Reading slices classify on accuracy percent.
+    accuracy-weak-below: 60
+    accuracy-strong-from: 80
+    # Writing criteria have no "correct" count, so they classify on the band itself.
+    band-weak-below: 5.5
+    band-strong-from: 7.0
+    # A question-type or part group is only reported as a weakness with at least this many
+    # questions; smaller groups still appear in the breakdown but are too noisy to act on.
+    min-sample-size: 3
   rate-limit:
     capacity: 10
     refill-tokens: 10

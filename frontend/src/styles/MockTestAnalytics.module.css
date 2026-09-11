@@ -1,0 +1,474 @@
+/*
+ * Result dashboard for one mock test sitting. Mobile first: every grid collapses to a
+ * single column below 720px and the page never scrolls sideways.
+ */
+
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-bottom: 40px;
+}
+
+.section {
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-xl);
+  padding: 20px;
+}
+
+.section-title {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 4px 0;
+  color: var(--on-surface);
+}
+
+.section-question {
+  font-size: 0.85rem;
+  color: var(--on-surface-variant);
+  margin: 0 0 16px 0;
+}
+
+/* ── Summary ─────────────────────────────────────────────── */
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.overall-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px 16px;
+  background: var(--surface-container-low);
+  border-radius: var(--radius-lg);
+}
+
+.overall-band {
+  font-family: var(--font-heading);
+  font-size: 3rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--primary);
+}
+
+.overall-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--outline);
+  margin-top: 8px;
+}
+
+.overall-note {
+  font-size: 0.78rem;
+  color: var(--on-surface-variant);
+  margin-top: 10px;
+  line-height: 1.5;
+  max-width: 260px;
+}
+
+.band-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.band-card {
+  padding: 14px 12px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-container-low);
+  text-align: center;
+  border: 1px solid transparent;
+}
+
+.band-card.weakest {
+  border-color: var(--error);
+}
+
+.band-card.excluded {
+  border: 1px dashed var(--outline-variant);
+  background: transparent;
+}
+
+.band-skill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--outline);
+}
+
+.band-value {
+  font-family: var(--font-heading);
+  font-size: 1.7rem;
+  font-weight: 700;
+  margin: 4px 0;
+  color: var(--on-surface);
+}
+
+.band-value.muted {
+  color: var(--outline);
+  font-size: 1.1rem;
+}
+
+.band-meta {
+  font-size: 0.75rem;
+  color: var(--on-surface-variant);
+}
+
+.weakest-tag {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--on-error-container);
+  background: var(--error-container);
+  border-radius: var(--radius-full);
+  padding: 2px 8px;
+}
+
+/* ── Skill breakdown ─────────────────────────────────────── */
+
+.skill-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.skill-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
+.skill-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.skill-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--on-surface);
+}
+
+.skill-figures {
+  font-size: 0.8rem;
+  color: var(--on-surface-variant);
+}
+
+.bar-track {
+  height: 8px;
+  background: var(--surface-container-high);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s ease-out;
+}
+
+.bar-target {
+  position: absolute;
+  top: -2px;
+  width: 2px;
+  height: 12px;
+  background: var(--on-surface);
+  opacity: 0.6;
+}
+
+.level-chip {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: var(--radius-full);
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.level-weak {
+  color: var(--on-error-container);
+  background: var(--error-container);
+}
+
+.level-developing {
+  color: var(--on-tertiary-fixed-variant);
+  background: var(--tertiary-fixed);
+}
+
+.level-strong {
+  color: var(--on-secondary-fixed-variant);
+  background: var(--secondary-fixed);
+}
+
+.level-pending {
+  color: var(--on-surface-variant);
+  background: var(--surface-container-high);
+}
+
+/* ── Weakness ─────────────────────────────────────────────── */
+
+.weakness-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.weakness-column h4 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--outline);
+  margin: 0 0 8px 0;
+}
+
+.group-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.group-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 12px;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.group-label {
+  color: var(--on-surface);
+  overflow-wrap: anywhere;
+}
+
+.group-count {
+  font-size: 0.75rem;
+  color: var(--on-surface-variant);
+}
+
+.group-bar {
+  grid-column: 1 / -1;
+}
+
+.empty {
+  font-size: 0.85rem;
+  color: var(--outline);
+  margin: 0;
+}
+
+/* ── Progress ─────────────────────────────────────────────── */
+
+.trend-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.trend-card {
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-container-low);
+}
+
+.trend-skill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--outline);
+}
+
+.trend-value {
+  font-family: var(--font-heading);
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--on-surface);
+}
+
+.trend-delta {
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.trend-up { color: var(--secondary); }
+.trend-down { color: var(--error); }
+.trend-flat { color: var(--on-surface-variant); }
+
+.chart {
+  width: 100%;
+  height: 260px;
+  --series-listening: #2a78d6;
+  --series-reading: #eb6834;
+  --series-writing: #1baf7a;
+}
+
+:global([data-theme='dark']) .chart {
+  --series-listening: #3987e5;
+  --series-reading: #d95926;
+  --series-writing: #199e70;
+}
+
+.chart-tooltip {
+  background: var(--surface-container-lowest);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  color: var(--on-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.chart-tooltip p {
+  margin: 2px 0;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 8px 0 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.78rem;
+  color: var(--on-surface-variant);
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend-swatch {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.timeline-table-wrap {
+  overflow-x: auto;
+  margin-top: 16px;
+}
+
+.timeline-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  min-width: 420px;
+}
+
+.timeline-table th,
+.timeline-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--outline-variant);
+  white-space: nowrap;
+}
+
+.timeline-table th {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--outline);
+}
+
+.timeline-table tr.current td {
+  font-weight: 700;
+  background: var(--surface-container-low);
+}
+
+.timeline-table a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+/* ── Recommendations ─────────────────────────────────────── */
+
+.rec-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.rec-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  background: var(--surface-container-low);
+  border-left: 4px solid var(--primary);
+}
+
+.rec-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--on-surface);
+  margin: 0;
+}
+
+.rec-reason {
+  font-size: 0.82rem;
+  color: var(--on-surface-variant);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.rec-action {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+/* ── Breakpoints ─────────────────────────────────────────── */
+
+@media (min-width: 720px) {
+  .section {
+    padding: 24px 28px;
+  }
+
+  .summary-grid {
+    grid-template-columns: minmax(200px, 1fr) 2fr;
+    align-items: stretch;
+  }
+
+  .band-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .weakness-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .trend-row {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .rec-grid {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+
+  .chart {
+    height: 300px;
+  }
+}
