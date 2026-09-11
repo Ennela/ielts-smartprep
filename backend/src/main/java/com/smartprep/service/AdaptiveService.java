@@ -131,8 +131,11 @@ public class AdaptiveService {
             double lastAccuracy = total > 0 ? (double) correct / total : 0;
 
             String currentDiff = latest.getDifficulty();
-            if (currentDiff == null || "FULL_TEST".equals(currentDiff)) {
-                // Fallback to average/estimated mapping if previous difficulty is unknown or was a Full Test
+            if (currentDiff == null || "FULL_TEST".equals(currentDiff)
+                    || MockTestService.MOCK_TEST_DIFFICULTY.equals(currentDiff)) {
+                // Fallback to average/estimated mapping if previous difficulty is unknown or was a
+                // full paper -- a practice full test or a mock test sitting -- which has no single
+                // passage/part difficulty to step up or down from.
                 if (skillType == SkillType.READING) {
                     currentDiff = Difficulty.PASSAGE_1.name();
                 } else {

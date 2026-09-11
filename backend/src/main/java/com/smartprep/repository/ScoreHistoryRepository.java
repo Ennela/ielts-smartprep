@@ -49,4 +49,10 @@ public interface ScoreHistoryRepository extends JpaRepository<ScoreHistory, Long
 
     // Admin: count tests today
     long countByRecordedAtAfter(LocalDateTime since);
+
+    /**
+     * Whether a mock test sitting has already recorded this skill. Guards the asynchronous
+     * writing grade, which may run more than once for one submission.
+     */
+    boolean existsByMockTestSubmissionSubmissionIdAndSkillType(Long submissionId, SkillType skillType);
 }

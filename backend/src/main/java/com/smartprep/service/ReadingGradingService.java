@@ -12,18 +12,17 @@ import com.smartprep.repository.ReadingQuizRepository;
 import com.smartprep.repository.ScoreHistoryRepository;
 import com.smartprep.repository.UserRepository;
 import com.smartprep.service.util.IeltsScoringUtils;
+import com.smartprep.service.util.UserAnswerSnapshots;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import java.util.Optional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Scoring, submission, and score-history persistence for Reading quizzes.
@@ -96,7 +95,7 @@ public class ReadingGradingService {
         for (ReadingQuestion question : quiz.getQuestions()) {
             String ua = answers.getOrDefault(question.getQuestionId(), "");
             boolean correct = IeltsScoringUtils.isReadingCorrect(question.getQuestionType(), question.getCorrectAnswer(), ua);
-            userAnswerList.add(buildUserAnswer(history, question.getOrderIndex(), question, ua, correct));
+            userAnswerList.add(UserAnswerSnapshots.forReading(history, question.getOrderIndex(), question, ua, correct, objectMapper));
         }
         history.setUserAnswers(userAnswerList);
         scoreHistoryRepository.save(history);
@@ -127,7 +126,7 @@ public class ReadingGradingService {
                 question.setUserAnswer(userAnswer);
                 boolean correct = IeltsScoringUtils.isReadingCorrect(question.getQuestionType(), question.getCorrectAnswer(), userAnswer);
                 if (correct) { quizCorrect++; totalCorrect++; }
-                allUserAnswers.add(buildUserAnswer(null, questionCounter, question, userAnswer, correct));
+                allUserAnswers.add(UserAnswerSnapshots.forReading(null, questionCounter, question, userAnswer, correct, objectMapper));
             }
 
             // Per-passage band, scaled onto the same shared scale as the overall band below.
@@ -178,39 +177,6 @@ public class ReadingGradingService {
                 .quizResults(quizResults)
                 .timeSpentSeconds(timeSpentSeconds)
                 .autoSubmitted(autoSubmitted)
-                .build();
-    }
-
-    // =========================================================================
-    // Private helpers
-    // =========================================================================
-
-    private UserAnswer buildUserAnswer(ScoreHistory history, int questionNo,
-                                        ReadingQuestion question, String userAnswerText, boolean correct) {
-        String optionsSnapshot = null;
-        if (question.getOptions() != null && !question.getOptions().isEmpty()) {
-            try {
-                optionsSnapshot = objectMapper.writeValueAsString(
-                        question.getOptions().stream()
-                                .map(o -> Map.of("label", o.getLabel(), "content", o.getContent()))
-                                .collect(Collectors.toList()));
-            } catch (Exception e) {
-                log.warn("Failed to serialize options for question {}: {}", question.getQuestionId(), e.getMessage());
-            }
-        } else if (question.getOptionsJson() != null) {
-            optionsSnapshot = question.getOptionsJson();
-        }
-
-        return UserAnswer.builder()
-                .scoreHistory(history).questionNo(questionNo)
-                .questionText(question.getQuestionText())
-                .questionType(question.getQuestionType().name())
-                .userAnswer(userAnswerText).correctAnswer(question.getCorrectAnswer())
-                .isCorrect(correct).explanation(question.getExplanation())
-                .optionsJson(optionsSnapshot)
-                .evidenceText(question.getEvidenceText())
-                .evidenceOffset(question.getEvidenceOffset())
-                .evidenceLength(question.getEvidenceLength())
                 .build();
     }
 }
