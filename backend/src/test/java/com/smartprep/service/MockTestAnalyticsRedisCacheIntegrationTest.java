@@ -63,6 +63,7 @@ class MockTestAnalyticsRedisCacheIntegrationTest extends AbstractMySQLContainerT
             .withExposedPorts(6379);
 
     static {
+        requireDocker();
         REDIS.start();
     }
 

@@ -45,6 +45,7 @@ class V48BackfillMigrationIntegrationTest {
 
     @BeforeAll
     static void migrateToV47ThenSeedThenBackfill() throws SQLException {
+        AbstractMySQLContainerTest.requireDocker();
         MYSQL.start();
 
         Flyway toV47 = Flyway.configure()

@@ -3,6 +3,7 @@ package com.smartprep.repository;
 import org.junit.jupiter.api.Tag;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.MySQLContainer;
 
 /**
@@ -18,7 +19,29 @@ public abstract class AbstractMySQLContainerTest {
             .withPassword("test");
 
     static {
+        requireDocker();
         MYSQL.start();
+    }
+
+    /**
+     * Fails the suite up front, with one message that names the cause, when no Docker
+     * daemon is reachable.
+     *
+     * <p>Without this, {@code MYSQL.start()} throws deep inside Testcontainers and every
+     * class in the profile reports {@code ExceptionInInitializerError} or "Could not find
+     * a valid Docker environment" -- 43 stack traces that all mean "Docker Desktop is not
+     * running". This is a fail, not an {@code Assumptions.abort()}: aborting would skip
+     * the whole profile and let a CI run whose Docker was broken finish green, and these
+     * are the only tests that check the entities against the Flyway schema.
+     */
+    protected static void requireDocker() {
+        if (!DockerClientFactory.instance().isDockerAvailable()) {
+            // ASCII only: this is read on a Windows console, which garbles anything else.
+            String message = "Docker daemon is not running -- start Docker Desktop and run the "
+                    + "integration-tests profile again.";
+            System.err.println(System.lineSeparator() + "[integration-tests] " + message + System.lineSeparator());
+            throw new IllegalStateException(message);
+        }
     }
 
     @DynamicPropertySource
