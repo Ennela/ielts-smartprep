@@ -361,6 +361,8 @@ export interface HistoryItem {
   skillType: string;
   score: number;
   recordedAt: string;
+  /** set for rows a full mock test wrote; the review for those is the mock test report */
+  mockTestSubmissionId?: number;
 }
 
 /**

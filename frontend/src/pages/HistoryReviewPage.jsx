@@ -67,21 +67,45 @@ export default function HistoryReviewPage() {
   }
 
   if (!detail || !detail.answers || detail.answers.length === 0) {
+    // A row written for a full mock test (or backfilled for one sat before answers were
+    // recorded) has no per-question answers here; the mock test report has the full review.
+    const mockTestSubmissionId = detail?.mockTestSubmissionId;
     return (
       <div className="loading-screen">
         <div style={{ textAlign: 'center' }}>
           <svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="var(--text-secondary)" strokeWidth="1.5">
             <path d="M9 12h6m-3-3v6m-7 4h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
-          <p style={{ color: 'var(--text-secondary)', marginTop: '1rem' }}>
-            No detailed answers recorded for this test.
-          </p>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-            Detailed review is available for tests submitted after this feature was enabled.
-          </p>
-          <button className="btn btn-primary" onClick={() => navigate(-1)} style={{ marginTop: '1.5rem' }}>
-            Go Back
-          </button>
+          {mockTestSubmissionId ? (
+            <>
+              <p style={{ color: 'var(--text-secondary)', marginTop: '1rem' }}>
+                This entry is part of a full mock test.
+              </p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                The detailed answer review for it lives on the mock test report.
+              </p>
+              <button
+                className="btn btn-primary"
+                onClick={() => navigate(`/mock-tests/result/${mockTestSubmissionId}`)}
+                style={{ marginTop: '1.5rem' }}
+                id="review-open-mock-report"
+              >
+                View Mock Test Report
+              </button>
+            </>
+          ) : (
+            <>
+              <p style={{ color: 'var(--text-secondary)', marginTop: '1rem' }}>
+                No detailed answers recorded for this test.
+              </p>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                Detailed review is available for tests submitted after this feature was enabled.
+              </p>
+              <button className="btn btn-primary" onClick={() => navigate(-1)} style={{ marginTop: '1.5rem' }}>
+                Go Back
+              </button>
+            </>
+          )}
         </div>
       </div>
     );

@@ -55,6 +55,9 @@ public class ReviewService {
                 .totalQuestions(answers.size())
                 .correctCount(correctCount)
                 .answers(answerResponses)
+                // Reading the id off the lazy proxy does not load the submission.
+                .mockTestSubmissionId(history.getMockTestSubmission() == null
+                        ? null : history.getMockTestSubmission().getSubmissionId())
                 .build();
     }
 

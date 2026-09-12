@@ -16,4 +16,10 @@ public class HistoryDetailResponse {
     private int totalQuestions;
     private int correctCount;
     private List<UserAnswerResponse> answers;
+    /**
+     * The full mock test sitting this row came from; null for practice. Rows backfilled by
+     * V48 carry the link but no answers, so a client seeing this set with an empty list
+     * should send the user to the mock test report, where the full review lives.
+     */
+    private Long mockTestSubmissionId;
 }

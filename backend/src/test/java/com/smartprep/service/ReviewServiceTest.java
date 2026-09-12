@@ -3,6 +3,7 @@ package com.smartprep.service;
 import com.smartprep.dto.response.HistoryDetailResponse;
 import com.smartprep.dto.response.UserAnswerResponse;
 import com.smartprep.exception.ResourceNotFoundException;
+import com.smartprep.model.entity.MockTestSubmission;
 import com.smartprep.model.entity.ScoreHistory;
 import com.smartprep.model.entity.User;
 import com.smartprep.model.entity.UserAnswer;
@@ -97,6 +98,43 @@ class ReviewServiceTest {
         assertThat(result.getAnswers()).hasSize(2);
         assertThat(result.getAnswers().get(0).getIsCorrect()).isTrue();
         assertThat(result.getAnswers().get(1).getIsCorrect()).isFalse();
+    }
+
+    @Test
+    void getHistoryDetail_practiceRow_hasNoMockTestSubmissionId() {
+        when(scoreHistoryRepository.findById(10L)).thenReturn(Optional.of(history));
+        when(userAnswerRepository.findByScoreHistoryHistoryIdOrderByQuestionNoAsc(10L))
+                .thenReturn(answers);
+
+        HistoryDetailResponse result = reviewService.getHistoryDetail(10L, 1L);
+
+        assertThat(result.getMockTestSubmissionId()).isNull();
+    }
+
+    @Test
+    void getHistoryDetail_mockTestRowWithoutAnswers_stillNamesItsSubmission() {
+        // A row V48 backfilled for a sitting that predates V47: linked to its submission,
+        // but with no user_answers to review. The client needs the id to send the user to
+        // the mock test report instead of an empty review.
+        ScoreHistory backfilled = ScoreHistory.builder()
+                .historyId(11L)
+                .user(user)
+                .skillType(SkillType.LISTENING)
+                .score(new BigDecimal("7.0"))
+                .difficulty("MOCK_TEST")
+                .recordedAt(LocalDateTime.now())
+                .mockTestSubmission(MockTestSubmission.builder().submissionId(7L).build())
+                .build();
+        when(scoreHistoryRepository.findById(11L)).thenReturn(Optional.of(backfilled));
+        when(userAnswerRepository.findByScoreHistoryHistoryIdOrderByQuestionNoAsc(11L))
+                .thenReturn(List.of());
+
+        HistoryDetailResponse result = reviewService.getHistoryDetail(11L, 1L);
+
+        assertThat(result.getMockTestSubmissionId()).isEqualTo(7L);
+        assertThat(result.getAnswers()).isEmpty();
+        assertThat(result.getTotalQuestions()).isZero();
+        assertThat(result.getCorrectCount()).isZero();
     }
 
     @Test
