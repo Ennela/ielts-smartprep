@@ -16,6 +16,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
+import org.springframework.data.domain.Page;
 
 @RestController
 @RequestMapping("/api/v1/mock-tests")
@@ -189,9 +190,11 @@ public class MockTestController {
      */
     @GetMapping("/history")
     @Operation(summary = "Get user's mock test submission history")
-    public ResponseEntity<ApiResponse<List<MockTestHistoryResponse>>> getHistory(
-            @AuthenticationPrincipal User user) {
-        List<MockTestHistoryResponse> history = mockTestService.getHistory(user.getUserId());
+    public ResponseEntity<ApiResponse<Page<MockTestHistoryResponse>>> getHistory(
+            @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Page<MockTestHistoryResponse> history = mockTestService.getHistory(user.getUserId(), page, size);
         return ResponseEntity.ok(ApiResponse.ok(history));
     }
 }

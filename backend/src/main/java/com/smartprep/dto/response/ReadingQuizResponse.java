@@ -22,6 +22,9 @@ public class ReadingQuizResponse {
     private Integer timeLimitSeconds;
     private boolean submitted;
     private LocalDateTime createdAt;
+    /** Question count; on the template list this is all that is known about the questions. */
+    private Integer totalQuestions;
+    /** Null on the template list -- the questions are only loaded when a quiz is started. */
     private List<QuestionDto> questions;
     private List<Long> quizIds;
 

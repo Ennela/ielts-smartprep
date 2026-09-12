@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useMockTest } from '../context/MockTestContext';
 import mockTestApi from '../api/mockTestApi';
 import { useToast } from '../context/ToastContext';
+import Pagination from '../components/Pagination';
 import styles from '../styles/MockTest.module.css';
+
+const HISTORY_PAGE_SIZE = 10;
 
 // Listening and Reading are graded on submit; Writing is null until the AI grade lands.
 const formatBand = (band) => (band === null || band === undefined ? '—' : Number(band).toFixed(1));
@@ -14,6 +17,8 @@ export default function MockTestLobbyPage() {
   const { error: showErrorToast } = useToast();
   const [tests, setTests] = useState([]);
   const [history, setHistory] = useState([]);
+  const [historyPage, setHistoryPage] = useState(0);
+  const [historyPageInfo, setHistoryPageInfo] = useState({ totalPages: 0, totalElements: 0 });
   const [loading, setLoading] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -40,17 +45,22 @@ export default function MockTestLobbyPage() {
       })
       .finally(() => setLoading(false));
 
-    // Load attempt history
+  }, []);
+
+  // Attempt history, one page at a time; the whole history is no longer shipped.
+  useEffect(() => {
     setHistoryLoading(true);
-    mockTestApi.getHistory()
+    mockTestApi.getHistory(historyPage, HISTORY_PAGE_SIZE)
       .then(res => {
-        setHistory(res.data?.data || []);
+        const data = res.data?.data;
+        setHistory(data?.content || []);
+        setHistoryPageInfo({ totalPages: data?.totalPages || 0, totalElements: data?.totalElements || 0 });
       })
       .catch(err => {
         console.error('Failed to load history', err);
       })
       .finally(() => setHistoryLoading(false));
-  }, []);
+  }, [historyPage]);
 
   useEffect(() => {
     return () => {
@@ -740,6 +750,15 @@ export default function MockTestLobbyPage() {
           </span>
           <p style={{ color: 'var(--on-surface-variant)', margin: 0 }}>You haven't taken any full mock tests yet. Your reports will appear here once you complete an exam.</p>
         </div>
+      )}
+      {!historyLoading && history.length > 0 && (
+        <Pagination
+          page={historyPage}
+          totalPages={historyPageInfo.totalPages}
+          totalElements={historyPageInfo.totalElements}
+          size={HISTORY_PAGE_SIZE}
+          onPageChange={setHistoryPage}
+        />
       )}
     </div>
   );

@@ -36,6 +36,11 @@ public interface ReadingQuizRepository extends JpaRepository<ReadingQuiz, Long> 
            "AND q.deletedAt IS NULL ORDER BY q.createdAt DESC")
     List<ReadingQuiz> findByUserUserIdOrderByCreatedAtDesc(@Param("userId") Long userId);
 
+    /** The user's submitted quizzes, one page at a time; order comes from the Pageable. */
+    @Query("SELECT q FROM ReadingQuiz q WHERE q.user.userId = :userId " +
+           "AND q.submittedAt IS NOT NULL AND q.deletedAt IS NULL")
+    Page<ReadingQuiz> findSubmittedByUser(@Param("userId") Long userId, Pageable pageable);
+
     @Query("SELECT q FROM ReadingQuiz q WHERE q.quizId = :quizId " +
            "AND q.user.userId = :userId AND q.deletedAt IS NULL")
     Optional<ReadingQuiz> findByQuizIdAndUserUserId(

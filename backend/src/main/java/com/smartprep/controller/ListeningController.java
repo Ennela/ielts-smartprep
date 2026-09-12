@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import org.springframework.data.domain.Page;
 
 @RestController
 @RequestMapping("/api/v1/listening")
@@ -77,9 +78,11 @@ public class ListeningController {
      * GET /api/v1/listening/history
      */
     @GetMapping("/history")
-    public ResponseEntity<ApiResponse<List<ListeningHistoryResponse>>> getHistory(
-            @AuthenticationPrincipal User user) {
-        return ResponseEntity.ok(ApiResponse.ok(listeningQueryService.getHistory(user.getUserId())));
+    public ResponseEntity<ApiResponse<Page<ListeningHistoryResponse>>> getHistory(
+            @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.ok(listeningQueryService.getHistory(user.getUserId(), page, size)));
     }
 
     /**

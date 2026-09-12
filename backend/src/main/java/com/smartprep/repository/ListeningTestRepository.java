@@ -9,11 +9,15 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Repository
 public interface ListeningTestRepository extends JpaRepository<ListeningTest, Long> {
 
     List<ListeningTest> findByUserUserIdOrderBySubmittedAtDesc(Long userId);
+
+    Page<ListeningTest> findByUserUserId(Long userId, Pageable pageable);
 
     @Query("SELECT tp.part.partId FROM ListeningTestPart tp " +
            "WHERE tp.test.user.userId = :userId AND tp.test.submittedAt > :since")

@@ -24,8 +24,8 @@ const listeningApi = {
             autoSubmitted: autoSubmitted || false,
         }),
 
-    getHistory: () =>
-        axiosClient.get('/listening/history'),
+    getHistory: (page = 0, size = 12) =>
+        axiosClient.get('/listening/history', { params: { page, size } }),
 
     getTestResult: (testId) =>
         axiosClient.get(`/listening/${testId}/result`),

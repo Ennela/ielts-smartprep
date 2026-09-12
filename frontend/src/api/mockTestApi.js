@@ -44,8 +44,8 @@ const mockTestApi = {
   regradeWriting: (submissionId) =>
     axiosClient.post(`/mock-tests/submissions/${submissionId}/regrade`),
 
-  getHistory: () => 
-    axiosClient.get('/mock-tests/history')
+  getHistory: (page = 0, size = 10) =>
+    axiosClient.get('/mock-tests/history', { params: { page, size } })
 };
 
 export default mockTestApi;

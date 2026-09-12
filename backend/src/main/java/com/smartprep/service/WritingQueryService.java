@@ -15,6 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
+import com.smartprep.service.util.UserPageRequests;
 
 /**
  * Read-only queries for Writing submissions and history.
@@ -28,8 +31,9 @@ public class WritingQueryService {
     private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
-    public List<WritingHistoryResponse> getHistory(Long userId) {
-        return submissionRepository.findByUserUserIdOrderBySubmittedAtDesc(userId).stream()
+    public Page<WritingHistoryResponse> getHistory(Long userId, int page, int size) {
+        return submissionRepository.findByUserUserId(userId,
+                        UserPageRequests.of(page, size, Sort.by(Sort.Direction.DESC, "submittedAt")))
                 .map(s -> WritingHistoryResponse.builder()
                         .submissionId(s.getSubmissionId())
                         .promptId(s.getPrompt().getPromptId())
@@ -38,8 +42,7 @@ public class WritingQueryService {
                         .overallBand(s.getOverallBand())
                         .wordCount(s.getWordCount())
                         .submittedAt(s.getSubmittedAt())
-                        .build())
-                .collect(Collectors.toList());
+                        .build());
     }
 
     @Transactional(readOnly = true)
@@ -47,7 +50,11 @@ public class WritingQueryService {
         WritingSubmission submission = submissionRepository
                 .findBySubmissionIdAndUserUserId(submissionId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Submission not found"));
+        return toGradeResponse(submission);
+    }
 
+    /** The grade response for an essay already in hand -- no second lookup. */
+    public WritingGradeResponse toGradeResponse(WritingSubmission submission) {
         List<WritingGradeResponse.ErrorDto> errors;
         try {
             errors = objectMapper.readValue(

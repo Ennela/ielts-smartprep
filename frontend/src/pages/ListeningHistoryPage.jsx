@@ -1,19 +1,29 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import listeningApi from '../api/listeningApi';
+import Pagination from '../components/Pagination';
 import styles from '../styles/History.module.css';
+
+const PAGE_SIZE = 12;
 
 export default function ListeningHistoryPage() {
   const [history, setHistory] = useState([]);
+  const [page, setPage] = useState(0);
+  const [pageInfo, setPageInfo] = useState({ totalPages: 0, totalElements: 0 });
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // The endpoint returns one page at a time; the whole history is no longer shipped.
   useEffect(() => {
-    listeningApi.getHistory()
-      .then(res => setHistory(res.data?.data || []))
+    listeningApi.getHistory(page, PAGE_SIZE)
+      .then(res => {
+        const data = res.data?.data;
+        setHistory(data?.content || []);
+        setPageInfo({ totalPages: data?.totalPages || 0, totalElements: data?.totalElements || 0 });
+      })
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
-  }, []);
+  }, [page]);
 
   const getScoreColor = (score) => {
     const s = parseFloat(score);
@@ -114,6 +124,16 @@ export default function ListeningHistoryPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {!loading && history.length > 0 && (
+        <Pagination
+          page={page}
+          totalPages={pageInfo.totalPages}
+          totalElements={pageInfo.totalElements}
+          size={PAGE_SIZE}
+          onPageChange={setPage}
+        />
       )}
 
     </div>
