@@ -27,7 +27,9 @@ export interface ApiResponse<T> {
 
 /**
  * Spring Data's Page, serialised. Returned directly by endpoints that page with
- * a Pageable (currently GET /reading/templates). Distinct from PaginatedResult,
+ * a Pageable: GET /reading/templates and the five history endpoints
+ * (/writing/history, /writing/full-history, /reading/history,
+ * /listening/history, /mock-tests/history). Distinct from PaginatedResult,
  * which is hand-built by StatsService.
  */
 export interface SpringPage<T> {
@@ -163,6 +165,22 @@ export interface ReadingResult {
   questions: QuestionResult[];
 }
 
+/** com.smartprep.dto.response.ReadingHistoryResponse — one row of GET /reading/history */
+export interface ReadingHistoryItem {
+  quizId: number;
+  /** score_history row for the answer review; absent when none could be matched */
+  historyId?: number;
+  topic: string;
+  difficulty: string;
+  bandScore?: number;
+  correctAnswers?: number;
+  totalQuestions?: number;
+  createdAt?: string;
+  submittedAt?: string;
+  timeSpentSeconds?: number;
+  autoSubmitted?: boolean;
+}
+
 // ── Writing ─────────────────────────────────────────────────────────────────
 
 /** com.smartprep.dto.response.WritingPromptResponse */
@@ -204,6 +222,36 @@ export interface WritingGradeResult {
   submittedAt?: string;
 }
 
+/** com.smartprep.dto.response.WritingHistoryResponse — one row of GET /writing/history */
+export interface WritingHistoryItem {
+  submissionId: number;
+  promptId: number;
+  essayType: string;
+  /** first 100 characters of the prompt */
+  promptTextPreview: string;
+  overallBand?: number;
+  wordCount?: number;
+  submittedAt?: string;
+  timeSpentSeconds?: number;
+  autoSubmitted?: boolean;
+}
+
+/**
+ * com.smartprep.dto.response.WritingFullResultResponse — a two-task sitting, one row of
+ * GET /writing/full-history and the body of GET /writing/full-submissions/{id}.
+ */
+export interface WritingFullResult {
+  id: number;
+  overallWritingBand?: number;
+  task1Result: WritingGradeResult;
+  task2Result: WritingGradeResult;
+  submittedAt?: string;
+  timeSpentSeconds?: number;
+  timeSpentTask1?: number;
+  timeSpentTask2?: number;
+  autoSubmitted?: boolean;
+}
+
 // ── Listening ───────────────────────────────────────────────────────────────
 
 /** ListeningPartResponse.QuestionDto — narrower than the reading Question */
@@ -231,6 +279,42 @@ export interface ListeningPart {
   durationSeconds?: number;
   questionCount?: number;
   questions: ListeningQuestion[];
+}
+
+/**
+ * com.smartprep.dto.response.ListeningHistoryResponse — one row of GET /listening/history.
+ * listeningApi is still JavaScript; it references this through JSDoc.
+ */
+export interface ListeningHistoryItem {
+  testId: number;
+  historyId?: number;
+  testMode: string;
+  score?: number;
+  totalQuestions?: number;
+  correctAnswers?: number;
+  submittedAt?: string;
+  timeSpentSeconds?: number;
+  autoSubmitted?: boolean;
+}
+
+// ── Mock test ───────────────────────────────────────────────────────────────
+
+/**
+ * com.smartprep.dto.response.MockTestHistoryResponse — one row of GET /mock-tests/history.
+ * mockTestApi is still JavaScript; it references this through JSDoc.
+ */
+export interface MockTestHistoryItem {
+  submissionId: number;
+  mockTestId: number;
+  title: string;
+  /** SubmissionStatus: GRADING, COMPLETED or FAILED */
+  status: string;
+  overallBand?: number;
+  listeningScore?: number;
+  readingScore?: number;
+  /** null until the asynchronous essay grade has landed */
+  writingScore?: number;
+  submittedAt?: string;
 }
 
 // ── Stats ───────────────────────────────────────────────────────────────────

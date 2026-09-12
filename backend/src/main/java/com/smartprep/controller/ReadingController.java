@@ -9,6 +9,8 @@ import com.smartprep.service.ReadingAssemblyService;
 import com.smartprep.service.ReadingGradingService;
 import com.smartprep.service.ReadingQueryService;
 import com.smartprep.service.ai.ReadingGenerationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -111,10 +113,12 @@ public class ReadingController {
      * GET /api/v1/reading/history
      */
     @GetMapping("/history")
+    @Operation(summary = "Get reading quiz history for current user",
+            description = "Returns a Spring Data Page: the rows are under `content`, with `totalElements`, `totalPages`, `number` and `size` beside it. `size` is capped at 100.")
     public ResponseEntity<ApiResponse<Page<ReadingHistoryResponse>>> history(
             @AuthenticationPrincipal User user,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @Parameter(description = "Zero-based page number", example = "0") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size (max 100)", example = "20") @RequestParam(defaultValue = "20") int size) {
         Page<ReadingHistoryResponse> historyList = readingQueryService.getHistory(user.getUserId(), page, size);
         return ResponseEntity.ok(ApiResponse.ok(historyList));
     }
