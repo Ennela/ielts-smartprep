@@ -51,6 +51,14 @@ public interface ScoreHistoryRepository extends JpaRepository<ScoreHistory, Long
     long countByRecordedAtAfter(LocalDateTime since);
 
     /**
+     * The rows that could match one page of Reading or Listening results: those history
+     * pages pair a test with its history row by score and a five-second window around the
+     * submission time, and used to load the user's entire history to do it.
+     */
+    List<ScoreHistory> findByUserUserIdAndSkillTypeAndRecordedAtBetween(
+            Long userId, SkillType skillType, LocalDateTime from, LocalDateTime to);
+
+    /**
      * Whether a mock test sitting has already recorded this skill. Guards the asynchronous
      * writing grade, which may run more than once for one submission.
      */

@@ -26,6 +26,9 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
+import com.smartprep.service.util.UserPageRequests;
 
 @Service
 @RequiredArgsConstructor
@@ -641,8 +644,9 @@ public class MockTestService {
      * Get user's Mock Test attempt history
      */
     @Transactional(readOnly = true)
-    public List<MockTestHistoryResponse> getHistory(Long userId) {
-        return submissionRepository.findByUserUserIdOrderBySubmittedAtDesc(userId).stream()
+    public Page<MockTestHistoryResponse> getHistory(Long userId, int page, int size) {
+        return submissionRepository.findByUserUserId(userId,
+                        UserPageRequests.of(page, size, Sort.by(Sort.Direction.DESC, "submittedAt")))
                 .map(sub -> MockTestHistoryResponse.builder()
                         .submissionId(sub.getSubmissionId())
                         .mockTestId(sub.getMockTest().getMockTestId())
@@ -653,8 +657,7 @@ public class MockTestService {
                         .readingScore(sub.getReadingScore())
                         .writingScore(sub.getStatus() == SubmissionStatus.COMPLETED ? sub.getWritingScore() : null)
                         .submittedAt(sub.getSubmittedAt())
-                        .build())
-                .collect(Collectors.toList());
+                        .build());
     }
 
     /** Mock test sittings are tagged with this in score_history.difficulty. */

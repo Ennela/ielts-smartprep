@@ -1,24 +1,35 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import writingApi from '../api/writingApi';
+import Pagination from '../components/Pagination';
+
+const PAGE_SIZE = 10;
 
 export default function WritingHistoryPage() {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('single'); // 'single' or 'full'
+    const [singlePage, setSinglePage] = useState(0);
+    const [fullPage, setFullPage] = useState(0);
 
-    const { data: historyRes, isLoading, error } = useQuery({
-        queryKey: ['writingHistory'],
-        queryFn: () => writingApi.getHistory(),
+    // Each list is one page of a Spring Page; the whole history is no longer shipped.
+    const { data: historyRes, isLoading, isFetching, isPlaceholderData, error } = useQuery({
+        queryKey: ['writingHistory', singlePage],
+        queryFn: () => writingApi.getHistory(singlePage, PAGE_SIZE),
+        placeholderData: keepPreviousData,
     });
 
-    const { data: fullHistoryRes, isLoading: isFullLoading, error: fullError } = useQuery({
-        queryKey: ['writingFullHistory'],
-        queryFn: () => writingApi.getFullHistory(),
+    const { data: fullHistoryRes, isLoading: isFullLoading, isFetching: isFullFetching,
+            isPlaceholderData: isFullPlaceholder, error: fullError } = useQuery({
+        queryKey: ['writingFullHistory', fullPage],
+        queryFn: () => writingApi.getFullHistory(fullPage, PAGE_SIZE),
+        placeholderData: keepPreviousData,
     });
 
-    const history = historyRes?.data?.data?.items || historyRes?.data?.data || [];
-    const fullHistory = fullHistoryRes?.data?.data || [];
+    const historyPage = historyRes?.data?.data;
+    const fullHistoryPage = fullHistoryRes?.data?.data;
+    const history = historyPage?.content || [];
+    const fullHistory = fullHistoryPage?.content || [];
 
     const formatDate = (dateStr) => {
         return new Date(dateStr).toLocaleDateString('en-US', {
@@ -54,6 +65,11 @@ export default function WritingHistoryPage() {
     const currentLoading = activeTab === 'single' ? isLoading : isFullLoading;
     const currentError = activeTab === 'single' ? error : fullError;
     const currentItems = activeTab === 'single' ? history : fullHistory;
+    const currentPage = activeTab === 'single' ? singlePage : fullPage;
+    const currentPageInfo = activeTab === 'single' ? historyPage : fullHistoryPage;
+    const setCurrentPage = activeTab === 'single' ? setSinglePage : setFullPage;
+    const currentFetching = activeTab === 'single' ? isFetching : isFullFetching;
+    const currentPlaceholder = activeTab === 'single' ? isPlaceholderData : isFullPlaceholder;
 
     return (
         <div className="writing-page">
@@ -181,6 +197,18 @@ export default function WritingHistoryPage() {
                             </div>
                         ))}
                     </div>
+                )}
+
+                {!currentLoading && !currentError && currentItems.length > 0 && (
+                    <Pagination
+                        page={currentPage}
+                        totalPages={currentPageInfo?.totalPages || 0}
+                        totalElements={currentPageInfo?.totalElements || 0}
+                        size={PAGE_SIZE}
+                        onPageChange={setCurrentPage}
+                        isFetching={currentFetching}
+                        isPlaceholderData={currentPlaceholder}
+                    />
                 )}
             </div>
         </div>

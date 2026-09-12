@@ -19,6 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
+import com.smartprep.service.util.UserPageRequests;
 
 /**
  * Assembles full Writing mock tests and orchestrates multi-task submissions.
@@ -114,10 +117,10 @@ public class WritingAssemblyService {
     }
 
     @Transactional(readOnly = true)
-    public List<WritingFullResultResponse> getFullSubmissionsHistory(Long userId) {
-        return writingFullSubmissionRepository.findByUserUserIdOrderBySubmittedAtDesc(userId).stream()
-                .map(this::toFullResultResponse)
-                .collect(Collectors.toList());
+    public Page<WritingFullResultResponse> getFullSubmissionsHistory(Long userId, int page, int size) {
+        return writingFullSubmissionRepository.findByUserUserId(userId,
+                        UserPageRequests.of(page, size, Sort.by(Sort.Direction.DESC, "submittedAt")))
+                .map(this::toFullResultResponse);
     }
 
     @Transactional(readOnly = true)
@@ -131,8 +134,10 @@ public class WritingAssemblyService {
         return WritingFullResultResponse.builder()
                 .id(fullSub.getId())
                 .overallWritingBand(fullSub.getOverallBand())
-                .task1Result(writingQueryService.getSubmission(fullSub.getUser().getUserId(), fullSub.getTask1Submission().getSubmissionId()))
-                .task2Result(writingQueryService.getSubmission(fullSub.getUser().getUserId(), fullSub.getTask2Submission().getSubmissionId()))
+                // Built from the essays already loaded with the sitting, not looked up again
+                // by id: on the history page that was two more queries per row.
+                .task1Result(writingQueryService.toGradeResponse(fullSub.getTask1Submission()))
+                .task2Result(writingQueryService.toGradeResponse(fullSub.getTask2Submission()))
                 .submittedAt(fullSub.getSubmittedAt())
                 .timeSpentSeconds(fullSub.getTimeSpentSeconds())
                 .timeSpentTask1(fullSub.getTimeSpentTask1())

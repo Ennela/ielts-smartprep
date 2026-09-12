@@ -22,7 +22,7 @@ const readingApi = {
     submitQuiz: (quizId: number | string, answers: Record<number, string>, attemptId?: number | null, autoSubmitted?: boolean): Promise<AxiosResponse<ApiResponse<ReadingResult>>> =>
         axiosClient.post(`/reading/${quizId}/submit`, { answers, attemptId: attemptId || undefined, autoSubmitted: autoSubmitted || false }),
 
-    getHistory: (page = 0, size = 10): Promise<AxiosResponse<ApiResponse<any[]>>> =>
+    getHistory: (page = 0, size = 10): Promise<AxiosResponse<ApiResponse<SpringPage<any>>>> =>
         axiosClient.get('/reading/history', { params: { page, size } }),
 
     getTemplates: (topic?: string, difficulty?: string, page = 0, size = 10): Promise<AxiosResponse<ApiResponse<SpringPage<Quiz>>>> => {

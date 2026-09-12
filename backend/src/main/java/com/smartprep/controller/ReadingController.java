@@ -111,9 +111,11 @@ public class ReadingController {
      * GET /api/v1/reading/history
      */
     @GetMapping("/history")
-    public ResponseEntity<ApiResponse<List<ReadingHistoryResponse>>> history(
-            @AuthenticationPrincipal User user) {
-        List<ReadingHistoryResponse> historyList = readingQueryService.getHistory(user.getUserId());
+    public ResponseEntity<ApiResponse<Page<ReadingHistoryResponse>>> history(
+            @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Page<ReadingHistoryResponse> historyList = readingQueryService.getHistory(user.getUserId(), page, size);
         return ResponseEntity.ok(ApiResponse.ok(historyList));
     }
 

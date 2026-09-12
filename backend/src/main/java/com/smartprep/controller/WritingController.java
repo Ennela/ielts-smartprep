@@ -17,6 +17,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.springframework.data.domain.Page;
 
 @RestController
 @RequestMapping("/api/v1/writing")
@@ -72,9 +73,11 @@ public class WritingController {
      */
     @GetMapping("/history")
     @Operation(summary = "Get writing submission history for current user")
-    public ResponseEntity<ApiResponse<List<WritingHistoryResponse>>> getHistory(
-            @AuthenticationPrincipal User user) {
-        List<WritingHistoryResponse> history = writingQueryService.getHistory(user.getUserId());
+    public ResponseEntity<ApiResponse<Page<WritingHistoryResponse>>> getHistory(
+            @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Page<WritingHistoryResponse> history = writingQueryService.getHistory(user.getUserId(), page, size);
         return ResponseEntity.ok(ApiResponse.ok(history));
     }
 
@@ -136,9 +139,11 @@ public class WritingController {
      */
     @GetMapping("/full-history")
     @Operation(summary = "Get full writing test submission history for current user")
-    public ResponseEntity<ApiResponse<List<WritingFullResultResponse>>> getFullHistory(
-            @AuthenticationPrincipal User user) {
-        List<WritingFullResultResponse> history = writingAssemblyService.getFullSubmissionsHistory(user.getUserId());
+    public ResponseEntity<ApiResponse<Page<WritingFullResultResponse>>> getFullHistory(
+            @AuthenticationPrincipal User user,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Page<WritingFullResultResponse> history = writingAssemblyService.getFullSubmissionsHistory(user.getUserId(), page, size);
         return ResponseEntity.ok(ApiResponse.ok(history));
     }
 

@@ -11,10 +11,17 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 
 @Repository
 public interface MockTestSubmissionRepository extends JpaRepository<MockTestSubmission, Long> {
     List<MockTestSubmission> findByUserUserIdOrderBySubmittedAtDesc(Long userId);
+
+    /** One page of the user's sittings with the paper fetched alongside, not one query each. */
+    @EntityGraph(attributePaths = "mockTest")
+    Page<MockTestSubmission> findByUserUserId(Long userId, Pageable pageable);
     Optional<MockTestSubmission> findBySubmissionIdAndUserUserId(Long submissionId, Long userId);
 
     /**

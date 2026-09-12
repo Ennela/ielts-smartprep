@@ -1,18 +1,26 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import readingApi from '../api/readingApi';
+import Pagination from '../components/Pagination';
+
+const PAGE_SIZE = 10;
 
 export default function ReadingHistoryPage() {
   const navigate = useNavigate();
   const [history, setHistory] = useState([]);
+  const [page, setPage] = useState(0);
+  const [pageInfo, setPageInfo] = useState({ totalPages: 0, totalElements: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // The endpoint returns one page at a time; the whole history is no longer shipped.
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const res = await readingApi.getHistory();
-        setHistory(res.data.data || []);
+        const res = await readingApi.getHistory(page, PAGE_SIZE);
+        const data = res.data.data;
+        setHistory(data?.content || []);
+        setPageInfo({ totalPages: data?.totalPages || 0, totalElements: data?.totalElements || 0 });
       } catch (err) {
         setError(err.response?.data?.message || 'Unable to load history');
       } finally {
@@ -20,7 +28,7 @@ export default function ReadingHistoryPage() {
       }
     };
     fetchHistory();
-  }, []);
+  }, [page]);
 
   if (loading) {
     return <div className="loading-screen">Loading history...</div>;
@@ -69,7 +77,7 @@ export default function ReadingHistoryPage() {
               <tbody>
                 {history.map((item, idx) => (
                   <tr key={item.quizId}>
-                    <td>{idx + 1}</td>
+                    <td>{page * PAGE_SIZE + idx + 1}</td>
                     <td><span className="meta-badge">{item.topic}</span></td>
                     <td><span className="meta-badge module">{item.moduleType || 'ACADEMIC'}</span></td>
                     <td><span className="meta-badge diff">{item.difficulty?.replace('_', ' ')}</span></td>
@@ -117,6 +125,13 @@ export default function ReadingHistoryPage() {
                 ))}
               </tbody>
             </table>
+            <Pagination
+              page={page}
+              totalPages={pageInfo.totalPages}
+              totalElements={pageInfo.totalElements}
+              size={PAGE_SIZE}
+              onPageChange={setPage}
+            />
           </div>
         )}
       </div>

@@ -171,12 +171,12 @@ Quy ước cột **Auth**:
 | GET | `/api/v1/writing/prompts` | JWT | `essayType` (String tự do) | `ApiResponse<List<WritingPromptResponse>>` | `controller/WritingController.java:36-42` |
 | GET | `/api/v1/writing/prompts/{promptId}` | JWT | `@PathVariable` | `ApiResponse<WritingPromptResponse>` | `controller/WritingController.java:48-54` |
 | POST | `/api/v1/writing/grade` | JWT | `@Valid WritingGradeRequest`: `@NotNull promptId`, `@NotBlank @Size(max=10000) essayText` (`dto/request/WritingGradeRequest.java:15-20`) | `ApiResponse<WritingGradeResponse>` — **AI đồng bộ 💰** | `controller/WritingController.java:60-67` |
-| GET | `/api/v1/writing/history` | JWT | — | `List<WritingHistoryResponse>` (không phân trang) | `controller/WritingController.java:73-79` |
+| GET | `/api/v1/writing/history` | JWT | `page`, `size` (mặc định 0/20, cap 100 qua `service/util/UserPageRequests.java`) | `Page<WritingHistoryResponse>` — prompt fetch cùng query (`@EntityGraph`) | `controller/WritingController.java:73-79` |
 | GET | `/api/v1/writing/submissions/{submissionId}` | JWT | `@PathVariable` | `ApiResponse<WritingGradeResponse>` | `controller/WritingController.java:85-92` |
 | GET | `/api/v1/writing/assemble` | JWT | — (**không lấy user**, `controller/WritingController.java:100`) | `List<WritingPromptResponse>` | `controller/WritingController.java:98-103` |
 | POST | `/api/v1/writing/submit-full` | JWT | `@Valid WritingSubmitFullRequest` — ⚠️ `task1EssayText`/`task2EssayText` **không có `@Size`** (`dto/request/WritingSubmitFullRequest.java:13-23`) | `ApiResponse<WritingFullResultResponse>` — **AI đồng bộ 2 bài 💰💰** | `controller/WritingController.java:109-116` |
 | POST | `/api/v1/writing/generate-mock` | JWT | `@Valid WritingGenerateRequest` (`dto/request/WritingGenerateRequest.java:13-18`) | `List<WritingPromptResponse>` — **AI 💰** | `controller/WritingController.java:124-131` |
-| GET | `/api/v1/writing/full-history` | JWT | — | `List<WritingFullResultResponse>` (không phân trang) | `controller/WritingController.java:137-143` |
+| GET | `/api/v1/writing/full-history` | JWT | `page`, `size` (mặc định 0/20, cap 100 qua `service/util/UserPageRequests.java`) | `Page<WritingFullResultResponse>` — 2 essay + prompt fetch cùng query, không tra lại theo id | `controller/WritingController.java:137-143` |
 | GET | `/api/v1/writing/full-submissions/{id}` | JWT | `@PathVariable` | `ApiResponse<WritingFullResultResponse>` | `controller/WritingController.java:149-156` |
 
 ### C.3. ReadingController — `/api/v1/reading` (`backend/src/main/java/com/smartprep/controller/ReadingController.java:23`)
@@ -184,12 +184,12 @@ Quy ước cột **Auth**:
 | Method | Path | Auth | Input | Output | file:line |
 |---|---|---|---|---|---|
 | POST | `/api/v1/reading/generate` | JWT | `@Valid ReadingGenerateRequest`: `topic` có `@NotBlank @Size(max=100) @Pattern` whitelist, `difficulty` `@NotBlank @Size(max=20)` (`dto/request/ReadingGenerateRequest.java:15-26`) | 201 `ReadingQuizResponse` — **AI 💰** | `controller/ReadingController.java:36-43` |
-| GET | `/api/v1/reading/templates` | JWT | `topic`, `difficulty`, `page`, `size` (**không cap size**) | `Page<ReadingQuizResponse>` | `controller/ReadingController.java:49-57` |
+| GET | `/api/v1/reading/templates` | JWT | `topic`, `difficulty`, `page`, `size` (cap 100) | `Page<ReadingQuizResponse>` **rút gọn**: `questions = null`, `passageText` cắt 400 ký tự, thêm `totalQuestions` (1 query aggregate) — đề đầy đủ chỉ tải ở `/templates/{id}/start` | `controller/ReadingController.java:49-57` |
 | POST | `/api/v1/reading/templates/{templateId}/start` | JWT | `@PathVariable` | 201 `ReadingQuizResponse` (clone template cho user) | `controller/ReadingController.java:63-70` |
 | GET | `/api/v1/reading/{quizId}` | JWT | `@PathVariable` + userId từ principal | `ReadingQuizResponse` | `controller/ReadingController.java:76-82` |
 | POST | `/api/v1/reading/{quizId}/submit` | JWT | `@Valid ReadingSubmitRequest`: `@NotEmpty answers` (`dto/request/ReadingSubmitRequest.java:15-22`) | `ReadingResultResponse` — chấm rule-based | `controller/ReadingController.java:88-95` |
 | GET | `/api/v1/reading/{quizId}/result` | JWT | `@PathVariable` + userId | `ReadingResultResponse` | `controller/ReadingController.java:101-107` |
-| GET | `/api/v1/reading/history` | JWT | — | `List<ReadingHistoryResponse>` (không phân trang) | `controller/ReadingController.java:113-118` |
+| GET | `/api/v1/reading/history` | JWT | `page`, `size` (mặc định 0/20, cap 100 qua `service/util/UserPageRequests.java`) | `Page<ReadingHistoryResponse>` — chỉ quiz đã nộp (`findSubmittedByUser`), `score_history` chỉ nạp trong cửa sổ ±5s của trang | `controller/ReadingController.java:113-118` |
 | GET | `/api/v1/reading/assemble` | JWT | — | `List<ReadingQuizResponse>` (ghép 3 passage) | `controller/ReadingController.java:124-129` |
 | POST | `/api/v1/reading/submit-full` | JWT | `@Valid ReadingSubmitFullRequest`: `@NotEmpty quizIds/answers` (`dto/request/ReadingSubmitFullRequest.java:16-20`) | `ReadingFullResultResponse` | `controller/ReadingController.java:135-141` |
 
@@ -201,7 +201,7 @@ Quy ước cột **Auth**:
 | GET | `/api/v1/listening/parts/{partId}` | JWT | `@PathVariable` | `ListeningPartResponse` | `controller/ListeningController.java:47-50` |
 | GET | `/api/v1/listening/mock-test` | JWT | — | `List<ListeningPartResponse>` (4 part, tránh part đã làm 7 ngày) | `controller/ListeningController.java:56-60` |
 | POST | `/api/v1/listening/submit` | JWT | `@Valid ListeningSubmitRequest`: `@NotNull testMode`, `@NotEmpty partIds/answers` (`dto/request/ListeningSubmitRequest.java:13-29`) | `ListeningTestResponse` — chấm rule-based | `controller/ListeningController.java:66-72` |
-| GET | `/api/v1/listening/history` | JWT | — | `List<ListeningHistoryResponse>` | `controller/ListeningController.java:78-82` |
+| GET | `/api/v1/listening/history` | JWT | `page`, `size` (mặc định 0/20, cap 100 qua `service/util/UserPageRequests.java`) | `Page<ListeningHistoryResponse>` — `score_history` chỉ nạp trong cửa sổ ±5s của trang | `controller/ListeningController.java:78-82` |
 | GET | `/api/v1/listening/{testId}/result` | JWT | `@PathVariable testId` — ⚠️ **không truyền userId** | `ListeningTestResponse` | `controller/ListeningController.java:88-92` |
 | POST | `/api/v1/listening/ai-analyze/{questionId}` | JWT | `@PathVariable` | `Map<String,Object>` — **AI 💰** | `controller/ListeningController.java:98-102` |
 | POST | `/api/v1/listening/vocabulary/{partId}` | JWT | `@PathVariable` | `Map<String,Object>` — **AI 💰** | `controller/ListeningController.java:108-112` |
@@ -227,7 +227,7 @@ Quy ước cột **Auth**:
 | GET | `/api/v1/mock-tests/submissions/{submissionId}` | JWT | `@PathVariable` | `MockTestSubmissionResponse` | `controller/MockTestController.java:171-178` |
 | GET | `/api/v1/mock-tests/submissions/{submissionId}/analytics` | JWT | `@PathVariable` + userId từ principal (sai chủ → 404 cùng message với "không tồn tại") | `MockTestAnalyticsResponse`: `summary` (overall 3 kỹ năng, `speakingIncluded=false`), `skills`, `listening.byPart/byQuestionType/wrongQuestions`, `reading.byQuestionType/wrongQuestions`, `writing.criteria` (TR/CC/LR/GRA, Task 2 nhân đôi; `null` khi chưa COMPLETED), `weaknesses`, `progress` (timeline các lần COMPLETED + delta), `recommendations` (≤3). Tính on-read, **không AI**, ngưỡng weak/developing/strong đọc từ `app.analytics.*` (`config/AnalyticsThresholdConfig.java`). Phần question-level được cache Redis theo key `submissionId:status`, TTL 1h (`service/MockTestAnalyticsCalculator.java`, `config/CacheConfig.java`) | `controller/MockTestController.java:144-152` |
 | GET | `/api/v1/mock-tests/submissions/{submissionId}/status` | JWT | `@PathVariable` | `Map` {status, overallBand} — endpoint để FE poll | `controller/MockTestController.java:184-195` |
-| GET | `/api/v1/mock-tests/history` | JWT | — | `List<MockTestHistoryResponse>` (có thêm `listeningScore`/`readingScore`/`writingScore`; `writingScore` là `null` cho tới khi COMPLETED) | `controller/MockTestController.java:201-207` |
+| GET | `/api/v1/mock-tests/history` | JWT | `page`, `size` (mặc định 0/20, cap 100 qua `service/util/UserPageRequests.java`) | `Page<MockTestHistoryResponse>` — mock test fetch cùng query (có thêm `listeningScore`/`readingScore`/`writingScore`; `writingScore` là `null` cho tới khi COMPLETED) | `controller/MockTestController.java:201-207` |
 
 ### C.6. Các controller còn lại của user
 
@@ -340,7 +340,7 @@ erDiagram
     users ||--o{ mock_test_submissions : "user_id CASCADE"
     users ||--o{ writing_full_submissions : "user_id CASCADE"
     users ||--o{ exam_attempts : "user_id RESTRICT"
-    mock_test_submissions ||--o{ score_history : "mock_test_submission_id SET NULL (V47)"
+    mock_test_submissions ||--o{ score_history : "mock_test_submission_id SET NULL (V47, backfill V48)"
 
     reading_quizzes ||--o{ reading_questions : "quiz_id CASCADE"
     reading_quizzes ||--o{ reading_quizzes : "parent_template_id SET NULL"

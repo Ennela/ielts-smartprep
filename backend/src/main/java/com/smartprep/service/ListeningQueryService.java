@@ -20,6 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
+import com.smartprep.service.util.UserPageRequests;
 
 /**
  * Read-only queries, mock test assembly, and DTO mapping for Listening.
@@ -70,14 +73,25 @@ public class ListeningQueryService {
     }
 
     @Transactional(readOnly = true)
-    public List<ListeningHistoryResponse> getHistory(Long userId) {
-        List<ScoreHistory> listeningHistories = scoreHistoryRepository
-                .findByUserUserIdOrderByRecordedAtDesc(userId).stream()
-                .filter(sh -> sh.getSkillType() == SkillType.LISTENING)
-                .collect(Collectors.toList());
+    public Page<ListeningHistoryResponse> getHistory(Long userId, int page, int size) {
+        Page<ListeningTest> tests = testRepository.findByUserUserId(userId,
+                UserPageRequests.of(page, size, Sort.by(Sort.Direction.DESC, "submittedAt")));
 
-        return testRepository.findByUserUserIdOrderBySubmittedAtDesc(userId).stream()
-                .map(t -> {
+        // Only the history rows that could pair with this page, not the user's whole history:
+        // a row matches a test by score and a five-second window around its submission.
+        List<ScoreHistory> listeningHistories;
+        if (tests.isEmpty()) {
+            listeningHistories = List.of();
+        } else {
+            LocalDateTime from = tests.getContent().stream().map(ListeningTest::getSubmittedAt)
+                    .min(LocalDateTime::compareTo).get().minusSeconds(5);
+            LocalDateTime to = tests.getContent().stream().map(ListeningTest::getSubmittedAt)
+                    .max(LocalDateTime::compareTo).get().plusSeconds(5);
+            listeningHistories = scoreHistoryRepository
+                    .findByUserUserIdAndSkillTypeAndRecordedAtBetween(userId, SkillType.LISTENING, from, to);
+        }
+
+        return tests.map(t -> {
                     Long historyId = listeningHistories.stream()
                             .filter(sh -> sh.getScore().compareTo(t.getScore()) == 0)
                             .filter(sh -> !sh.getRecordedAt().isBefore(t.getSubmittedAt().minusSeconds(5)))
@@ -100,8 +114,7 @@ public class ListeningQueryService {
                             .timeSpentSeconds(matchedHistory != null ? matchedHistory.getTimeSpentSeconds() : null)
                             .autoSubmitted(matchedHistory != null ? matchedHistory.getAutoSubmitted() : null)
                             .build();
-                })
-                .collect(Collectors.toList());
+                });
     }
 
     // =========================================================================
