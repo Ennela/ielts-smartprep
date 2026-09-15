@@ -72,14 +72,33 @@ spring:
     # LazyInitializationException. It also silences Spring Boot's warning about relying on
     # the default, which is how this was configured before: by accident.
     #
-    # Note this does not undo the fix. open-in-view keeps the EntityManager open, not a
-    # connection -- ConnectionHoldingIntegrationTest asserts that a non-transactional read
-    # returns its connection to the pool immediately.
+    # open-in-view keeps the EntityManager open, not a connection -- but only with the
+    # handling mode set below. See the comment there.
     open-in-view: true
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
+        connection:
+          # Release the connection when each transaction ends, not when the session closes.
+          #
+          # Hibernate's own default for JDBC transactions is exactly this, but Spring's
+          # HibernateJpaVendorAdapter overrides it with DELAYED_ACQUISITION_AND_HOLD so it can
+          # prepare the connection (isolation level, read-only flag) for a transaction. HOLD
+          # means "release on session close", and with open-in-view the session is the whole
+          # web request. So the read-only transaction behind the first findById in an AI
+          # entry point checked out a pooled connection that stayed out across the Gemini
+          # round trip -- HikariCP's leak detector fired on a real full-writing submission
+          # (issue #13) -- and dropping @Transactional from those methods had removed the
+          # transaction but not the hold.
+          #
+          # Setting the mode here wins over the vendor adapter's value. Transactions still
+          # hold their connection until they commit or roll back (AFTER_STATEMENT would not:
+          # it releases mid-transaction and breaks commit on a resource-local setup). The
+          # cost is that Spring no longer sets the JDBC read-only flag or custom isolation
+          # levels on the connection; nothing here declares an isolation level.
+          # AiCallConnectionHoldingIntegrationTest asserts both halves through a real request.
+          handling_mode: DELAYED_ACQUISITION_AND_RELEASE_AFTER_TRANSACTION
   flyway:
     enabled: true
     locations: classpath:db/migration
