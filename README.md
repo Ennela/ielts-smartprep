@@ -442,10 +442,18 @@ Boot's default. Several of these methods walk lazy associations after their AI c
 Reading fallback clones a template quiz, `suggestVocabulary` gathers transcripts across a
 mock test — and with no transaction it is open-in-view that keeps an EntityManager available
 for them. Turning it off would break those paths with `LazyInitializationException`. It keeps
-an EntityManager open, not a connection, so it does not reintroduce the problem.
+an EntityManager open, not a connection — **provided** Hibernate releases connections when a
+transaction ends. Spring's `HibernateJpaVendorAdapter` sets Hibernate's handling mode to
+*hold until the session closes*, which under open-in-view is the whole request, so the
+read-only transaction behind the first repository read in an AI method kept its connection
+across the Gemini call. `application.yml` overrides the mode with
+`hibernate.connection.handling_mode=DELAYED_ACQUISITION_AND_RELEASE_AFTER_TRANSACTION`, and
+`AiCallConnectionHoldingIntegrationTest` drives a real request into a blocked Gemini stub and
+asserts the pool has nothing checked out.
 
 Hikari's `leak-detection-threshold` stays at 30 seconds as a backstop: if a connection is
-ever held that long again, the stack trace naming the culprit appears in the log.
+ever held that long again, the stack trace naming the culprit appears in the log. That is how
+the hold above was found, on a real full-writing submission.
 
 ### Monitoring
 
