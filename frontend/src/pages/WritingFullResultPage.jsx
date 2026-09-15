@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { formatBand } from '../utils/formatBand';
 import AiVocabularyButton from '../components/vocab/AiVocabularyButton';
 import VisualDataRenderer from '../components/writing/VisualDataRenderer';
 
@@ -153,7 +154,7 @@ export default function WritingFullResultPage() {
               fontWeight: 600, cursor: 'pointer', fontSize: '1rem'
             }}
           >
-            Task 1: Academic Report (Band {result.task1Result.overallBand})
+            Task 1: Academic Report (Band {formatBand(result.task1Result.overallBand)})
           </button>
           <button
             className={`tab-btn ${activeTaskTab === 2 ? 'active' : ''}`}
@@ -165,7 +166,7 @@ export default function WritingFullResultPage() {
               fontWeight: 600, cursor: 'pointer', fontSize: '1rem'
             }}
           >
-            Task 2: Essay Writing (Band {result.task2Result.overallBand})
+            Task 2: Essay Writing (Band {formatBand(result.task2Result.overallBand)})
           </button>
         </div>
 

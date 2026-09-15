@@ -3,6 +3,7 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import writingApi from '../api/writingApi';
 import Pagination from '../components/Pagination';
+import { formatBand } from '../utils/formatBand';
 
 const PAGE_SIZE = 10;
 
@@ -144,7 +145,7 @@ export default function WritingHistoryPage() {
                                         className="history-score"
                                         style={{ color: getScoreColor(item.overallBand) }}
                                     >
-                                        Band {item.overallBand}
+                                        Band {formatBand(item.overallBand)}
                                     </span>
                                 </div>
                             </div>
@@ -166,8 +167,8 @@ export default function WritingHistoryPage() {
                                     <span className="history-date">{formatDate(item.submittedAt)}</span>
                                 </div>
                                 <p className="history-prompt-preview" style={{ fontSize: '0.85rem', lineHeight: 1.5 }}>
-                                    Task 1: {formatType(item.task1Result?.essayType)} (Band {item.task1Result?.overallBand})<br/>
-                                    Task 2: {formatType(item.task2Result?.essayType)} (Band {item.task2Result?.overallBand})
+                                    Task 1: {formatType(item.task1Result?.essayType)} (Band {formatBand(item.task1Result?.overallBand)})<br/>
+                                    Task 2: {formatType(item.task2Result?.essayType)} (Band {formatBand(item.task2Result?.overallBand)})
                                 </p>
                                 <div className="history-card-bottom">
                                     <span className="history-words" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -191,7 +192,7 @@ export default function WritingHistoryPage() {
                                         className="history-score"
                                         style={{ color: getScoreColor(item.overallWritingBand), fontWeight: 700 }}
                                     >
-                                        Band {item.overallWritingBand}
+                                        Band {formatBand(item.overallWritingBand)}
                                     </span>
                                 </div>
                             </div>
