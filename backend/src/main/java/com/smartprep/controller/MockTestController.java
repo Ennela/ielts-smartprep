@@ -7,6 +7,7 @@ import com.smartprep.model.entity.User;
 import com.smartprep.service.MockTestAnalyticsService;
 import com.smartprep.service.MockTestService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -189,11 +190,12 @@ public class MockTestController {
      * GET /api/v1/mock-tests/history
      */
     @GetMapping("/history")
-    @Operation(summary = "Get user's mock test submission history")
+    @Operation(summary = "Get user's mock test submission history",
+            description = "Returns a Spring Data Page: the rows are under `content`, with `totalElements`, `totalPages`, `number` and `size` beside it. `size` is capped at 100.")
     public ResponseEntity<ApiResponse<Page<MockTestHistoryResponse>>> getHistory(
             @AuthenticationPrincipal User user,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @Parameter(description = "Zero-based page number", example = "0") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size (max 100)", example = "20") @RequestParam(defaultValue = "20") int size) {
         Page<MockTestHistoryResponse> history = mockTestService.getHistory(user.getUserId(), page, size);
         return ResponseEntity.ok(ApiResponse.ok(history));
     }

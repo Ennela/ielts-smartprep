@@ -161,6 +161,11 @@ public class StatsService {
                     item.put("skillType", h.getSkillType().name());
                     item.put("score", h.getScore());
                     item.put("recordedAt", h.getRecordedAt());
+                    // Present only for rows a full mock test wrote (or V48 backfilled); the
+                    // dashboard links those to the mock test report instead of the answer
+                    // review, which is empty for backfilled rows.
+                    item.put("mockTestSubmissionId", h.getMockTestSubmission() == null
+                            ? null : h.getMockTestSubmission().getSubmissionId());
                     return item;
                 })
                 .collect(Collectors.toList());

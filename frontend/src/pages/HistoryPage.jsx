@@ -25,22 +25,26 @@ export default function HistoryPage() {
       setLoading(true);
       setError('');
       try {
+        // Each endpoint returns a Spring Page; the rows are under `content`. This page
+        // merges the four skills client-side, so it asks for the largest page the server
+        // allows (size is capped at 100) rather than paging each one.
+        const emptyPage = { data: { data: { content: [] } } };
         const [readingRes, listeningRes, writingRes, mockRes] = await Promise.all([
           readingApi.getHistory(0, 100).catch(err => {
             console.error('Reading history fetch failed:', err);
-            return { data: { data: [] } };
+            return emptyPage;
           }),
-          listeningApi.getHistory().catch(err => {
+          listeningApi.getHistory(0, 100).catch(err => {
             console.error('Listening history fetch failed:', err);
-            return { data: { data: [] } };
+            return emptyPage;
           }),
           writingApi.getHistory(0, 100).catch(err => {
             console.error('Writing history fetch failed:', err);
-            return { data: { data: [] } };
+            return emptyPage;
           }),
-          mockTestApi.getHistory().catch(err => {
+          mockTestApi.getHistory(0, 100).catch(err => {
             console.error('Mock test history fetch failed:', err);
-            return { data: { data: [] } };
+            return emptyPage;
           })
         ]);
 
@@ -61,7 +65,7 @@ export default function HistoryPage() {
           }
         };
 
-        const readingData = (readingRes.data?.data?.items || readingRes.data?.data || []).map(item => ({
+        const readingData = (readingRes.data?.data?.content || []).map(item => ({
           id: item.historyId || item.quizId,
           date: new Date(item.submittedAt || item.createdAt),
           skill: 'Reading',
@@ -71,7 +75,7 @@ export default function HistoryPage() {
           actionUrl: item.quizId ? `/reading/result/${item.quizId}` : `/history/${item.historyId}/review`
         }));
 
-        const listeningData = (listeningRes.data?.data?.items || listeningRes.data?.data || []).map(item => ({
+        const listeningData = (listeningRes.data?.data?.content || []).map(item => ({
           id: item.historyId || item.testId,
           date: new Date(item.submittedAt),
           skill: 'Listening',
@@ -81,7 +85,7 @@ export default function HistoryPage() {
           actionUrl: item.historyId ? `/history/${item.historyId}/review` : `/listening/result/${item.testId}`
         }));
 
-        const writingData = (writingRes.data?.data?.items || writingRes.data?.data || []).map(item => {
+        const writingData = (writingRes.data?.data?.content || []).map(item => {
           const isTask1 = item.essayType?.includes('TASK1') || ['LINE_GRAPH', 'BAR_CHART', 'PIE_CHART', 'TABLE', 'MAP', 'DIAGRAM'].includes(item.essayType);
           return {
             id: item.submissionId,
@@ -94,7 +98,7 @@ export default function HistoryPage() {
           };
         });
 
-        const mockData = (mockRes.data?.data?.items || mockRes.data?.data || []).map(item => ({
+        const mockData = (mockRes.data?.data?.content || []).map(item => ({
           id: item.submissionId,
           date: new Date(item.submittedAt),
           skill: 'Mock Test',

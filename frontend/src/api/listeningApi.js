@@ -24,6 +24,10 @@ const listeningApi = {
             autoSubmitted: autoSubmitted || false,
         }),
 
+    /**
+     * One page of the user's listening history; the rows are under `content`.
+     * @returns {Promise<import('axios').AxiosResponse<import('./types').ApiResponse<import('./types').SpringPage<import('./types').ListeningHistoryItem>>>>}
+     */
     getHistory: (page = 0, size = 12) =>
         axiosClient.get('/listening/history', { params: { page, size } }),
 

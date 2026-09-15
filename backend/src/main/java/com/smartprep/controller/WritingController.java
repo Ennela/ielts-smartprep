@@ -9,6 +9,7 @@ import com.smartprep.service.WritingPromptService;
 import com.smartprep.service.WritingQueryService;
 import com.smartprep.service.WritingService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -72,11 +73,12 @@ public class WritingController {
      * GET /api/v1/writing/history
      */
     @GetMapping("/history")
-    @Operation(summary = "Get writing submission history for current user")
+    @Operation(summary = "Get writing submission history for current user",
+            description = "Returns a Spring Data Page: the rows are under `content`, with `totalElements`, `totalPages`, `number` and `size` beside it. `size` is capped at 100.")
     public ResponseEntity<ApiResponse<Page<WritingHistoryResponse>>> getHistory(
             @AuthenticationPrincipal User user,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @Parameter(description = "Zero-based page number", example = "0") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size (max 100)", example = "20") @RequestParam(defaultValue = "20") int size) {
         Page<WritingHistoryResponse> history = writingQueryService.getHistory(user.getUserId(), page, size);
         return ResponseEntity.ok(ApiResponse.ok(history));
     }
@@ -138,11 +140,12 @@ public class WritingController {
      * GET /api/v1/writing/full-history
      */
     @GetMapping("/full-history")
-    @Operation(summary = "Get full writing test submission history for current user")
+    @Operation(summary = "Get full writing test submission history for current user",
+            description = "Returns a Spring Data Page: the rows are under `content`, with `totalElements`, `totalPages`, `number` and `size` beside it. `size` is capped at 100.")
     public ResponseEntity<ApiResponse<Page<WritingFullResultResponse>>> getFullHistory(
             @AuthenticationPrincipal User user,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @Parameter(description = "Zero-based page number", example = "0") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size (max 100)", example = "20") @RequestParam(defaultValue = "20") int size) {
         Page<WritingFullResultResponse> history = writingAssemblyService.getFullSubmissionsHistory(user.getUserId(), page, size);
         return ResponseEntity.ok(ApiResponse.ok(history));
     }

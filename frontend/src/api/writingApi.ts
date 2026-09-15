@@ -1,6 +1,6 @@
 import type { AxiosResponse } from 'axios';
 import axiosClient from './axiosClient';
-import type { SpringPage, ApiResponse, WritingPrompt, WritingGradeResult } from './types';
+import type { SpringPage, ApiResponse, WritingPrompt, WritingGradeResult, WritingHistoryItem, WritingFullResult } from './types';
 
 interface GetPromptsParams {
     page: number;
@@ -21,7 +21,7 @@ const writingApi = {
     gradeEssay: (promptId: number | string, essayText: string): Promise<AxiosResponse<ApiResponse<WritingGradeResult>>> =>
         axiosClient.post('/writing/grade', { promptId, essayText }),
 
-    getHistory: (page = 0, size = 10): Promise<AxiosResponse<ApiResponse<SpringPage<any>>>> =>
+    getHistory: (page = 0, size = 10): Promise<AxiosResponse<ApiResponse<SpringPage<WritingHistoryItem>>>> =>
         axiosClient.get('/writing/history', { params: { page, size } }),
 
     getSubmission: (submissionId: number | string): Promise<AxiosResponse<ApiResponse<any>>> =>
@@ -36,10 +36,10 @@ const writingApi = {
     generateMockTest: (data: { topic?: string; difficulty: string; moduleType?: string }): Promise<AxiosResponse<ApiResponse<any>>> =>
         axiosClient.post('/writing/generate-mock', data),
 
-    getFullHistory: (page = 0, size = 10): Promise<AxiosResponse<ApiResponse<SpringPage<any>>>> =>
+    getFullHistory: (page = 0, size = 10): Promise<AxiosResponse<ApiResponse<SpringPage<WritingFullResult>>>> =>
         axiosClient.get('/writing/full-history', { params: { page, size } }),
 
-    getFullSubmission: (id: number | string): Promise<AxiosResponse<ApiResponse<any>>> =>
+    getFullSubmission: (id: number | string): Promise<AxiosResponse<ApiResponse<WritingFullResult>>> =>
         axiosClient.get(`/writing/full-submissions/${id}`),
 };
 

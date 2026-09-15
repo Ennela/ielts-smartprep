@@ -115,6 +115,16 @@ That runs 31 tests across `UserRepositoryTest`, `ReadingQuizRepositoryTest`,
 `ddl-auto=validate`, so they are the only tests that catch drift between the JPA entities
 and the Flyway schema.
 
+**The `integration-tests` profile requires a running Docker daemon.** If Docker Desktop is
+not running, the suite fails before any container starts, with one line naming the cause:
+
+```
+[integration-tests] Docker daemon is not running -- start Docker Desktop and run the integration-tests profile again.
+```
+
+It fails rather than skipping on purpose: skipping would let a CI run whose Docker was
+broken finish green with the schema unchecked.
+
 Frontend:
 
 ```bash

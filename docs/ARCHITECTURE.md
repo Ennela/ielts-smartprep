@@ -239,8 +239,8 @@ Quy ước cột **Auth**:
 | GET | `/api/v1/analytics/weakness` | JWT | `skill` optional | `WeaknessDto` | `controller/AnalyticsController.java:42-46` |
 | GET | `/api/v1/stats/overview` | JWT | — | `AnalyticsOverviewResponse` | `controller/StatsController.java:26-30` |
 | GET | `/api/v1/stats/trend` | JWT | `skill`, `period` (String tự do) | `ScoreTrendResponse` | `controller/StatsController.java:36-43` |
-| GET | `/api/v1/stats/history` | JWT | `skill`, `page`, `size` (không cap) | `Map<String,Object>` | `controller/StatsController.java:49-57` |
-| GET | `/api/v1/history/{historyId}/answers` | JWT | `@PathVariable` + userId | `HistoryDetailResponse` | `controller/ReviewController.java:24-30` |
+| GET | `/api/v1/stats/history` | JWT | `skill`, `page`, `size` (không cap) | `Map<String,Object>` — mỗi item có thêm `mockTestSubmissionId` (null với bài practice) để Dashboard link dòng mock test sang `/mock-tests/result/{id}` | `controller/StatsController.java:49-57` |
+| GET | `/api/v1/history/{historyId}/answers` | JWT | `@PathVariable` + userId | `HistoryDetailResponse` — có `mockTestSubmissionId` (null với bài practice); dòng V48 backfill có id nhưng `answers` rỗng, FE chuyển sang report mock test | `controller/ReviewController.java:24-30` |
 | POST | `/api/v1/history/{historyId}/answers/{answerId}/explain` | JWT | `@PathVariable` ×2 + userId | `UserAnswerResponse` — **AI 💰** | `controller/ReviewController.java:36-43` |
 | POST | `/api/v1/attempts/start` | JWT | `@Valid StartAttemptRequest`: `@NotNull skillType` (`dto/request/StartAttemptRequest.java:13-20`) | 201 `AttemptResponse` | `controller/ExamAttemptController.java:27-34` |
 | GET | `/api/v1/attempts/{attemptId}` | JWT | `@PathVariable` + userId | `AttemptResponse` | `controller/ExamAttemptController.java:40-46` |

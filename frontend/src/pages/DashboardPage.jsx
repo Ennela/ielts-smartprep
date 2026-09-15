@@ -356,10 +356,15 @@ export default function DashboardPage() {
               <tbody className="divide-y divide-outline-variant/10">
                 {history.items.map((item, index) => {
                   const config = getSkillConfig(item.skillType);
+                  // Rows a full mock test wrote have their review on the mock test report;
+                  // the per-answer review is empty for the ones backfilled by V48.
+                  const isMockTest = Boolean(item.mockTestSubmissionId);
                   return (
                     <tr 
                       key={item.historyId || index}
-                      onClick={() => navigate(`/history/${item.historyId}/review`)}
+                      onClick={() => navigate(isMockTest
+                        ? `/mock-tests/result/${item.mockTestSubmissionId}`
+                        : `/history/${item.historyId}/review`)}
                       className="hover:bg-surface-container-low/30 cursor-pointer transition-colors duration-150 group"
                     >
                       <td className="py-4 px-md">
@@ -379,7 +384,7 @@ export default function DashboardPage() {
                       </td>
                       <td className="py-4 px-md text-right">
                         <button className="text-primary hover:text-primary-container font-bold text-sm flex items-center gap-xs ml-auto group-hover:underline">
-                          Review Answers
+                          {isMockTest ? 'View Report' : 'Review Answers'}
                           <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                         </button>
                       </td>
