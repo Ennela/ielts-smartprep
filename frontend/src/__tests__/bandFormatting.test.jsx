@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import WritingHistoryPage from '../pages/WritingHistoryPage';
 import ReadingHistoryPage from '../pages/ReadingHistoryPage';
 import ReadingConfigPage from '../pages/ReadingConfigPage';
+import WritingFullResultPage from '../pages/WritingFullResultPage';
 
 /*
  * A band is a decimal with one place. BigDecimal 7.0 arrives as the JSON number 7, and
@@ -48,6 +49,24 @@ describe('band formatting', () => {
     expect(await screen.findByText('Band 6.0')).toBeInTheDocument();
     expect(screen.getByText(/Task 1: Line Graph \(Band 5\.0\)/)).toBeInTheDocument();
     expect(screen.getByText(/Task 2: Opinion \(Band 6\.5\)/)).toBeInTheDocument();
+  });
+
+  it('WritingFullResultPage shows whole-number task bands with one decimal', () => {
+    const result = {
+      id: 1, overallWritingBand: 8.5, submittedAt: '2026-09-15T14:48:41',
+      task1Result: { submissionId: 20, essayType: 'DIAGRAM', overallBand: 8, promptText: 'p1', essayText: 'e1', errors: [] },
+      task2Result: { submissionId: 21, essayType: 'ADVANTAGES_DISADVANTAGES', overallBand: 9, promptText: 'p2', essayText: 'e2', errors: [] },
+    };
+    render(
+      <MemoryRouter initialEntries={[{ pathname: '/writing/full-result', state: { result } }]}>
+        <WritingFullResultPage />
+      </MemoryRouter>
+    );
+
+    expect(screen.getByText(/Task 1: Academic Report \(Band 8\.0\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Task 2: Essay Writing \(Band 9\.0\)/)).toBeInTheDocument();
+    expect(screen.getByText('8.0')).toBeInTheDocument();
+    expect(screen.getByText('9.0')).toBeInTheDocument();
   });
 
   it('ReadingHistoryPage shows the band with one decimal', async () => {
