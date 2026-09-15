@@ -99,8 +99,9 @@ export default function WritingFullExamPage() {
   useEffect(() => {
     const init = async () => {
       try {
-        const t1Id = searchParams.get('task1');
-        const t2Id = searchParams.get('task2');
+        // WritingPromptListPage opens this page with ?task1Id=&task2Id= on both paths.
+        const t1Id = searchParams.get('task1Id');
+        const t2Id = searchParams.get('task2Id');
 
         if (!t1Id || !t2Id) {
           setError('Missing task prompts');
