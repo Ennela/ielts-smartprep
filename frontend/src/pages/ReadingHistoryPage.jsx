@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import readingApi from '../api/readingApi';
 import Pagination from '../components/Pagination';
+import { formatBand } from '../utils/formatBand';
 
 const PAGE_SIZE = 10;
 
@@ -82,7 +83,7 @@ export default function ReadingHistoryPage() {
                     <td><span className="meta-badge module">{item.moduleType || 'ACADEMIC'}</span></td>
                     <td><span className="meta-badge diff">{item.difficulty?.replace('_', ' ')}</span></td>
                     <td>{item.correctAnswers}/{item.totalQuestions}</td>
-                    <td><span className={`band-score band-${getBandClass(item.bandScore)}`}>{item.bandScore}</span></td>
+                    <td><span className={`band-score band-${getBandClass(item.bandScore)}`}>{formatBand(item.bandScore)}</span></td>
                     <td>
                       {item.timeSpentSeconds != null ? (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
