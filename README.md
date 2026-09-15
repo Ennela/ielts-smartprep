@@ -15,7 +15,7 @@ full mock tests, AI-assisted writing evaluation, and progress tracking.
 |---|---|
 | Frontend | React 19, Vite, TailwindCSS, React Router 7, TanStack Query |
 | Backend | Java 17, Spring Boot 3.2.5, Spring Security, JPA/Hibernate 6.4 |
-| Database | MySQL 8.0, Flyway (46 migrations) |
+| Database | MySQL 8.0, Flyway migrations (`backend/src/main/resources/db/migration`) |
 | Cache / rate limiting | Redis (Bucket4j, distributed) |
 | Object storage | MinIO (S3-compatible) — listening audio, avatars |
 | Text-to-speech | edge-tts, as a Python FastAPI sidecar |
@@ -64,7 +64,7 @@ python scripts/check_env.py
 docker compose up -d --build
 ```
 
-Flyway applies all 46 migrations on first boot, including the Cambridge 19 seed content, so
+Flyway applies every migration on first boot, including the Cambridge 19 seed content, so
 there is content to practise with immediately. Wait for the backend to report healthy:
 
 ```bash
@@ -98,7 +98,7 @@ cd backend
 ./mvnw verify
 ```
 
-That runs 385 unit tests and the JaCoCo coverage gate.
+That runs the unit tests (everything not tagged `integration`) and the JaCoCo coverage gate.
 
 Integration tests are **excluded from the default run** — they are tagged `integration` and
 need Docker for Testcontainers, which starts a real MySQL:
@@ -108,12 +108,15 @@ cd backend
 ./mvnw -Pintegration-tests verify
 ```
 
-That runs 31 tests across `UserRepositoryTest`, `ReadingQuizRepositoryTest`,
-`ListeningPartRepositoryTest`, `VocabularyRepositoryTest`,
-`ContentDeletionSafetyRepositoryTest`, `V43MigrationIntegrationTest` and
-`AuthRateLimitIntegrationTest`. They boot Spring against a real database with
-`ddl-auto=validate`, so they are the only tests that catch drift between the JPA entities
-and the Flyway schema.
+That runs every class tagged `@Tag("integration")` under `backend/src/test/java` — the
+repository tests, the migration tests (`V43…`, `V48…`), the MockMvc tests for the history
+and analytics endpoints, the mock test lifecycle tests, the connection-holding tests and the
+Redis cache test, which starts a Redis container as well. They boot Spring against a real
+database with `ddl-auto=validate`, so they are the only tests that catch drift between the
+JPA entities and the Flyway schema.
+
+Counts are deliberately not written down here: they changed on four of the last five pull
+requests and were wrong every time. Maven prints them.
 
 **The `integration-tests` profile requires a running Docker daemon.** If Docker Desktop is
 not running, the suite fails before any container starts, with one line naming the cause:
@@ -156,7 +159,7 @@ npm run lint && npm test && npm run build
                  ┌─────▼──┐ ┌───▼───┐ ┌───▼────┐ ┌───▼─────┐ ┌──▼──────┐
                  │ MySQL  │ │ Redis │ │ MinIO  │ │edge-tts │ │ Gemini  │
                  │ Flyway │ │refresh│ │ audio  │ │ FastAPI │ │ (ext.)  │
-                 │  ×45   │ │+limit │ │+avatar │ │         │ │         │
+                 │        │ │+limit │ │+avatar │ │         │ │         │
                  └────────┘ └───────┘ └────────┘ └─────────┘ └─────────┘
 ```
 
