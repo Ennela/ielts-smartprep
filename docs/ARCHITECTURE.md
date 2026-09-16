@@ -325,7 +325,7 @@ Ngược lại, backend có endpoint frontend không dùng: toàn bộ `Adaptive
 
 ### D.1. Tổng quan
 
-22 bảng, tất cả `ENGINE=InnoDB CHARSET=utf8mb4` (ví dụ `backend/src/main/resources/db/migration/V1__create_users_table.sql:14`), quản lý bằng **Flyway**. Source hiện có 41 migration `V1`→`V41` (`backend/src/main/resources/db/migration/`), nhưng DB dev thật mới được xác minh ở `V40`; V41 mới chỉ chạy thành công trên Testcontainers và phải được apply/verify riêng. `ddl-auto: none` ở base và `validate` ở dev/prod (`backend/src/main/resources/application.yml:10-17`, `application-dev.yml:10-14`, `application-prod.yml:10-14`).
+22 bảng, tất cả `ENGINE=InnoDB CHARSET=utf8mb4` (ví dụ `backend/src/main/resources/db/migration/V1__create_users_table.sql:14`), quản lý bằng **Flyway**. Source hiện có 48 migration `V1`→`V48` (`backend/src/main/resources/db/migration/`); DB dev local đã ở `V48` (kiểm `flyway_schema_history` ngày 2026-09-13). Con số này đổi theo từng PR có migration — đếm thư mục thay vì tin dòng này. `ddl-auto: none` ở base và `validate` ở dev/prod (`backend/src/main/resources/application.yml:10-17`, `application-dev.yml:10-14`, `application-prod.yml:10-14`).
 
 ### D.2. ERD
 
