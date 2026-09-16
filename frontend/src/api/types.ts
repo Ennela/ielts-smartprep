@@ -27,9 +27,9 @@ export interface ApiResponse<T> {
 
 /**
  * Spring Data's Page, serialised. Returned directly by endpoints that page with
- * a Pageable: GET /reading/templates and the five history endpoints
- * (/writing/history, /writing/full-history, /reading/history,
- * /listening/history, /mock-tests/history). Distinct from PaginatedResult,
+ * a Pageable: GET /reading/templates, the merged GET /history feed and the five
+ * per-skill history endpoints (/writing/history, /writing/full-history,
+ * /reading/history, /listening/history, /mock-tests/history). Distinct from PaginatedResult,
  * which is hand-built by StatsService.
  */
 export interface SpringPage<T> {
@@ -315,6 +315,24 @@ export interface MockTestHistoryItem {
   /** null until the asynchronous essay grade has landed */
   writingScore?: number;
   submittedAt?: string;
+}
+
+// ── History feed ────────────────────────────────────────────────────────────
+
+/**
+ * com.smartprep.dto.response.HistoryFeedItemResponse — one row of GET /history, the
+ * merged feed the History page lists. `refId` is the id in the skill's own table (quiz,
+ * listening test, writing submission, mock test submission); `title` is that skill's own
+ * label (reading topic, listening test mode, essay type, mock test title) for the client
+ * to format; `status` is set for mock tests only.
+ */
+export interface HistoryFeedItem {
+  skill: 'READING' | 'LISTENING' | 'WRITING' | 'MOCK_TEST';
+  refId: number;
+  title: string;
+  score?: number;
+  status?: string;
+  submittedAt: string;
 }
 
 // ── Stats ───────────────────────────────────────────────────────────────────

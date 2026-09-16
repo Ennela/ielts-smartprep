@@ -1,164 +1,120 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import readingApi from '../api/readingApi';
-import listeningApi from '../api/listeningApi';
-import writingApi from '../api/writingApi';
-import mockTestApi from '../api/mockTestApi';
+import historyApi from '../api/historyApi';
+
+const PAGE_SIZE = 8;
+const SKILL_PARAM = { 'Reading': 'READING', 'Writing': 'WRITING', 'Listening': 'LISTENING', 'Mock Tests': 'MOCK_TEST' };
+const TIME_DAYS = { 'Last 30 Days': 30, 'Last 3 Months': 90 };
+const SKILL_LABEL = { READING: 'Reading', LISTENING: 'Listening', WRITING: 'Writing', MOCK_TEST: 'Mock Test' };
+const TASK1_TYPES = ['LINE_GRAPH', 'BAR_CHART', 'PIE_CHART', 'TABLE', 'MAP', 'DIAGRAM'];
+
+const formatEssayType = (type) => {
+  if (!type) return 'Writing Essay';
+  switch (type) {
+    case 'CAUSE_AND_EFFECT': return 'Cause & Effect';
+    case 'PROBLEM_AND_SOLUTION': return 'Problem & Solution';
+    case 'ADVANTAGES_DISADVANTAGES': return 'Advantages & Disadvantages';
+    case 'TWO_PART_QUESTION': return 'Two-Part Question';
+    case 'LINE_GRAPH': return 'Line Graph';
+    case 'BAR_CHART': return 'Bar Chart';
+    case 'PIE_CHART': return 'Pie Chart';
+    case 'TABLE': return 'Table';
+    case 'MAP': return 'Map';
+    case 'DIAGRAM': return 'Diagram';
+    default: return type.charAt(0) + type.slice(1).toLowerCase();
+  }
+};
+
+// The server keeps each skill's own label and id; the row text and review link are
+// built here, the same way the four per-skill history pages do it.
+const toRow = (item) => {
+  const band = item.score === null || item.score === undefined ? '—' : `Band ${parseFloat(item.score).toFixed(1)}`;
+  switch (item.skill) {
+    case 'READING':
+      return { title: item.title || 'Academic Reading Practice', score: band, timeSpent: '58 mins', actionUrl: `/reading/result/${item.refId}` };
+    case 'LISTENING':
+      return { title: item.title === 'MOCK_TEST' ? 'Listening Mock Test' : 'Listening Section Practice', score: band, timeSpent: '30 mins', actionUrl: `/listening/result/${item.refId}` };
+    case 'WRITING':
+      return { title: `Task ${item.title?.includes('TASK1') || TASK1_TYPES.includes(item.title) ? '1' : '2'} Essay: ${formatEssayType(item.title)}`, score: band, timeSpent: '40 mins', actionUrl: `/writing/result/${item.refId}` };
+    default:
+      return { title: item.title || 'Full Mock Test', score: item.status === 'GRADING' ? 'Grading...' : band, timeSpent: '2h 45m', actionUrl: `/mock-tests/result/${item.refId}` };
+  }
+};
+
+// The API compares against submitted_at as a local date-time, so the cut-off is sent in
+// local time too, without a zone suffix.
+const localIso = (date) => {
+  const p = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}T${p(date.getHours())}:${p(date.getMinutes())}:${p(date.getSeconds())}`;
+};
+
+// Page numbers to show around the current one; a long history is not a row of fifty buttons.
+const pageWindow = (current, total) => {
+  const span = 2;
+  const from = Math.max(1, Math.min(current - span, total - span * 2));
+  const to = Math.min(total, from + span * 2);
+  const pages = [];
+  for (let i = from; i <= to; i++) pages.push(i);
+  return pages;
+};
 
 export default function HistoryPage() {
   const navigate = useNavigate();
   const [historyItems, setHistoryItems] = useState([]);
+  const [pageInfo, setPageInfo] = useState({ totalPages: 0, totalElements: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Filters state
+  // Filters state -- applied by the server; changing one goes back to the first page.
   const [skillFilter, setSkillFilter] = useState('All Skills');
   const [timeFilter, setTimeFilter] = useState('All Time');
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // Pagination
+  const [search, setSearch] = useState('');
+
+  // Pagination (1-based, as the buttons below count)
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+
+  // Typing in the search box does not fire a request per keystroke.
+  useEffect(() => {
+    const handle = setTimeout(() => setSearch(searchTerm.trim()), 300);
+    return () => clearTimeout(handle);
+  }, [searchTerm]);
 
   useEffect(() => {
-    const fetchAllHistory = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        // Each endpoint returns a Spring Page; the rows are under `content`. This page
-        // merges the four skills client-side, so it asks for the largest page the server
-        // allows (size is capped at 100) rather than paging each one.
-        const emptyPage = { data: { data: { content: [] } } };
-        const [readingRes, listeningRes, writingRes, mockRes] = await Promise.all([
-          readingApi.getHistory(0, 100).catch(err => {
-            console.error('Reading history fetch failed:', err);
-            return emptyPage;
-          }),
-          listeningApi.getHistory(0, 100).catch(err => {
-            console.error('Listening history fetch failed:', err);
-            return emptyPage;
-          }),
-          writingApi.getHistory(0, 100).catch(err => {
-            console.error('Writing history fetch failed:', err);
-            return emptyPage;
-          }),
-          mockTestApi.getHistory(0, 100).catch(err => {
-            console.error('Mock test history fetch failed:', err);
-            return emptyPage;
-          })
-        ]);
+    let cancelled = false;
+    const params = { page: currentPage - 1, size: PAGE_SIZE };
+    if (SKILL_PARAM[skillFilter]) params.skill = SKILL_PARAM[skillFilter];
+    if (TIME_DAYS[timeFilter]) params.from = localIso(new Date(Date.now() - TIME_DAYS[timeFilter] * 24 * 60 * 60 * 1000));
+    if (search) params.q = search;
 
-        const formatEssayType = (type) => {
-          if (!type) return 'Writing Essay';
-          switch (type) {
-            case 'CAUSE_AND_EFFECT': return 'Cause & Effect';
-            case 'PROBLEM_AND_SOLUTION': return 'Problem & Solution';
-            case 'ADVANTAGES_DISADVANTAGES': return 'Advantages & Disadvantages';
-            case 'TWO_PART_QUESTION': return 'Two-Part Question';
-            case 'LINE_GRAPH': return 'Line Graph';
-            case 'BAR_CHART': return 'Bar Chart';
-            case 'PIE_CHART': return 'Pie Chart';
-            case 'TABLE': return 'Table';
-            case 'MAP': return 'Map';
-            case 'DIAGRAM': return 'Diagram';
-            default: return type.charAt(0) + type.slice(1).toLowerCase();
-          }
-        };
-
-        const readingData = (readingRes.data?.data?.content || []).map(item => ({
-          id: item.historyId || item.quizId,
-          date: new Date(item.submittedAt || item.createdAt),
-          skill: 'Reading',
-          title: item.topic || 'Academic Reading Practice',
-          score: item.bandScore ? `Band ${parseFloat(item.bandScore).toFixed(1)}` : (item.correctAnswers !== undefined ? `${item.correctAnswers}/${item.totalQuestions}` : '—'),
-          timeSpent: '58 mins',
-          actionUrl: item.quizId ? `/reading/result/${item.quizId}` : `/history/${item.historyId}/review`
-        }));
-
-        const listeningData = (listeningRes.data?.data?.content || []).map(item => ({
-          id: item.historyId || item.testId,
+    setLoading(true);
+    setError('');
+    historyApi.getFeed(params)
+      .then(res => {
+        if (cancelled) return;
+        const data = res.data?.data;
+        setHistoryItems((data?.content || []).map(item => ({
+          id: `${item.skill}-${item.refId}`,
           date: new Date(item.submittedAt),
-          skill: 'Listening',
-          title: item.testMode === 'MOCK_TEST' ? 'Listening Mock Test' : 'Listening Section Practice',
-          score: item.score ? `Band ${parseFloat(item.score).toFixed(1)}` : (item.correctAnswers !== undefined ? `${item.correctAnswers}/${item.totalQuestions}` : '—'),
-          timeSpent: '30 mins',
-          actionUrl: item.historyId ? `/history/${item.historyId}/review` : `/listening/result/${item.testId}`
-        }));
-
-        const writingData = (writingRes.data?.data?.content || []).map(item => {
-          const isTask1 = item.essayType?.includes('TASK1') || ['LINE_GRAPH', 'BAR_CHART', 'PIE_CHART', 'TABLE', 'MAP', 'DIAGRAM'].includes(item.essayType);
-          return {
-            id: item.submissionId,
-            date: new Date(item.submittedAt),
-            skill: 'Writing',
-            title: `Task ${isTask1 ? '1' : '2'} Essay: ${formatEssayType(item.essayType)}`,
-            score: item.overallBand ? `Band ${parseFloat(item.overallBand).toFixed(1)}` : '—',
-            timeSpent: '40 mins',
-            actionUrl: `/writing/result/${item.submissionId}`
-          };
-        });
-
-        const mockData = (mockRes.data?.data?.content || []).map(item => ({
-          id: item.submissionId,
-          date: new Date(item.submittedAt),
-          skill: 'Mock Test',
-          title: item.title || 'Full Mock Test',
-          score: item.status === 'GRADING' ? 'Grading...' : (item.overallBand ? `Band ${parseFloat(item.overallBand).toFixed(1)}` : '—'),
-          timeSpent: '2h 45m',
-          actionUrl: `/mock-tests/result/${item.submissionId}`
-        }));
-
-        const combined = [...readingData, ...listeningData, ...writingData, ...mockData];
-        // Sort descending by date
-        combined.sort((a, b) => b.date.getTime() - a.date.getTime());
-
-        setHistoryItems(combined);
-      } catch (err) {
+          skill: SKILL_LABEL[item.skill] || item.skill,
+          ...toRow(item),
+        })));
+        setPageInfo({ totalPages: data?.totalPages || 0, totalElements: data?.totalElements || 0 });
+      })
+      .catch(err => {
+        if (cancelled) return;
         setError('Failed to fetch test history records.');
         console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
+      })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [skillFilter, timeFilter, search, currentPage]);
 
-    fetchAllHistory();
-  }, []);
-
-  // Filter & Search processing
-  const filteredItems = historyItems.filter(item => {
-    // Skill Filter
-    if (skillFilter !== 'All Skills') {
-      if (skillFilter === 'Reading' && item.skill !== 'Reading') return false;
-      if (skillFilter === 'Writing' && item.skill !== 'Writing') return false;
-      if (skillFilter === 'Listening' && item.skill !== 'Listening') return false;
-      if (skillFilter === 'Mock Tests' && item.skill !== 'Mock Test') return false;
-    }
-
-    // Time Filter
-    if (timeFilter !== 'All Time') {
-      const now = new Date();
-      const diffMs = now.getTime() - item.date.getTime();
-      const diffDays = diffMs / (1000 * 60 * 60 * 24);
-      if (timeFilter === 'Last 30 Days' && diffDays > 30) return false;
-      if (timeFilter === 'Last 3 Months' && diffDays > 90) return false;
-    }
-
-    // Search Term Filter
-    if (searchTerm.trim() !== '') {
-      const search = searchTerm.toLowerCase();
-      const titleMatch = item.title.toLowerCase().includes(search);
-      const skillMatch = item.skill.toLowerCase().includes(search);
-      if (!titleMatch && !skillMatch) return false;
-    }
-
-    return true;
-  });
-
-  // Pagination processing
-  const totalItems = filteredItems.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedItems = filteredItems.slice(startIndex, startIndex + itemsPerPage);
+  const filtersActive = skillFilter !== 'All Skills' || timeFilter !== 'All Time' || search !== '';
+  const totalItems = pageInfo.totalElements;
+  const totalPages = pageInfo.totalPages;
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const paginatedItems = historyItems;
 
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
@@ -273,7 +229,7 @@ export default function HistoryPage() {
           <h3 className="font-title-lg text-title-lg text-on-surface mb-2">{error}</h3>
           <button onClick={() => window.location.reload()} className="btn btn-primary mt-2">Retry</button>
         </div>
-      ) : historyItems.length === 0 ? (
+      ) : totalItems === 0 && !filtersActive ? (
         <div className="bg-surface-container-lowest rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-outline-variant p-xl flex flex-col items-center justify-center text-center py-20">
           <div className="w-24 h-24 mb-md opacity-50 flex items-center justify-center rounded-full bg-surface-container">
             <span className="material-symbols-outlined text-[48px] text-outline">history</span>
@@ -282,7 +238,7 @@ export default function HistoryPage() {
           <p className="font-body-md text-body-md text-on-surface-variant max-w-md mb-lg">Start practicing now to see your scores and detailed evaluations recorded here.</p>
           <button onClick={() => navigate('/mock-tests')} className="btn btn-primary">Go to Mock Tests</button>
         </div>
-      ) : filteredItems.length === 0 ? (
+      ) : totalItems === 0 ? (
         <div className="bg-surface-container-lowest rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-outline-variant p-xl flex flex-col items-center justify-center text-center py-20">
           <div className="w-24 h-24 mb-md opacity-50 flex items-center justify-center rounded-full bg-surface-container">
             <span className="material-symbols-outlined text-[48px] text-outline">filter_list_off</span>
@@ -294,6 +250,7 @@ export default function HistoryPage() {
               setSkillFilter('All Skills');
               setTimeFilter('All Time');
               setSearchTerm('');
+              setCurrentPage(1);
             }}
             className="btn btn-outline"
           >
@@ -370,7 +327,7 @@ export default function HistoryPage() {
           {/* Pagination Footer */}
           <div className="px-lg py-md border-t border-outline-variant flex items-center justify-between bg-surface-container-lowest">
             <span className="font-body-md text-body-md text-on-surface-variant">
-              Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, totalItems)} of {totalItems} entries
+              Showing {startIndex + 1} to {startIndex + paginatedItems.length} of {totalItems} entries
             </span>
             {totalPages > 1 && (
               <div className="flex gap-1">
@@ -382,7 +339,7 @@ export default function HistoryPage() {
                   <span className="material-symbols-outlined text-[18px]">chevron_left</span>
                 </button>
                 
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                {pageWindow(currentPage, totalPages).map(page => (
                   <button
                     key={page}
                     onClick={() => handlePageChange(page)}
