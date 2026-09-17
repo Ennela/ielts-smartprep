@@ -31,4 +31,12 @@ public class HistoryFeedItemResponse {
     private BigDecimal score;
     private String status;
     private LocalDateTime submittedAt;
+    /**
+     * The score_history row recorded for this sitting, matched the way the per-skill
+     * history pages match it (same user and skill, recorded within 5 s of submission);
+     * null when none was, and always null for mock tests, whose review is their report.
+     */
+    private Long historyId;
+    /** Seconds spent, when the sitting recorded it; null otherwise. */
+    private Integer timeSpentSeconds;
 }

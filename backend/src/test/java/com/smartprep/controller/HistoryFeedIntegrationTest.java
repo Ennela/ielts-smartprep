@@ -58,6 +58,7 @@ class HistoryFeedIntegrationTest extends AbstractMySQLContainerTest {
     @Autowired private MockTestRepository mockTestRepository;
     @Autowired private MockTestSessionRepository sessionRepository;
     @Autowired private MockTestSubmissionRepository submissionRepository;
+    @Autowired private ScoreHistoryRepository scoreHistoryRepository;
 
     @MockBean private MockTestAsyncGrader asyncGrader;
     @MockBean private ProxyManager<String> proxyManager;
@@ -83,6 +84,12 @@ class HistoryFeedIntegrationTest extends AbstractMySQLContainerTest {
         mock(user, SubmissionStatus.GRADING, null, T0.plusHours(3));  // 4
         reading(user, Topic.SCIENCE, "7.0", T0.plusHours(4));         // 5
         mock(user, SubmissionStatus.COMPLETED, "6.5", T0.plusHours(5)); // 6
+        // score_history rows: one 2 s after the SCIENCE quiz (matched, carries the time), one
+        // 3 s after the listening test (matched), and one a minute after the HEALTH quiz
+        // (outside the 5 s window: not matched).
+        scoreHistory(SkillType.READING, T0.plusHours(4).plusSeconds(2), 1500);
+        scoreHistory(SkillType.LISTENING, T0.plusHours(1).plusSeconds(3), null);
+        scoreHistory(SkillType.READING, T0.plusMinutes(1), 999);
         // A quiz that was never submitted, and one that was deleted, are not history.
         readingQuizRepository.save(ReadingQuiz.builder()
                 .user(user).topic(Topic.HISTORY).difficulty(Difficulty.PASSAGE_1)
@@ -94,6 +101,14 @@ class HistoryFeedIntegrationTest extends AbstractMySQLContainerTest {
         reading(other, Topic.ENVIRONMENT, "9.0", T0.plusHours(7));
 
         entityManager.flush();
+    }
+
+    private void scoreHistory(SkillType skill, LocalDateTime recordedAt, Integer timeSpent) {
+        ScoreHistory row = scoreHistoryRepository.save(ScoreHistory.builder()
+                .user(user).skillType(skill).score(new BigDecimal("6.0")).difficulty("PASSAGE_1")
+                .timeSpentSeconds(timeSpent).build());
+        entityManager.flush();
+        jdbc.update("UPDATE score_history SET recorded_at = ? WHERE history_id = ?", recordedAt, row.getHistoryId());
     }
 
     private ReadingQuiz reading(User owner, Topic topic, String band, LocalDateTime at) {
@@ -133,6 +148,9 @@ class HistoryFeedIntegrationTest extends AbstractMySQLContainerTest {
                 .overallBand(band == null ? BigDecimal.ZERO : new BigDecimal(band))
                 .listeningCorrectAnswers(0).readingCorrectAnswers(0).build());
         stamp("mock_test_submissions", "submission_id", sub.getSubmissionId(), at);
+        // The sitting took ten minutes.
+        jdbc.update("UPDATE mock_test_sessions SET started_at = ? WHERE session_id = ?",
+                at.minusMinutes(10), session.getSessionId());
     }
 
     /**
@@ -164,14 +182,26 @@ class HistoryFeedIntegrationTest extends AbstractMySQLContainerTest {
                 .andExpect(jsonPath("$.data.content[0].title").value(notNullValue()))
                 .andExpect(jsonPath("$.data.content[1].title").value("SCIENCE"))
                 .andExpect(jsonPath("$.data.content[2].status").value("GRADING"))
-                .andExpect(jsonPath("$.data.content[3].refId").value(notNullValue()));
+                .andExpect(jsonPath("$.data.content[3].refId").value(notNullValue()))
+                // Time and review link: the mock test from its session, the SCIENCE quiz from
+                // its score_history row, the essay from nothing (no row within 5 s).
+                .andExpect(jsonPath("$.data.content[0].timeSpentSeconds").value(600))
+                .andExpect(jsonPath("$.data.content[0].historyId").value(nullValue()))
+                .andExpect(jsonPath("$.data.content[1].timeSpentSeconds").value(1500))
+                .andExpect(jsonPath("$.data.content[1].historyId").value(notNullValue()))
+                .andExpect(jsonPath("$.data.content[3].timeSpentSeconds").value(nullValue()))
+                .andExpect(jsonPath("$.data.content[3].historyId").value(nullValue()));
 
         mockMvc.perform(get("/api/v1/history").param("size", "4").param("page", "1").with(asUser()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content", hasSize(2)))
                 .andExpect(jsonPath("$.data.content[*].skill", contains("LISTENING", "READING")))
                 .andExpect(jsonPath("$.data.content[0].title").value("PRACTICE"))
-                .andExpect(jsonPath("$.data.content[1].title").value("HEALTH"));
+                .andExpect(jsonPath("$.data.content[0].historyId").value(notNullValue()))
+                .andExpect(jsonPath("$.data.content[0].timeSpentSeconds").value(nullValue()))
+                .andExpect(jsonPath("$.data.content[1].title").value("HEALTH"))
+                // The HEALTH quiz's only score_history row is a minute later: not matched.
+                .andExpect(jsonPath("$.data.content[1].historyId").value(nullValue()));
     }
 
     @Test

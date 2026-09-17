@@ -333,6 +333,10 @@ export interface HistoryFeedItem {
   score?: number;
   status?: string;
   submittedAt: string;
+  /** the matching score_history row, when one was recorded within 5 s; never for mock tests */
+  historyId?: number;
+  /** seconds spent, when the sitting recorded it */
+  timeSpentSeconds?: number;
 }
 
 // ── Stats ───────────────────────────────────────────────────────────────────
