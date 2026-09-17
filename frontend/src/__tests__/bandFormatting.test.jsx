@@ -53,7 +53,7 @@ describe('band formatting', () => {
 
   it('WritingFullResultPage shows whole-number task bands with one decimal', () => {
     const result = {
-      id: 1, overallWritingBand: 8.5, submittedAt: '2026-09-15T14:48:41',
+      id: 1, overallWritingBand: 8, submittedAt: '2026-09-15T14:48:41',
       task1Result: { submissionId: 20, essayType: 'DIAGRAM', overallBand: 8, promptText: 'p1', essayText: 'e1', errors: [] },
       task2Result: { submissionId: 21, essayType: 'ADVANTAGES_DISADVANTAGES', overallBand: 9, promptText: 'p2', essayText: 'e2', errors: [] },
     };
@@ -65,8 +65,10 @@ describe('band formatting', () => {
 
     expect(screen.getByText(/Task 1: Academic Report \(Band 8\.0\)/)).toBeInTheDocument();
     expect(screen.getByText(/Task 2: Essay Writing \(Band 9\.0\)/)).toBeInTheDocument();
-    expect(screen.getByText('8.0')).toBeInTheDocument();
+    // The task band figure and the big weighted band both read 8.0, never "8".
+    expect(screen.getAllByText('8.0')).toHaveLength(2);
     expect(screen.getByText('9.0')).toBeInTheDocument();
+    expect(screen.queryByText('8')).not.toBeInTheDocument();
   });
 
   it('ReadingHistoryPage shows the band with one decimal', async () => {
