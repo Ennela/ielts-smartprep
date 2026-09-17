@@ -100,7 +100,7 @@ export default function WritingFullResultPage() {
               </defs>
             </svg>
             <div className="overall-score-text">
-              <span className="overall-band">{result.overallWritingBand}</span>
+              <span className="overall-band">{formatBand(result.overallWritingBand)}</span>
               <span className="overall-label">Weighted Band</span>
             </div>
           </div>

@@ -25,19 +25,32 @@ const formatEssayType = (type) => {
   }
 };
 
+// Time spent as recorded for the sitting; older sittings recorded none.
+const formatTimeSpent = (seconds) => {
+  if (seconds === null || seconds === undefined) return '—';
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} min${minutes === 1 ? '' : 's'}`;
+  return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, '0')}m`;
+};
+
 // The server keeps each skill's own label and id; the row text and review link are
-// built here, the same way the four per-skill history pages do it.
+// built here, the same way the four per-skill history pages do it. A listening test with
+// a matched score_history row opens the answer review, like the Listening history page.
 const toRow = (item) => {
   const band = item.score === null || item.score === undefined ? '—' : `Band ${parseFloat(item.score).toFixed(1)}`;
+  const timeSpent = formatTimeSpent(item.timeSpentSeconds);
   switch (item.skill) {
     case 'READING':
-      return { title: item.title || 'Academic Reading Practice', score: band, timeSpent: '58 mins', actionUrl: `/reading/result/${item.refId}` };
+      return { title: item.title || 'Academic Reading Practice', score: band, timeSpent, actionUrl: `/reading/result/${item.refId}` };
     case 'LISTENING':
-      return { title: item.title === 'MOCK_TEST' ? 'Listening Mock Test' : 'Listening Section Practice', score: band, timeSpent: '30 mins', actionUrl: `/listening/result/${item.refId}` };
+      return {
+        title: item.title === 'MOCK_TEST' ? 'Listening Mock Test' : 'Listening Section Practice', score: band, timeSpent,
+        actionUrl: item.historyId ? `/history/${item.historyId}/review` : `/listening/result/${item.refId}`,
+      };
     case 'WRITING':
-      return { title: `Task ${item.title?.includes('TASK1') || TASK1_TYPES.includes(item.title) ? '1' : '2'} Essay: ${formatEssayType(item.title)}`, score: band, timeSpent: '40 mins', actionUrl: `/writing/result/${item.refId}` };
+      return { title: `Task ${item.title?.includes('TASK1') || TASK1_TYPES.includes(item.title) ? '1' : '2'} Essay: ${formatEssayType(item.title)}`, score: band, timeSpent, actionUrl: `/writing/result/${item.refId}` };
     default:
-      return { title: item.title || 'Full Mock Test', score: item.status === 'GRADING' ? 'Grading...' : band, timeSpent: '2h 45m', actionUrl: `/mock-tests/result/${item.refId}` };
+      return { title: item.title || 'Full Mock Test', score: item.status === 'GRADING' ? 'Grading...' : band, timeSpent, actionUrl: `/mock-tests/result/${item.refId}` };
   }
 };
 
