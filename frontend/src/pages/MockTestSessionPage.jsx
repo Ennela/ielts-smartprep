@@ -36,7 +36,9 @@ export default function MockTestSessionPage() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    // Ensure active session is loaded on mount
+    // Ensure active session is loaded on mount. Mount only: after submitExam() clears the
+    // session, the redirect effect below resets latestSubmissionId too, and re-running this
+    // would find no session (404) and send the user to the lobby instead of the result page.
     if (!activeSession && !latestSubmissionId) {
       loadActiveSession().then((session) => {
         if (!session) {
@@ -44,7 +46,7 @@ export default function MockTestSessionPage() {
         }
       });
     }
-  }, [activeSession, latestSubmissionId]);
+  }, []);
 
   // Handle auto-submission redirect
   useEffect(() => {
