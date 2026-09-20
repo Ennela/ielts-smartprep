@@ -16,6 +16,12 @@ export function MockTestProvider({ children }) {
   const answersRef = useRef({});
   const timerRef = useRef(0);
   const sessionRef = useRef(null);
+  // Wall-clock instant (ms) at which the current section ends, anchored on the
+  // server's timeRemainingSeconds every time it hands one back. The countdown is
+  // derived from this rather than decremented, so a throttled or sleeping tab
+  // does not fall behind the server clock that decides whether a submit is late.
+  const deadlineRef = useRef(null);
+  const timeUpRef = useRef(false);
 
   // Sync refs to keep useEffect handlers updated without re-running loops
   useEffect(() => {
@@ -59,9 +65,19 @@ export function MockTestProvider({ children }) {
     }
   };
 
+  // The server recomputes timeRemainingSeconds from the section deadline on every
+  // response; that number is the only clock that matters.
+  const anchorTimer = (timeRemainingSeconds) => {
+    deadlineRef.current = Date.now() + timeRemainingSeconds * 1000;
+    setTimeRemaining(timeRemainingSeconds);
+  };
+
+  const remainingFromDeadline = () =>
+    deadlineRef.current == null ? 0 : Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000));
+
   const initializeSession = (sessionData) => {
     setActiveSession(sessionData);
-    setTimeRemaining(sessionData.timeRemainingSeconds);
+    anchorTimer(sessionData.timeRemainingSeconds);
 
     // Parse progressJson
     let serverAnswers = {};
@@ -73,7 +89,8 @@ export function MockTestProvider({ children }) {
       }
     }
 
-    // Recover from local storage if local storage has a newer state
+    // Recover answers from local storage if it has a newer state. Only answers:
+    // the backup's timeRemaining is the client clock, which is never authoritative.
     const localKey = `mock_session_${sessionData.sessionId}`;
     const localBackupStr = localStorage.getItem(localKey);
     if (localBackupStr) {
@@ -84,10 +101,6 @@ export function MockTestProvider({ children }) {
         if (localBackup.timestamp > serverSyncedTime) {
           // Restoring from newer local storage backup
           serverAnswers = { ...serverAnswers, ...localBackup.answers };
-          // If local backup has a different time remaining, we can align it (bound by server limit check)
-          if (localBackup.timeRemaining < sessionData.timeRemainingSeconds) {
-            setTimeRemaining(localBackup.timeRemaining);
-          }
         }
       } catch (_e) {
         // ignore malformed backup
@@ -123,8 +136,12 @@ export function MockTestProvider({ children }) {
     try {
       setIsSyncing(true);
       const jsonString = JSON.stringify(answersMap);
-      await mockTestApi.saveProgress(sessionId, section, time, jsonString);
+      const res = await mockTestApi.saveProgress(sessionId, section, time, jsonString);
       setIsOffline(false);
+      const serverRemaining = res?.data?.data?.timeRemainingSeconds;
+      if (typeof serverRemaining === 'number') {
+        anchorTimer(serverRemaining);
+      }
     } catch (err) {
       setIsOffline(true);
       console.warn('Network offline, saving progress locally.', err);
@@ -133,22 +150,43 @@ export function MockTestProvider({ children }) {
     }
   };
 
-  // Tick the countdown timer every second
+  // Tick the countdown every second, recomputing from the anchored deadline
   useEffect(() => {
     if (!activeSession || activeSession.status !== 'IN_PROGRESS') return;
+    timeUpRef.current = false;
 
-    const interval = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          handleTimeExpired();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+    const tick = () => {
+      const remaining = remainingFromDeadline();
+      setTimeRemaining(remaining);
+      if (remaining <= 0 && !timeUpRef.current) {
+        timeUpRef.current = true;
+        clearInterval(interval);
+        handleTimeExpired();
+      }
+    };
+    const interval = setInterval(tick, 1000);
 
-    return () => clearInterval(interval);
+    // A hidden tab's timers run about once a minute, so catch up the moment the
+    // candidate comes back, then re-anchor on the server in case the clock drifted.
+    const handleVisibility = () => {
+      if (document.visibilityState !== 'visible') return;
+      tick();
+      mockTestApi.getCurrentSession()
+        .then((res) => {
+          const s = res.data.data;
+          if (s?.sessionId === activeSession.sessionId && s.status === 'IN_PROGRESS' && !timeUpRef.current) {
+            anchorTimer(s.timeRemainingSeconds);
+            tick();
+          }
+        })
+        .catch(() => { /* no session or offline — the local deadline stands */ });
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [activeSession]);
 
   // Handle time expiration
@@ -198,7 +236,7 @@ export function MockTestProvider({ children }) {
       
       const sessionData = res.data.data;
       setActiveSession(sessionData);
-      setTimeRemaining(sessionData.timeRemainingSeconds);
+      anchorTimer(sessionData.timeRemainingSeconds);
       // We don't wipe answers since answers contains all cumulative sections
       
       // Update local storage backup with new section timer
