@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Cambridge answer keys / book scans must never ship in the static bundle (audit FE-01)
+public/cam19_import_review.json
+public/images/temp_all/
+public/images/temp_render/
