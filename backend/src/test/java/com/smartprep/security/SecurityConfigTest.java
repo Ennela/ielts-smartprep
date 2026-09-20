@@ -32,9 +32,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Uses a minimal Spring context with only security-related beans (no DB, no Redis,
  * no Testcontainers). Verifies:
  * <ul>
- *   <li>Admin endpoints require ADMIN role and reject unauthenticated requests</li>
+ *   <li>Admin endpoints require ADMIN role and answer 401 to unauthenticated requests</li>
  *   <li>Public endpoints are accessible without authentication</li>
- *   <li>Authenticated endpoints reject unauthenticated requests</li>
+ *   <li>Authenticated endpoints answer 401 (not 403) to missing/expired tokens</li>
  *   <li>CORS headers are returned correctly for allowed origins</li>
  *   <li>CORS rejects disallowed origins</li>
  *   <li>CSP header is present in responses</li>
@@ -97,6 +97,9 @@ class SecurityConfigTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
+
     // =========================================================================
     // Admin endpoint protection
     // =========================================================================
@@ -105,27 +108,19 @@ class SecurityConfigTest {
     class AdminEndpointTests {
 
         @Test
-        @DisplayName("GET /api/v1/admin/users → rejected without token")
-        void adminEndpoint_noToken_rejected() throws Exception {
+        @DisplayName("GET /api/v1/admin/users → 401 without token")
+        void adminEndpoint_noToken_unauthorized() throws Exception {
             mockMvc.perform(get("/api/v1/admin/users")
                             .contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(result -> {
-                        int status = result.getResponse().getStatus();
-                        assert status == 401 || status == 403
-                                : "Expected admin endpoint to be protected but got " + status;
-                    });
+                    .andExpect(status().isUnauthorized());
         }
 
         @Test
-        @DisplayName("GET /api/v1/admin/stats/overview → rejected without token (nested path)")
-        void adminNestedEndpoint_noToken_rejected() throws Exception {
+        @DisplayName("GET /api/v1/admin/stats/overview → 401 without token (nested path)")
+        void adminNestedEndpoint_noToken_unauthorized() throws Exception {
             mockMvc.perform(get("/api/v1/admin/stats/overview")
                             .contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(result -> {
-                        int status = result.getResponse().getStatus();
-                        assert status == 401 || status == 403
-                                : "Expected admin nested endpoint to be protected but got " + status;
-                    });
+                    .andExpect(status().isUnauthorized());
         }
 
         @Test
@@ -188,27 +183,36 @@ class SecurityConfigTest {
     class AuthenticatedEndpointTests {
 
         @Test
-        @DisplayName("GET /api/v1/exams → rejected without token")
-        void protectedEndpoint_noToken_rejected() throws Exception {
+        @DisplayName("GET /api/v1/exams → 401 without token")
+        void protectedEndpoint_noToken_unauthorized() throws Exception {
             mockMvc.perform(get("/api/v1/exams")
                             .contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(result -> {
-                        int status = result.getResponse().getStatus();
-                        assert status == 401 || status == 403
-                                : "Expected protected endpoint to reject anonymous but got " + status;
-                    });
+                    .andExpect(status().isUnauthorized());
         }
 
         @Test
-        @DisplayName("GET /api/v1/users/me → rejected without token")
-        void userProfile_noToken_rejected() throws Exception {
+        @DisplayName("GET /api/v1/users/me → 401 without token")
+        void userProfile_noToken_unauthorized() throws Exception {
             mockMvc.perform(get("/api/v1/users/me")
                             .contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(result -> {
-                        int status = result.getResponse().getStatus();
-                        assert status == 401 || status == 403
-                                : "Expected user profile to reject anonymous but got " + status;
-                    });
+                    .andExpect(status().isUnauthorized());
+        }
+
+        /**
+         * An expired or tampered access token fails {@code validateToken} and the request
+         * continues anonymously. It must surface as 401, not 403: the frontend interceptor
+         * only calls {@code POST /auth/refresh} on 401, so a 403 here would leave every
+         * session dead after the 15-minute access-token lifetime.
+         */
+        @Test
+        @DisplayName("GET /api/v1/users/me → 401 with an expired/invalid bearer token")
+        void userProfile_expiredToken_unauthorized() throws Exception {
+            org.mockito.Mockito.when(jwtTokenProvider.validateToken("expired-token")).thenReturn(false);
+
+            mockMvc.perform(get("/api/v1/users/me")
+                            .header("Authorization", "Bearer expired-token")
+                            .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isUnauthorized());
         }
     }
 
