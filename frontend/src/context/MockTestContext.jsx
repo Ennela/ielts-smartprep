@@ -87,7 +87,7 @@ export function MockTestProvider({ children }) {
       if (sessionData.status !== 'IN_PROGRESS') {
         setError(sessionData.status === 'SUBMITTED'
           ? 'This exam has already been submitted.'
-          : 'The time for this exam ran out, so it can no longer be continued.');
+          : 'This exam session has ended (time ran out or it was abandoned), so it can no longer be continued.');
         setLoading(false);
         return sessionData;
       }

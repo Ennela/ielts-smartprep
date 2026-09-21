@@ -53,7 +53,7 @@ describe('MockTestSessionPage loads the session named in the route', () => {
       </MemoryRouter>
     );
 
-    expect(await screen.findByText(/ran out, so it can no longer be continued/)).toBeInTheDocument();
+    expect(await screen.findByText(/has ended .* can no longer be continued/)).toBeInTheDocument();
     expect(mockTestApi.getSession).toHaveBeenCalledWith('9');
     expect(mockTestApi.getCurrentSession).not.toHaveBeenCalled();
     expect(screen.queryByText('Lobby')).not.toBeInTheDocument();
