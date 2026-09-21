@@ -599,10 +599,15 @@ body::after {
 
 /* Audio Player */
 .audio-player {
-  display: flex; align-items: center; gap: 12px; padding: 14px 20px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 20px;
   background: var(--color-surface-solid); border: 1px solid var(--color-border);
   border-radius: var(--radius-md); margin-top: 12px; box-shadow: var(--shadow-sm);
 }
+.audio-error {
+  flex-basis: 100%; display: flex; align-items: center; gap: 8px;
+  color: var(--error); font-size: 0.85rem;
+}
+.audio-error .btn { padding: 2px 10px; font-size: 0.8rem; }
 .audio-play-btn {
   width: 40px; height: 40px; border-radius: 50%; border: none;
   background: var(--color-primary); color: #fff; display: flex; align-items: center; justify-content: center;

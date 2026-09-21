@@ -7,6 +7,9 @@ export default function AudioPlayer({ src, mode = 'practice' }) {
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.8);
   const [playedSources, setPlayedSources] = useState(new Set());
+  // The audio element reported it could not load or play the source (404, CSP,
+  // storage down). Without surfacing this the player sits at 0:00 forever.
+  const [loadError, setLoadError] = useState(false);
   const isMockTest = mode === 'mock-test';
 
   const hasPlayedThisSource = playedSources.has(src);
@@ -19,20 +22,49 @@ export default function AudioPlayer({ src, mode = 'practice' }) {
     const onLoadedMetadata = () => setDuration(audio.duration || 0);
     const onTimeUpdate = () => setCurrentTime(audio.currentTime || 0);
     const onEnded = () => setIsPlaying(false);
+    const onError = () => {
+      setIsPlaying(false);
+      setLoadError(true);
+    };
 
     audio.addEventListener('loadedmetadata', onLoadedMetadata);
     audio.addEventListener('timeupdate', onTimeUpdate);
     audio.addEventListener('ended', onEnded);
+    audio.addEventListener('error', onError);
 
     // Reset playing state on source change (unless already played in mock test)
     setIsPlaying(false);
+    setLoadError(false);
 
     return () => {
       audio.removeEventListener('loadedmetadata', onLoadedMetadata);
       audio.removeEventListener('timeupdate', onTimeUpdate);
       audio.removeEventListener('ended', onEnded);
+      audio.removeEventListener('error', onError);
     };
   }, [src]);
+
+  // A failed play() must not count as the mock test's single listen.
+  const onPlayFailed = useCallback((err) => {
+    // pause() right after play() rejects the play promise with AbortError; that is
+    // the user's own click, not a broken source.
+    if (err?.name === 'AbortError') return;
+    setIsPlaying(false);
+    setLoadError(true);
+    setPlayedSources(prev => {
+      if (!prev.has(src)) return prev;
+      const next = new Set(prev);
+      next.delete(src);
+      return next;
+    });
+  }, [src]);
+
+  const retryLoad = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    setLoadError(false);
+    audio.load();
+  }, []);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
@@ -45,16 +77,16 @@ export default function AudioPlayer({ src, mode = 'practice' }) {
         return next;
       });
       setIsPlaying(true);
-      audio.play().catch(() => {});
+      audio.play().catch(onPlayFailed);
     } else {
       if (isPlaying) {
         audio.pause();
       } else {
-        audio.play().catch(() => {});
+        audio.play().catch(onPlayFailed);
       }
       setIsPlaying(!isPlaying);
     }
-  }, [isPlaying, isMockTest, hasPlayedThisSource, src]);
+  }, [isPlaying, isMockTest, hasPlayedThisSource, src, onPlayFailed]);
 
   const handleSeek = useCallback((e) => {
     if (isMockTest) return; // Seeking disabled in mock test mode
@@ -135,6 +167,15 @@ export default function AudioPlayer({ src, mode = 'practice' }) {
 
       {isMockTest && (
         <span className="audio-mock-badge">MOCK TEST</span>
+      )}
+
+      {loadError && (
+        <div className="audio-error" role="alert">
+          <span>Audio could not be loaded.</span>
+          <button type="button" className="btn btn-outline" onClick={retryLoad}>
+            Reload audio
+          </button>
+        </div>
       )}
     </div>
   );

@@ -376,7 +376,7 @@ export default function MockTestLobbyPage() {
                       </div>
                     )}
                   </div>
-                  <audio ref={audioRef} src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" loop />
+                  <audio ref={audioRef} src="/audio/sound-check.wav" loop />
                 </div>
               </div>
 
