@@ -149,7 +149,7 @@ export default function AdminListeningListPage() {
             Overview
           </button>
           <h1>Listening Parts Management</h1>
-          <p className="subtitle">{totalElements} listening parts in the system</p>
+          <p className="subtitle">{totalElements} {showArchived ? 'archived ' : ''}listening parts in the system</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
           {stats?.statusCounts?.FAILED > 0 && (
