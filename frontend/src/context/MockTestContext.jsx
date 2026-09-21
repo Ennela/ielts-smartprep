@@ -75,6 +75,31 @@ export function MockTestProvider({ children }) {
   const remainingFromDeadline = () =>
     deadlineRef.current == null ? 0 : Math.max(0, Math.ceil((deadlineRef.current - Date.now()) / 1000));
 
+  // Load the session the route names. GET /mock-tests/{id} returns a finished session
+  // as EXPIRED/SUBMITTED rather than hiding it, so the page can say what happened
+  // instead of silently opening whatever sessions/current holds.
+  const loadSession = async (sessionId) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const res = await mockTestApi.getSession(sessionId);
+      const sessionData = res.data.data;
+      if (sessionData.status !== 'IN_PROGRESS') {
+        setError(sessionData.status === 'SUBMITTED'
+          ? 'This exam has already been submitted.'
+          : 'The time for this exam ran out, so it can no longer be continued.');
+        setLoading(false);
+        return sessionData;
+      }
+      initializeSession(sessionData);
+      return sessionData;
+    } catch (_err) {
+      // Not found, or not this user's session
+      setLoading(false);
+      return null;
+    }
+  };
+
   const initializeSession = (sessionData) => {
     setActiveSession(sessionData);
     anchorTimer(sessionData.timeRemainingSeconds);
@@ -335,6 +360,7 @@ export function MockTestProvider({ children }) {
       clearLatestSubmissionId: () => setLatestSubmissionId(null),
       startOrResumeTest,
       loadActiveSession,
+      loadSession,
       setAnswer,
       advanceSection,
       submitExam,

@@ -10,9 +10,6 @@ const analyticsApi = {
     getOverview: (): Promise<AxiosResponse<ApiResponse<any>>> =>
         axiosClient.get('/analytics/overview'),
 
-    getScoreTrend: (skill: string): Promise<AxiosResponse<ApiResponse<any>>> =>
-        axiosClient.get('/analytics/score-trend', { params: { skill } }),
-
     getWeakness: (skill?: string): Promise<AxiosResponse<ApiResponse<WeaknessAnalysis>>> => {
         const params: WeaknessParams = {};
         if (skill) params.skill = skill;

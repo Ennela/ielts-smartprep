@@ -2,18 +2,11 @@ import type { AxiosResponse } from 'axios';
 import axiosClient from './axiosClient';
 import type { SpringPage, ApiResponse, WritingPrompt, WritingGradeResult, WritingHistoryItem, WritingFullResult } from './types';
 
-interface GetPromptsParams {
-    page: number;
-    size: number;
-    essayType?: string;
-}
-
 const writingApi = {
-    getPrompts: (essayType?: string, page = 0, size = 20): Promise<AxiosResponse<ApiResponse<WritingPrompt[]>>> => {
-        const params: GetPromptsParams = { page, size };
-        if (essayType) params.essayType = essayType;
-        return axiosClient.get('/writing/prompts', { params });
-    },
+    // GET /writing/prompts returns the whole list (WritingController#getPrompts reads
+    // only essayType); there is no paging to ask for.
+    getPrompts: (essayType?: string): Promise<AxiosResponse<ApiResponse<WritingPrompt[]>>> =>
+        axiosClient.get('/writing/prompts', { params: essayType ? { essayType } : {} }),
 
     getPromptById: (promptId: number | string): Promise<AxiosResponse<ApiResponse<WritingPrompt>>> =>
         axiosClient.get(`/writing/prompts/${promptId}`),

@@ -77,7 +77,7 @@ export default function WritingFullExamPage() {
       timeSpentTask2: times.timeSpentTask2,
     }).then(res => {
       sessionStorage.removeItem(SESSION_KEY);
-      navigate('/writing/full-result', { state: { result: res.data.data }, replace: true });
+      navigate(`/writing/full-result/${res.data.data.id}`, { state: { result: res.data.data }, replace: true });
     }).catch(err => {
       console.error(err);
       showErrorToast('Auto-submit failed. Please try submitting manually.');
@@ -190,7 +190,7 @@ export default function WritingFullExamPage() {
         localStorage.removeItem(`writing_draft_${task1?.promptId}`);
         localStorage.removeItem(`writing_draft_${task2?.promptId}`);
       } catch (_e) { /* ignore */ }
-      navigate('/writing/full-result', { state: { result }, replace: true });
+      navigate(`/writing/full-result/${result.id}`, { state: { result }, replace: true });
     };
     const beforeId = await latestSubmissionId(writingApi.getFullHistory, 'id');
 

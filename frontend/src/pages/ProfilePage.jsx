@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useTheme } from '../context/ThemeContext';
 import authService from '../api/authService';
-import axiosClient from '../api/axiosClient';
+import analyticsApi from '../api/analyticsApi';
 import styles from '../styles/Profile.module.css';
 
 export default function ProfilePage() {
@@ -74,7 +74,7 @@ export default function ProfilePage() {
   const loadOverview = () => {
     setLoadingOverview(true);
     setOverviewError('');
-    axiosClient.get('/analytics/overview')
+    analyticsApi.getOverview()
       .then(res => setOverview(res.data.data))
       .catch(err => {
         console.error('Error fetching analytics overview:', err);

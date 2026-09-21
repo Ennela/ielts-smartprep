@@ -14,6 +14,8 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ReadingFullResultResponse {
+    /** ScoreHistory row of this sitting; the client's fallback when navigation state is lost. */
+    private Long historyId;
     private BigDecimal overallBand;
     private int totalCorrect;
     private int totalQuestions;

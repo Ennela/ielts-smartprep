@@ -1,13 +1,6 @@
 import axiosClient from './axiosClient';
 
 const listeningApi = {
-    getParts: (partNumber, topic) => {
-        const params = {};
-        if (partNumber) params.partNumber = partNumber;
-        if (topic) params.topic = topic;
-        return axiosClient.get('/listening/parts', { params });
-    },
-
     getAllParts: () =>
         axiosClient.get('/listening/parts'),
 

@@ -38,14 +38,8 @@ const authService = {
         });
     },
 
-
-    // ── Token Management ──────────────────────────────────────────────────
-
-    refreshToken: (refreshToken?: string): Promise<AxiosResponse<ApiResponse<{ token: string }>>> =>
-        axiosClient.post('/auth/refresh', refreshToken ? { refreshToken } : {}),
-
-    serverLogout: (refreshToken?: string): Promise<AxiosResponse<ApiResponse<void>>> =>
-        axiosClient.post('/auth/logout', refreshToken ? { refreshToken } : {}),
+    // Token refresh lives in axiosClient's response interceptor (it must bypass this
+    // client's own interceptors); logout is the `logout` helper below.
 
     // ── Password Recovery ─────────────────────────────────────────────────
 
