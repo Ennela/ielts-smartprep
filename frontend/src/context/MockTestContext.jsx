@@ -292,6 +292,15 @@ export function MockTestProvider({ children }) {
     setError(null);
   };
 
+  // Retire the session on the server, then drop it locally. Clearing only local
+  // state left the session IN_PROGRESS: the next Start resumed it and the lobby
+  // kept showing "Test in Progress".
+  const abandonSession = async () => {
+    if (!activeSession) return;
+    await mockTestApi.abandonSession(activeSession.sessionId);
+    clearSession();
+  };
+
   const getOverallTimeRemaining = () => {
     if (!activeSession) return 0;
     const currentSec = activeSession.currentSection;
@@ -330,6 +339,7 @@ export function MockTestProvider({ children }) {
       advanceSection,
       submitExam,
       clearSession,
+      abandonSession,
       syncNow: () => syncWithServer(activeSession?.sessionId, activeSession?.currentSection, timerRef.current, answersRef.current)
     }}>
       {children}

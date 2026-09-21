@@ -13,7 +13,7 @@ const formatBand = (band) => (band === null || band === undefined ? '—' : Numb
 
 export default function MockTestLobbyPage() {
   const navigate = useNavigate();
-  const { activeSession, startOrResumeTest, loadActiveSession, clearSession } = useMockTest();
+  const { activeSession, startOrResumeTest, loadActiveSession, abandonSession } = useMockTest();
   const { error: showErrorToast } = useToast();
   const [tests, setTests] = useState([]);
   const [history, setHistory] = useState([]);
@@ -92,9 +92,12 @@ export default function MockTestLobbyPage() {
     }
   };
 
-  const handleCancelActive = () => {
-    if (window.confirm('Are you sure you want to abandon this mock test? Your progress will be lost.')) {
-      clearSession();
+  const handleCancelActive = async () => {
+    if (!window.confirm('Are you sure you want to abandon this mock test? Your progress will be lost.')) return;
+    try {
+      await abandonSession();
+    } catch (err) {
+      showErrorToast(err.response?.data?.message || err.message || 'Failed to abandon the test');
     }
   };
 

@@ -97,6 +97,15 @@ class MockTestOwnershipTest {
     }
 
     @Test
+    @DisplayName("abandoning another user's session is refused as not found")
+    void abandonSession_otherUsersSession() {
+        when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(sessionOwnedByOther()));
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> mockTestService.abandonSession(ATTACKER_ID, SESSION_ID));
+    }
+
+    @Test
     @DisplayName("submitting another user's session is refused as not found")
     void submitExam_otherUsersSession() {
         when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(sessionOwnedByOther()));

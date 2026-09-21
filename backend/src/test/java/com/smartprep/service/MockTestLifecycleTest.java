@@ -163,6 +163,36 @@ class MockTestLifecycleTest {
     }
 
     @Test
+    @DisplayName("abandoning on request retires the session so the next Start is a fresh one")
+    void abandonSession_retiresAnInProgressSession() {
+        MockTestSession session = sessionStartedSecondsAgo(60, SkillType.LISTENING);
+        when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(session));
+        when(sessionRepository.save(any(MockTestSession.class))).thenAnswer(i -> i.getArgument(0));
+
+        MockTestSessionResponse response = mockTestService.abandonSession(USER_ID, SESSION_ID);
+
+        assertEquals(SessionStatus.EXPIRED, response.getStatus());
+        assertEquals(0, response.getTimeRemainingSeconds());
+        assertEquals(SessionStatus.EXPIRED, session.getStatus());
+        verify(sessionRepository).save(session);
+        verify(submissionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("abandoning a session that is already over is a no-op")
+    void abandonSession_alreadySubmitted_isIdempotent() {
+        MockTestSession session = sessionStartedSecondsAgo(60, SkillType.WRITING);
+        session.setStatus(SessionStatus.SUBMITTED);
+        session.setTimeRemainingSeconds(0);
+        when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(session));
+
+        MockTestSessionResponse response = mockTestService.abandonSession(USER_ID, SESSION_ID);
+
+        assertEquals(SessionStatus.SUBMITTED, response.getStatus());
+        verify(sessionRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("an expired session cannot be brought back to life")
     void expiredSession_cannotBecomeActiveAgain() {
         MockTestSession session = sessionStartedSecondsAgo(60, SkillType.LISTENING);
