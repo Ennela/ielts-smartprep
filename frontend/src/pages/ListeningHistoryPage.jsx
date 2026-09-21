@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import listeningApi from '../api/listeningApi';
 import Pagination from '../components/Pagination';
@@ -11,19 +11,29 @@ export default function ListeningHistoryPage() {
   const [page, setPage] = useState(0);
   const [pageInfo, setPageInfo] = useState({ totalPages: 0, totalElements: 0 });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   // The endpoint returns one page at a time; the whole history is no longer shipped.
-  useEffect(() => {
+  const loadHistory = useCallback(() => {
+    setLoading(true);
+    setError('');
     listeningApi.getHistory(page, PAGE_SIZE)
       .then(res => {
         const data = res.data?.data;
         setHistory(data?.content || []);
         setPageInfo({ totalPages: data?.totalPages || 0, totalElements: data?.totalElements || 0 });
       })
-      .catch(err => console.error(err))
+      .catch(err => {
+        console.error(err);
+        setError(err.response?.data?.message || err.message || 'Unable to load listening history');
+      })
       .finally(() => setLoading(false));
   }, [page]);
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
 
   const getScoreColor = (score) => {
     const s = parseFloat(score);
@@ -49,6 +59,11 @@ export default function ListeningHistoryPage() {
         <div className="loading-spinner" style={{ margin: '48px auto' }}>
           <span className="spinner" />
           <span>Loading listening history...</span>
+        </div>
+      ) : error ? (
+        <div className="error-msg" role="alert">
+          <span>{error}</span>
+          <button className="btn btn-outline" onClick={loadHistory}>Retry</button>
         </div>
       ) : history.length === 0 ? (
         <div style={{

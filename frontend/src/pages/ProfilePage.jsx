@@ -41,6 +41,7 @@ export default function ProfilePage() {
   // Overview metrics (Current estimated band)
   const [overview, setOverview] = useState(null);
   const [loadingOverview, setLoadingOverview] = useState(false);
+  const [overviewError, setOverviewError] = useState('');
 
   // --- TAB 3: Preferences ---
   const [language, setLanguage] = useState('English (US)');
@@ -70,14 +71,20 @@ export default function ProfilePage() {
   }, []);
 
   // Fetch estimated scores when Goals tab is loaded
+  const loadOverview = () => {
+    setLoadingOverview(true);
+    setOverviewError('');
+    axiosClient.get('/analytics/overview')
+      .then(res => setOverview(res.data.data))
+      .catch(err => {
+        console.error('Error fetching analytics overview:', err);
+        setOverviewError(err.response?.data?.message || err.message || 'Could not load your current estimated bands');
+      })
+      .finally(() => setLoadingOverview(false));
+  };
+
   useEffect(() => {
-    if (activeTab === 'goals' && user) {
-      setLoadingOverview(true);
-      axiosClient.get('/analytics/overview')
-        .then(res => setOverview(res.data.data))
-        .catch(err => console.error('Error fetching analytics overview:', err))
-        .finally(() => setLoadingOverview(false));
-    }
+    if (activeTab === 'goals' && user) loadOverview();
   }, [activeTab, user]);
 
   // Current Estimated scores
@@ -492,6 +499,13 @@ export default function ProfilePage() {
                 <div className="h-28 bg-outline-variant/20 rounded-xl"></div>
               </div>
             ) : (
+              <>
+              {overviewError && (
+                <div className="error-msg" role="alert">
+                  <span>{overviewError} — the estimated bands below are not current.</span>
+                  <button type="button" className="btn btn-outline" onClick={loadOverview}>Retry</button>
+                </div>
+              )}
               <form onSubmit={handleSaveGoals} className={styles['goals-stack']}>
                 {/* Reading Target Slider */}
                 <div className={`${styles['goal-slider-box']} ${styles.featured}`}>
@@ -594,6 +608,7 @@ export default function ProfilePage() {
                   </button>
                 </div>
               </form>
+              </>
             )}
           </div>
         </div>

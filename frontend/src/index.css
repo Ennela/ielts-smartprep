@@ -603,6 +603,14 @@ body::after {
   background: var(--color-surface-solid); border: 1px solid var(--color-border);
   border-radius: var(--radius-md); margin-top: 12px; box-shadow: var(--shadow-sm);
 }
+/* Inline load failure with an optional retry button */
+.error-msg {
+  background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2);
+  color: var(--error); padding: 12px 16px; border-radius: var(--radius-sm);
+  margin-bottom: 20px; font-size: 0.9rem;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+.error-msg .btn { padding: 4px 12px; font-size: 0.85rem; }
 .audio-error {
   flex-basis: 100%; display: flex; align-items: center; gap: 8px;
   color: var(--error); font-size: 0.85rem;

@@ -30,16 +30,23 @@ export default function ListeningPracticePage() {
   // Curated list states
   const [parts, setParts] = useState([]);
   const [curatedLoading, setCuratedLoading] = useState(false);
+  const [curatedError, setCuratedError] = useState('');
   const [mockLoading, setMockLoading] = useState(false);
 
+  const loadCurated = () => {
+    setCuratedLoading(true);
+    setCuratedError('');
+    listeningApi.getAllParts()
+      .then(res => setParts(res.data?.data || []))
+      .catch(err => {
+        console.error(err);
+        setCuratedError(err.response?.data?.message || err.message || 'Failed to load curated tests');
+      })
+      .finally(() => setCuratedLoading(false));
+  };
+
   useEffect(() => {
-    if (activeTab === 'curated') {
-      setCuratedLoading(true);
-      listeningApi.getAllParts()
-        .then(res => setParts(res.data?.data || []))
-        .catch(err => console.error(err))
-        .finally(() => setCuratedLoading(false));
-    }
+    if (activeTab === 'curated') loadCurated();
   }, [activeTab]);
 
   const startMockTest = async () => {
@@ -255,6 +262,11 @@ export default function ListeningPracticePage() {
             {curatedLoading ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
                 <span className="spinner"></span> &nbsp; Loading tests...
+              </div>
+            ) : curatedError ? (
+              <div className="error-msg" role="alert">
+                <span>{curatedError}</span>
+                <button className="btn btn-outline" onClick={loadCurated}>Retry</button>
               </div>
             ) : parts.length === 0 ? (
               <div style={{
