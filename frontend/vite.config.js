@@ -16,5 +16,8 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/__tests__/setup.js'],
+    // Page-level tests (lazy routes, react-query, a dozen mocked modules) transform
+    // slowly when the whole suite runs in parallel; 5 s tripped on a busy machine.
+    testTimeout: 15000,
   },
 });
