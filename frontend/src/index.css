@@ -422,6 +422,7 @@ body::after {
   font-weight: 600; font-size: 0.82rem; cursor: pointer; transition: all var(--transition);
 }
 .filter-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.archived-toggle { display: inline-flex; gap: 6px; margin-left: auto; }
 .filter-btn.active { background: var(--color-primary-06); border-color: var(--color-primary); color: var(--color-primary); }
 .prompt-list { display: flex; flex-direction: column; gap: 16px; }
 .prompt-card { padding: 24px; }

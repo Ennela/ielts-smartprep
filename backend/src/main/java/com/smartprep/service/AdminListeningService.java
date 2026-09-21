@@ -41,7 +41,7 @@ public class AdminListeningService {
      * List all listening parts with pagination and filtering by audioStatus & topic.
      */
     @Transactional(readOnly = true)
-    public Page<AdminListeningPartResponse> listParts(String audioStatusStr, String topic, int page, int size, String sort) {
+    public Page<AdminListeningPartResponse> listParts(String audioStatusStr, String topic, boolean archived, int page, int size, String sort) {
         size = Math.min(size, MAX_PAGE_SIZE);
         PageRequest pageRequest = PageRequest.of(page, size, parseSort(sort, "createdAt"));
         AudioStatus audioStatus = null;
@@ -51,7 +51,9 @@ public class AdminListeningService {
 
         String cleanTopic = (topic != null && !topic.isBlank()) ? topic : null;
 
-        Page<ListeningPart> partPage = partRepository.findByFilters(audioStatus, cleanTopic, pageRequest);
+        Page<ListeningPart> partPage = archived
+                ? partRepository.findArchivedByFilters(audioStatus, cleanTopic, pageRequest)
+                : partRepository.findByFilters(audioStatus, cleanTopic, pageRequest);
         return partPage.map(this::toAdminPartResponse);
     }
 

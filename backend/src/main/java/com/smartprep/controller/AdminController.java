@@ -65,6 +65,8 @@ public class AdminController {
     public ResponseEntity<ApiResponse<Page<WritingPrompt>>> listWritingPrompts(
             @Parameter(description = "Filter by essay type, e.g. OPINION, DISCUSSION")
             @RequestParam(required = false) String essayType,
+            @Parameter(description = "true lists archived prompts only, so they can be restored")
+            @RequestParam(defaultValue = "false") boolean archived,
             @Parameter(description = "Zero-based page number", example = "0")
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size (max 100)", example = "20")
@@ -72,7 +74,7 @@ public class AdminController {
             @Parameter(description = "Sort field and direction", example = "createdAt,desc")
             @RequestParam(defaultValue = "createdAt,desc") String sort) {
         size = Math.min(size, MAX_PAGE_SIZE);
-        return ResponseEntity.ok(ApiResponse.ok(adminService.listWritingPrompts(essayType, page, size, sort)));
+        return ResponseEntity.ok(ApiResponse.ok(adminService.listWritingPrompts(essayType, archived, page, size, sort)));
     }
 
     @PostMapping("/writing-prompts")
@@ -110,6 +112,8 @@ public class AdminController {
             @Parameter(description = "Filter by topic") @RequestParam(required = false) String topic,
             @Parameter(description = "Filter by difficulty") @RequestParam(required = false) String difficulty,
             @Parameter(description = "Filter by source: ADMIN or AI") @RequestParam(required = false) String source,
+            @Parameter(description = "true lists archived quizzes only, so they can be restored")
+            @RequestParam(defaultValue = "false") boolean archived,
             @Parameter(description = "Zero-based page number", example = "0")
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size (max 100)", example = "20")
@@ -117,7 +121,7 @@ public class AdminController {
             @Parameter(description = "Sort field and direction", example = "createdAt,desc")
             @RequestParam(defaultValue = "createdAt,desc") String sort) {
         size = Math.min(size, MAX_PAGE_SIZE);
-        return ResponseEntity.ok(ApiResponse.ok(adminService.listReadingQuizzes(topic, difficulty, source, page, size, sort)));
+        return ResponseEntity.ok(ApiResponse.ok(adminService.listReadingQuizzes(topic, difficulty, source, archived, page, size, sort)));
     }
 
     @PostMapping("/reading-quizzes")
@@ -152,6 +156,8 @@ public class AdminController {
     @Operation(summary = "List mock tests with pagination")
     @GetMapping("/mock-tests")
     public ResponseEntity<ApiResponse<Page<MockTestResponse>>> listMockTests(
+            @Parameter(description = "true lists archived mock tests only, so they can be restored")
+            @RequestParam(defaultValue = "false") boolean archived,
             @Parameter(description = "Zero-based page number", example = "0")
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size (max 100)", example = "20")
@@ -159,7 +165,7 @@ public class AdminController {
             @Parameter(description = "Sort field and direction", example = "createdAt,desc")
             @RequestParam(defaultValue = "createdAt,desc") String sort) {
         size = Math.min(size, MAX_PAGE_SIZE);
-        return ResponseEntity.ok(ApiResponse.ok(adminService.listMockTests(page, size, sort)));
+        return ResponseEntity.ok(ApiResponse.ok(adminService.listMockTests(archived, page, size, sort)));
     }
 
     @PostMapping("/mock-tests")

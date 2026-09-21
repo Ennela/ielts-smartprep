@@ -124,4 +124,35 @@ class AdminMockTestServiceTest {
         assertEquals(MockTestDifficulty.HARD, response.getDifficulty());
         assertEquals("Updated Mock", response.getTitle());
     }
+
+    /**
+     * The archive dialog promised the item could be restored, but every admin list
+     * excluded soft-deleted rows, so nothing archived could ever be found again from
+     * the UI. {@code archived=true} lists exactly those rows.
+     */
+    @Test
+    @DisplayName("listMockTests with archived=true reads the soft-deleted rows")
+    void listMockTests_archived_readsSoftDeletedRows() {
+        MockTest archived = MockTest.builder().mockTestId(5L).title("Archived one")
+                .difficulty(MockTestDifficulty.EASY).build();
+        when(mockTestRepository.findArchived(any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(archived)));
+
+        var page = adminService.listMockTests(true, 0, 20, "createdAt,desc");
+
+        assertEquals(1, page.getTotalElements());
+        assertEquals("Archived one", page.getContent().get(0).getTitle());
+        verify(mockTestRepository, never()).findAll(any(org.springframework.data.domain.Pageable.class));
+    }
+
+    @Test
+    @DisplayName("listMockTests without the flag keeps reading the live rows")
+    void listMockTests_default_readsLiveRows() {
+        when(mockTestRepository.findAll(any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(org.springframework.data.domain.Page.empty());
+
+        adminService.listMockTests(false, 0, 20, "createdAt,desc");
+
+        verify(mockTestRepository, never()).findArchived(any());
+    }
 }
