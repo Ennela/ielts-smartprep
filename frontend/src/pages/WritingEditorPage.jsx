@@ -6,7 +6,9 @@ import attemptApi from '../api/attemptApi';
 import adminApi from '../api/adminApi';
 import useExamTimer from '../hooks/useExamTimer';
 import useExamWarnings from '../hooks/useExamWarnings';
+import useElapsedSeconds, { formatElapsed } from '../hooks/useElapsedSeconds';
 import { useToast } from '../context/ToastContext';
+import { mayHaveGradedAnyway, latestSubmissionId, findNewSubmission } from '../utils/gradingRecovery';
 
 const TASK1_TYPES = ['LINE_GRAPH', 'BAR_CHART', 'PIE_CHART', 'TABLE', 'MAP', 'DIAGRAM'];
 
@@ -58,6 +60,9 @@ export default function WritingEditorPage() {
   const [wordCount, setWordCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [grading, setGrading] = useState(false);
+  // After a grade request died without an answer: looking for the backend's copy.
+  const [recovering, setRecovering] = useState(false);
+  const gradingSeconds = useElapsedSeconds(grading);
   const [error, setError] = useState('');
 
   const isPreviewParam = searchParams.get('preview') === 'true';
@@ -272,6 +277,12 @@ export default function WritingEditorPage() {
     stopTimer();
 
     const sessionKey = SESSION_KEY_PREFIX + promptId;
+    const finish = (submissionId) => {
+      sessionStorage.removeItem(sessionKey);
+      try { localStorage.removeItem(DRAFT_KEY_PREFIX + promptId); } catch { /* ignore */ }
+      navigate(`/writing/result/${submissionId}`);
+    };
+    const beforeId = await latestSubmissionId(writingApi.getHistory, 'submissionId');
 
     try {
       const res = await writingApi.gradeEssay(Number(promptId), essayText);
@@ -282,14 +293,28 @@ export default function WritingEditorPage() {
         await attemptApi.completeAttempt(storedAttemptId, { autoSubmitted: false }).catch(() => {});
       }
 
-      sessionStorage.removeItem(sessionKey);
-      try { localStorage.removeItem(DRAFT_KEY_PREFIX + promptId); } catch { /* ignore */ }
-      navigate(`/writing/result/${res.data.data.submissionId}`);
+      finish(res.data.data.submissionId);
     } catch (err) {
-      setError(err.response?.data?.message || 'Grading failed. Please try again.');
-      submittingRef.current = false;
-    } finally {
       setGrading(false);
+      if (mayHaveGradedAnyway(err)) {
+        // The backend may well have finished the grade we never heard back about.
+        // Resubmitting now would grade it twice; look for its result first.
+        setRecovering(true);
+        setError('Connection lost while grading — checking whether your essay was saved...');
+        const found = await findNewSubmission(
+          writingApi.getHistory, 'submissionId', beforeId,
+          (row) => Number(row.promptId) === Number(promptId),
+        );
+        setRecovering(false);
+        if (found) {
+          finish(found.submissionId);
+          return;
+        }
+        setError('Grading did not complete. Check your history before submitting again, or your essay may be graded twice.');
+      } else {
+        setError(err.response?.data?.message || err.message || 'Grading failed. Please try again.');
+      }
+      submittingRef.current = false;
     }
   };
 
@@ -379,11 +404,13 @@ export default function WritingEditorPage() {
           <button
             className="btn btn-primary btn-grade"
             onClick={handleGrade}
-            disabled={isPreview || !isOk || grading}
-            title={isPreview ? "Không thể nộp ở chế độ preview" : undefined}
+            disabled={isPreview || !isOk || grading || recovering}
+            title={isPreview ? "Không thể nộp ở chế độ preview" : (grading ? 'Grading usually takes 1-2 minutes' : undefined)}
             id="grade-essay-btn"
           >
-            {grading ? <><span className="spinner" />AI is grading...</> : 'Submit for Grading'}
+            {grading ? <><span className="spinner" />AI is grading... {formatElapsed(gradingSeconds)}</>
+              : recovering ? <><span className="spinner" />Checking...</>
+              : 'Submit for Grading'}
           </button>
         </div>
       </header>

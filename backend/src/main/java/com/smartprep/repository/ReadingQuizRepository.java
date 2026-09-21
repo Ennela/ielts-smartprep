@@ -60,6 +60,15 @@ public interface ReadingQuizRepository extends JpaRepository<ReadingQuiz, Long> 
             @Param("source") String source,
             Pageable pageable);
 
+    // Admin "Archived" view: only soft-deleted rows, newest archive first.
+    @Query("SELECT q FROM ReadingQuiz q WHERE q.deletedAt IS NOT NULL " +
+           "AND (:topic IS NULL OR q.topic = :topic) " +
+           "AND (:difficulty IS NULL OR q.difficulty = :difficulty) ORDER BY q.deletedAt DESC")
+    Page<ReadingQuiz> findArchivedForAdmin(
+            @Param("topic") Topic topic,
+            @Param("difficulty") Difficulty difficulty,
+            Pageable pageable);
+
     @Query("SELECT q FROM ReadingQuiz q WHERE q.contentStatus = :contentStatus " +
            "AND q.deletedAt IS NULL")
     Page<ReadingQuiz> findByContentStatus(

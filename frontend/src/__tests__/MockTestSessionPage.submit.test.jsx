@@ -15,6 +15,7 @@ import MockTestSessionPage from '../pages/MockTestSessionPage';
 
 vi.mock('../api/mockTestApi', () => ({
   default: {
+    getSession: vi.fn(),
     getCurrentSession: vi.fn(),
     saveProgress: vi.fn(),
     nextSection: vi.fn(),
@@ -53,9 +54,10 @@ describe('MockTestSessionPage submit redirect', () => {
     vi.clearAllMocks();
     localStorage.clear();
     vi.spyOn(window, 'confirm').mockReturnValue(true);
-    mockTestApi.getCurrentSession
+    mockTestApi.getSession
       .mockResolvedValueOnce(ok(session))
       .mockRejectedValue({ response: { status: 404 } });
+    mockTestApi.getCurrentSession.mockRejectedValue({ response: { status: 404 } });
     mockTestApi.saveProgress.mockResolvedValue(ok({}));
     mockTestApi.submitExam.mockResolvedValue(ok({ submissionId: 8, status: 'GRADING' }));
   });
@@ -80,7 +82,9 @@ describe('MockTestSessionPage submit redirect', () => {
     expect(await screen.findByText('Result page')).toBeInTheDocument();
     expect(screen.queryByText('Lobby')).not.toBeInTheDocument();
     expect(mockTestApi.submitExam).toHaveBeenCalledTimes(1);
-    // The session was loaded once on mount and never re-requested after the submit.
-    expect(mockTestApi.getCurrentSession).toHaveBeenCalledTimes(1);
+    // The session was loaded once on mount (by the id in the route) and never
+    // re-requested after the submit.
+    expect(mockTestApi.getSession).toHaveBeenCalledTimes(1);
+    expect(mockTestApi.getCurrentSession).not.toHaveBeenCalled();
   });
 });

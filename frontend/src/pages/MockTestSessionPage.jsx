@@ -11,7 +11,7 @@ import { useToast } from '../context/ToastContext';
 export default function MockTestSessionPage() {
   const navigate = useNavigate();
   const { error: showErrorToast } = useToast();
-  const { _sessionId } = useParams();
+  const { sessionId } = useParams();
   const {
     activeSession,
     answers,
@@ -24,6 +24,7 @@ export default function MockTestSessionPage() {
     latestSubmissionId,
     clearLatestSubmissionId,
     loadActiveSession,
+    loadSession,
     setAnswer,
     advanceSection,
     submitExam,
@@ -40,7 +41,7 @@ export default function MockTestSessionPage() {
     // session, the redirect effect below resets latestSubmissionId too, and re-running this
     // would find no session (404) and send the user to the lobby instead of the result page.
     if (!activeSession && !latestSubmissionId) {
-      loadActiveSession().then((session) => {
+      (sessionId ? loadSession(sessionId) : loadActiveSession()).then((session) => {
         if (!session) {
           navigate('/mock-tests');
         }

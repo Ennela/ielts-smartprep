@@ -30,6 +30,10 @@ public interface MockTestRepository extends JpaRepository<MockTest, Long> {
     @Query("SELECT m FROM MockTest m WHERE m.deletedAt IS NULL")
     Page<MockTest> findAll(Pageable pageable);
 
+    // Admin "Archived" view: only soft-deleted rows, newest archive first.
+    @Query("SELECT m FROM MockTest m WHERE m.deletedAt IS NOT NULL ORDER BY m.deletedAt DESC")
+    Page<MockTest> findArchived(Pageable pageable);
+
     @Query("SELECT m FROM MockTest m WHERE m.contentStatus = :contentStatus " +
            "AND m.deletedAt IS NULL")
     Page<MockTest> findByContentStatus(

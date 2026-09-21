@@ -32,6 +32,9 @@ const mockTestApi = {
       progressJson
     }),
 
+  abandonSession: (sessionId) =>
+    axiosClient.post(`/mock-tests/${sessionId}/abandon`),
+
   getSubmission: (submissionId) => 
     axiosClient.get(`/mock-tests/submissions/${submissionId}`),
 

@@ -5,6 +5,7 @@ import adminApi from '../api/adminApi';
 import listeningApi from '../api/listeningApi';
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
+import ArchivedToggle from '../components/admin/ArchivedToggle';
 
 export default function AdminMockTestsPage() {
   const navigate = useNavigate();
@@ -40,6 +41,7 @@ export default function AdminMockTestsPage() {
   // Delete state
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   const {
     content,
@@ -48,12 +50,14 @@ export default function AdminMockTestsPage() {
     page,
     size,
     setPage,
+    resetPage,
     isLoading,
     isFetching,
     isPlaceholderData,
   } = usePaginatedQuery({
     queryKey: ['admin', 'mock-tests'],
-    queryFn: (pg, sz) => adminApi.listMockTests(pg, sz),
+    queryFn: (pg, sz) => adminApi.listMockTests(pg, sz, 'createdAt,desc', showArchived),
+    filters: { showArchived },
   });
 
   const invalidateList = () => {
@@ -167,6 +171,19 @@ export default function AdminMockTestsPage() {
     }
   };
 
+
+  // Archived view: put the row back in the active list.
+  const handleRestore = async (id) => {
+    try {
+      await adminApi.restoreMockTest(id);
+      setSuccessMsg('Mock test restored.');
+      invalidateList();
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to restore');
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteId) return;
     setDeleting(true);
@@ -194,7 +211,7 @@ export default function AdminMockTestsPage() {
             Overview
           </button>
           <h1>IELTS Mock Tests Builder</h1>
-          <p className="subtitle">{totalElements} active mock tests configured</p>
+          <p className="subtitle">{totalElements} {showArchived ? 'archived' : 'active'} mock tests{showArchived ? '' : ' configured'}</p>
         </div>
         <button
           className="btn btn-primary"
@@ -217,13 +234,17 @@ export default function AdminMockTestsPage() {
       {successMsg && <div className="success-msg">{successMsg}</div>}
       {error && !modalOpen && <div className="error-msg">{error}</div>}
 
+      <div className="writing-filter reveal reveal-delay-1" style={{ display: 'flex', marginTop: 16 }}>
+        <ArchivedToggle archived={showArchived} onChange={(v) => { setShowArchived(v); resetPage(); }} />
+      </div>
+
       {/* Main Table */}
       <div className={`admin-table-section reveal reveal-delay-1${isFetching && isPlaceholderData ? ' is-fetching' : ''}`} style={{ marginTop: 24 }}>
         {isLoading ? (
           <div className="loading-spinner"><div className="spinner" /></div>
         ) : content.length === 0 ? (
           <div className="empty-state">
-            <p>No full mock tests configured yet. Click "Build Full Mock Test" to assemble your first exam template.</p>
+            <p>{showArchived ? 'No archived mock tests.' : 'No full mock tests configured yet. Click "Build Full Mock Test" to assemble your first exam template.'}</p>
           </div>
         ) : (
           <>
@@ -258,16 +279,26 @@ export default function AdminMockTestsPage() {
                       <td>{t.writingPromptsCount} Tasks</td>
                       <td>
                         <div className="admin-action-btns">
-                          <button
-                            className="btn btn-sm btn-outline"
-                            onClick={() => openEdit(t)}
-                            id={`edit-mock-${t.mockTestId}`}
-                          >Edit</button>
-                          <button
-                            className="btn btn-sm admin-btn-danger"
-                            onClick={() => setDeleteId(t.mockTestId)}
-                            id={`delete-mock-${t.mockTestId}`}
-                          >Delete</button>
+                          {showArchived ? (
+                            <button
+                              className="btn btn-sm btn-outline"
+                              onClick={() => handleRestore(t.mockTestId)}
+                              id={`restore-mock-${t.mockTestId}`}
+                            >Restore</button>
+                          ) : (
+                            <>
+                              <button
+                                className="btn btn-sm btn-outline"
+                                onClick={() => openEdit(t)}
+                                id={`edit-mock-${t.mockTestId}`}
+                              >Edit</button>
+                              <button
+                                className="btn btn-sm admin-btn-danger"
+                                onClick={() => setDeleteId(t.mockTestId)}
+                                id={`delete-mock-${t.mockTestId}`}
+                              >Delete</button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

@@ -87,6 +87,20 @@ public class MockTestController {
     }
 
     /**
+     * Abandon a session without grading it.
+     * POST /api/v1/mock-tests/{id}/abandon
+     */
+    @PostMapping("/{id}/abandon")
+    @Operation(summary = "Abandon a mock test session",
+            description = "Retires an in-progress session without grading it, so a new one can be started")
+    public ResponseEntity<ApiResponse<MockTestSessionResponse>> abandonSession(
+            @AuthenticationPrincipal User user,
+            @PathVariable("id") Long sessionId) {
+        MockTestSessionResponse session = mockTestService.abandonSession(user.getUserId(), sessionId);
+        return ResponseEntity.ok(ApiResponse.ok(session, "Session abandoned"));
+    }
+
+    /**
      * Get mock test session by ID (Aliased).
      * GET /api/v1/mock-tests/{id}
      */

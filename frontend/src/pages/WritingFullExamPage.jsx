@@ -6,7 +6,9 @@ import VisualDataRenderer from '../components/writing/VisualDataRenderer';
 import useExamTimer from '../hooks/useExamTimer';
 import useWritingTaskTimer from '../hooks/useWritingTaskTimer';
 import useExamWarnings from '../hooks/useExamWarnings';
+import useElapsedSeconds, { formatElapsed } from '../hooks/useElapsedSeconds';
 import { useToast } from '../context/ToastContext';
+import { mayHaveGradedAnyway, latestSubmissionId, findNewSubmission } from '../utils/gradingRecovery';
 
 const SESSION_KEY = 'writing_full_attemptId';
 
@@ -22,6 +24,9 @@ export default function WritingFullExamPage() {
   const [activeTab, setActiveTab] = useState(1); // 1 or 2
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  // After a submit died without an answer: looking for the backend's copy.
+  const [recovering, setRecovering] = useState(false);
+  const submittingSeconds = useElapsedSeconds(submitting);
   const [error, setError] = useState('');
 
   // Server-authoritative attempt state
@@ -72,7 +77,7 @@ export default function WritingFullExamPage() {
       timeSpentTask2: times.timeSpentTask2,
     }).then(res => {
       sessionStorage.removeItem(SESSION_KEY);
-      navigate('/writing/full-result', { state: { result: res.data.data }, replace: true });
+      navigate(`/writing/full-result/${res.data.data.id}`, { state: { result: res.data.data }, replace: true });
     }).catch(err => {
       console.error(err);
       showErrorToast('Auto-submit failed. Please try submitting manually.');
@@ -179,6 +184,15 @@ export default function WritingFullExamPage() {
     stopTimer();
 
     const times = getFinalTimes();
+    const finish = (result) => {
+      sessionStorage.removeItem(SESSION_KEY);
+      try {
+        localStorage.removeItem(`writing_draft_${task1?.promptId}`);
+        localStorage.removeItem(`writing_draft_${task2?.promptId}`);
+      } catch (_e) { /* ignore */ }
+      navigate(`/writing/full-result/${result.id}`, { state: { result }, replace: true });
+    };
+    const beforeId = await latestSubmissionId(writingApi.getFullHistory, 'id');
 
     try {
       const res = await writingApi.submitFullWriting({
@@ -191,16 +205,24 @@ export default function WritingFullExamPage() {
         timeSpentTask1: times.timeSpentTask1,
         timeSpentTask2: times.timeSpentTask2,
       });
-      sessionStorage.removeItem(SESSION_KEY);
-      try {
-        localStorage.removeItem(`writing_draft_${task1?.promptId}`);
-        localStorage.removeItem(`writing_draft_${task2?.promptId}`);
-      } catch (_e) { /* ignore */ }
-      navigate('/writing/full-result', { state: { result: res.data.data }, replace: true });
+      finish(res.data.data);
     } catch (err) {
-      const msg = err.response?.data?.message || 'Submission failed';
-      setError(msg);
       setSubmitting(false);
+      if (mayHaveGradedAnyway(err)) {
+        // Four Gemini calls take 70-80 s; the backend may have finished the sitting we
+        // never heard back about. Resubmitting would grade it twice; look for it first.
+        setRecovering(true);
+        showErrorToast('Connection lost while grading — checking whether your test was saved...');
+        const found = await findNewSubmission(writingApi.getFullHistory, 'id', beforeId);
+        setRecovering(false);
+        if (found) {
+          finish(found);
+          return;
+        }
+        showErrorToast('Grading did not complete. Check your history before submitting again, or the test may be graded twice.');
+      } else {
+        showErrorToast(err.response?.data?.message || err.message || 'Submission failed');
+      }
       submittingRef.current = false;
     }
   };
@@ -301,10 +323,11 @@ export default function WritingFullExamPage() {
           <button
             className="btn btn-primary btn-submit-exam"
             onClick={handleSubmit}
-            disabled={submitting}
+            disabled={submitting || recovering}
+            title={submitting ? 'Grading a full test usually takes 1-2 minutes' : undefined}
             id="submit-writing-btn"
           >
-            {submitting ? 'Grading...' : 'Submit'}
+            {submitting ? `Grading... ${formatElapsed(submittingSeconds)}` : recovering ? 'Checking...' : 'Submit'}
           </button>
         </div>
       </header>
@@ -422,9 +445,10 @@ export default function WritingFullExamPage() {
           <button
             className="btn btn-primary"
             onClick={handleSubmit}
-            disabled={submitting}
+            disabled={submitting || recovering}
+            title={submitting ? 'Grading a full test usually takes 1-2 minutes' : undefined}
           >
-            {submitting ? 'Grading...' : 'Submit Full Test'}
+            {submitting ? `Grading... ${formatElapsed(submittingSeconds)}` : recovering ? 'Checking...' : 'Submit Full Test'}
           </button>
         </div>
       </div>

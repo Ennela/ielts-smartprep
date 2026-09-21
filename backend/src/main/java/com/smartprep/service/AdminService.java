@@ -123,11 +123,14 @@ public class AdminService {
 
     // ===== Writing Prompts CRUD =====
 
-    public Page<WritingPrompt> listWritingPrompts(String essayType, int page, int size, String sort) {
+    public Page<WritingPrompt> listWritingPrompts(String essayType, boolean archived, int page, int size, String sort) {
         size = Math.min(size, MAX_PAGE_SIZE);
         PageRequest pageRequest = PageRequest.of(page, size, parseSort(sort, "createdAt"));
-        if (essayType != null && !essayType.isBlank()) {
-            EssayType type = EssayType.valueOf(essayType.toUpperCase());
+        EssayType type = (essayType != null && !essayType.isBlank()) ? EssayType.valueOf(essayType.toUpperCase()) : null;
+        if (archived) {
+            return writingPromptRepository.findArchived(type, pageRequest);
+        }
+        if (type != null) {
             return writingPromptRepository.findByEssayTypeOrderByCreatedAtDesc(type, pageRequest);
         }
         return writingPromptRepository.findAllByOrderByCreatedAtDesc(pageRequest);
@@ -206,11 +209,15 @@ public class AdminService {
 
     // ===== Reading Quizzes CRUD =====
 
-    public Page<AdminReadingQuizResponse> listReadingQuizzes(String topicStr, String difficultyStr, String source, int page, int size, String sort) {
+    public Page<AdminReadingQuizResponse> listReadingQuizzes(String topicStr, String difficultyStr, String source, boolean archived, int page, int size, String sort) {
         size = Math.min(size, MAX_PAGE_SIZE);
         PageRequest pageRequest = PageRequest.of(page, size, parseSort(sort, "createdAt"));
         Topic topic = (topicStr != null && !topicStr.isBlank()) ? Topic.valueOf(topicStr.toUpperCase()) : null;
         Difficulty difficulty = (difficultyStr != null && !difficultyStr.isBlank()) ? Difficulty.valueOf(difficultyStr.toUpperCase()) : null;
+        if (archived) {
+            return readingQuizRepository.findArchivedForAdmin(topic, difficulty, pageRequest)
+                    .map(this::toAdminReadingQuizResponse);
+        }
         String cleanSource = (source != null && !source.isBlank()) ? source.toUpperCase() : null;
         return readingQuizRepository.findQuizzesForAdmin(topic, difficulty, cleanSource, pageRequest)
                 .map(this::toAdminReadingQuizResponse);
@@ -390,10 +397,11 @@ public class AdminService {
 
     // ===== Mock Tests CRUD =====
 
-    public Page<MockTestResponse> listMockTests(int page, int size, String sort) {
+    public Page<MockTestResponse> listMockTests(boolean archived, int page, int size, String sort) {
         size = Math.min(size, MAX_PAGE_SIZE);
         PageRequest pageRequest = PageRequest.of(page, size, parseSort(sort, "createdAt"));
-        return mockTestRepository.findAll(pageRequest).map(this::mapToMockTestResponse);
+        Page<MockTest> tests = archived ? mockTestRepository.findArchived(pageRequest) : mockTestRepository.findAll(pageRequest);
+        return tests.map(this::mapToMockTestResponse);
     }
 
     @Transactional

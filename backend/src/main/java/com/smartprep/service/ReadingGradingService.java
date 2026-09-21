@@ -169,9 +169,10 @@ public class ReadingGradingService {
                 .build();
         allUserAnswers.forEach(ua -> ua.setScoreHistory(history));
         history.setUserAnswers(allUserAnswers);
-        scoreHistoryRepository.save(history);
+        ScoreHistory saved = scoreHistoryRepository.save(history);
 
         return ReadingFullResultResponse.builder()
+                .historyId(saved.getHistoryId())
                 .overallBand(overallBand).totalCorrect(totalCorrect)
                 .totalQuestions(totalQuestions).submittedAt(LocalDateTime.now())
                 .quizResults(quizResults)

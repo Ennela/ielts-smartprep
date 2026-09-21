@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import writingApi from '../api/writingApi';
 import { formatBand } from '../utils/formatBand';
 import AiVocabularyButton from '../components/vocab/AiVocabularyButton';
 import VisualDataRenderer from '../components/writing/VisualDataRenderer';
@@ -26,16 +27,39 @@ const CRITERIA_EXPLANATIONS = [
 export default function WritingFullResultPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const result = location.state?.result;
+  const { id } = useParams();
+  // Navigation state is the fast path; a new tab, bookmark or shared link has none,
+  // so the sitting is fetched by the id in the URL.
+  const [result, setResult] = useState(location.state?.result || null);
+  const [loading, setLoading] = useState(!location.state?.result && !!id);
+  const [loadError, setLoadError] = useState('');
 
   const [activeTaskTab, setActiveTaskTab] = useState(1); // 1 or 2
   const [activeDetailTab, setActiveDetailTab] = useState('errors'); // 'errors' or 'rewrite'
+
+  useEffect(() => {
+    if (result || !id) return;
+    let cancelled = false;
+    writingApi.getFullSubmission(id)
+      .then(res => { if (!cancelled) setResult(res.data?.data || null); })
+      .catch(err => { if (!cancelled) setLoadError(err.response?.data?.message || err.message || 'Could not load this result.'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [id, result]);
+
+  if (loading) {
+    return (
+      <div className="loading-screen">
+        <span className="spinner" style={{ width: 24, height: 24 }} />Loading result...
+      </div>
+    );
+  }
 
   if (!result) {
     return (
       <div className="loading-screen">
         <div>
-          <p style={{ color: 'var(--error)' }}>No exam result found. Please start a new session.</p>
+          <p style={{ color: 'var(--error)' }}>{loadError || 'No exam result found. Please start a new session.'}</p>
           <button className="btn btn-primary" onClick={() => navigate('/writing')} style={{ marginTop: 16 }}>
             Back to Writing
           </button>

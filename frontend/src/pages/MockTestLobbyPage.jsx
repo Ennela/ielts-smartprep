@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMockTest } from '../context/MockTestContext';
 import mockTestApi from '../api/mockTestApi';
@@ -13,7 +13,7 @@ const formatBand = (band) => (band === null || band === undefined ? '—' : Numb
 
 export default function MockTestLobbyPage() {
   const navigate = useNavigate();
-  const { activeSession, startOrResumeTest, loadActiveSession, clearSession } = useMockTest();
+  const { activeSession, startOrResumeTest, loadActiveSession, abandonSession } = useMockTest();
   const { error: showErrorToast } = useToast();
   const [tests, setTests] = useState([]);
   const [history, setHistory] = useState([]);
@@ -21,6 +21,8 @@ export default function MockTestLobbyPage() {
   const [historyPageInfo, setHistoryPageInfo] = useState({ totalPages: 0, totalElements: 0 });
   const [loading, setLoading] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [testsError, setTestsError] = useState('');
+  const [historyError, setHistoryError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
   // Wizard state
@@ -30,26 +32,30 @@ export default function MockTestLobbyPage() {
   const [isTermsChecked, setIsTermsChecked] = useState(false);
   const audioRef = useRef(null);
 
-  useEffect(() => {
-    // Load active session on mount
-    loadActiveSession().catch(() => {});
-    
-    // Load available mock tests
+  const loadTests = useCallback(() => {
     setLoading(true);
+    setTestsError('');
     mockTestApi.getAllMockTests()
       .then(res => {
         setTests(res.data?.data || []);
       })
       .catch(err => {
         console.error('Failed to load mock tests', err);
+        setTestsError(err.response?.data?.message || err.message || 'Failed to load mock tests');
       })
       .finally(() => setLoading(false));
-
   }, []);
 
-  // Attempt history, one page at a time; the whole history is no longer shipped.
   useEffect(() => {
+    // Load active session on mount
+    loadActiveSession().catch(() => {});
+    loadTests();
+  }, [loadTests]);
+
+  // Attempt history, one page at a time; the whole history is no longer shipped.
+  const loadHistory = useCallback(() => {
     setHistoryLoading(true);
+    setHistoryError('');
     mockTestApi.getHistory(historyPage, HISTORY_PAGE_SIZE)
       .then(res => {
         const data = res.data?.data;
@@ -58,9 +64,14 @@ export default function MockTestLobbyPage() {
       })
       .catch(err => {
         console.error('Failed to load history', err);
+        setHistoryError(err.response?.data?.message || err.message || 'Failed to load your exam history');
       })
       .finally(() => setHistoryLoading(false));
   }, [historyPage]);
+
+  useEffect(() => {
+    loadHistory();
+  }, [loadHistory]);
 
   useEffect(() => {
     return () => {
@@ -92,9 +103,12 @@ export default function MockTestLobbyPage() {
     }
   };
 
-  const handleCancelActive = () => {
-    if (window.confirm('Are you sure you want to abandon this mock test? Your progress will be lost.')) {
-      clearSession();
+  const handleCancelActive = async () => {
+    if (!window.confirm('Are you sure you want to abandon this mock test? Your progress will be lost.')) return;
+    try {
+      await abandonSession();
+    } catch (err) {
+      showErrorToast(err.response?.data?.message || err.message || 'Failed to abandon the test');
     }
   };
 
@@ -376,7 +390,7 @@ export default function MockTestLobbyPage() {
                       </div>
                     )}
                   </div>
-                  <audio ref={audioRef} src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" loop />
+                  <audio ref={audioRef} src="/audio/sound-check.wav" loop />
                 </div>
               </div>
 
@@ -651,6 +665,11 @@ export default function MockTestLobbyPage() {
           <span className="spinner" />
           <span>Loading mock tests...</span>
         </div>
+      ) : testsError ? (
+        <div className="error-msg" role="alert">
+          <span>{testsError}</span>
+          <button className="btn btn-outline" onClick={loadTests}>Retry</button>
+        </div>
       ) : (
         <div className={styles['tests-grid']}>
           {tests.map(test => (
@@ -700,6 +719,11 @@ export default function MockTestLobbyPage() {
         <div className="loading-spinner" style={{ margin: '32px auto' }}>
           <span className="spinner" />
           <span>Loading history...</span>
+        </div>
+      ) : historyError ? (
+        <div className="error-msg" role="alert">
+          <span>{historyError}</span>
+          <button className="btn btn-outline" onClick={loadHistory}>Retry</button>
         </div>
       ) : history.length > 0 ? (
         <div className={styles['history-table']}>

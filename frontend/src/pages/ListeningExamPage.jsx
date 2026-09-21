@@ -12,6 +12,21 @@ import useExamWarnings from '../hooks/useExamWarnings';
 import { useToast } from '../context/ToastContext';
 
 const SESSION_KEY = 'listening_attemptId';
+// Answers are drafted per attempt so a reload or a dropped connection does not lose
+// them while the server clock keeps running (same idea as reading_quiz_draft_*).
+const draftKey = (attemptId) => `listening_draft_${attemptId}`;
+// Poll for generated audio at most this many times (x 3 s) before giving up.
+const MAX_AUDIO_POLLS = 40;
+// A single practice part gets its audio length plus this much time to answer,
+// instead of the full 32-minute exam allowance.
+const PRACTICE_ANSWER_BUFFER_SECONDS = 300;
+
+const audioFailureMessage = (parts) => {
+  const failed = parts.filter(p => p.audioStatus === 'FAILED');
+  if (!failed.length) return null;
+  const names = failed.map(p => `Part ${p.partNumber}`).join(', ');
+  return `The audio for ${names} could not be generated. Please try another part or contact support.`;
+};
 
 export default function ListeningExamPage() {
   const [searchParams] = useSearchParams();
@@ -29,6 +44,7 @@ export default function ListeningExamPage() {
   const [parts, setParts] = useState([]);
   const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [polling, setPolling] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [currentPartIndex, setCurrentPartIndex] = useState(0);
@@ -58,6 +74,7 @@ export default function ListeningExamPage() {
       true, // autoSubmitted
     ).then(res => {
       sessionStorage.removeItem(SESSION_KEY);
+      if (storedAttemptId) localStorage.removeItem(draftKey(storedAttemptId));
       navigate(`/listening/result/${res.data?.data?.testId}`, { state: res.data?.data });
     }).catch(err => {
       console.error(err);
@@ -105,8 +122,14 @@ export default function ListeningExamPage() {
           setParts(loaded);
           setPolling(true);
           setLoading(false);
+          let pollCount = 0;
 
           const poll = async () => {
+            if (++pollCount > MAX_AUDIO_POLLS) {
+              setPolling(false);
+              setError('Audio generation is taking longer than expected. Please go back and try again in a minute.');
+              return;
+            }
             try {
               const updated = [];
               let allReady = true;
@@ -135,9 +158,14 @@ export default function ListeningExamPage() {
 
               if (allReady) {
                 setPolling(false);
+                const failure = audioFailureMessage(updated);
+                if (failure) {
+                  setError(failure);
+                  return;
+                }
                 // Start attempt after audio is ready
                 if (!isPreview) {
-                  await initAttempt();
+                  await initAttempt(updated);
                 } else {
                   setAttemptId(null);
                   setDeadline(null);
@@ -157,9 +185,15 @@ export default function ListeningExamPage() {
           setPolling(false);
           setLoading(false);
 
+          const failure = audioFailureMessage(loaded);
+          if (failure) {
+            setError(failure);
+            return;
+          }
+
           // Start/resume attempt for all modes
           if (!isPreview) {
-            await initAttempt();
+            await initAttempt(loaded);
           } else {
             setAttemptId(null);
             setDeadline(null);
@@ -167,11 +201,14 @@ export default function ListeningExamPage() {
         }
       } catch (err) {
         console.error(err);
-        if (active) setLoading(false);
+        if (active) {
+          setError(err.message || 'Failed to load the listening test.');
+          setLoading(false);
+        }
       }
     };
 
-    const initAttempt = async () => {
+    const initAttempt = async (loadedParts) => {
       try {
         const storedAttemptId = sessionStorage.getItem(SESSION_KEY);
         let attempt;
@@ -185,10 +222,17 @@ export default function ListeningExamPage() {
         }
 
         if (!attempt) {
-          const res = await attemptApi.startAttempt({
+          const request = {
             skillType: 'LISTENING',
             examReferenceIds: JSON.stringify(partIds),
-          });
+          };
+          // Practice: size the attempt to the parts chosen. The server default is the
+          // full 32-minute exam, which is meaningless for one 4-minute part.
+          const audioSeconds = loadedParts.reduce((sum, p) => sum + (p.durationSeconds || 0), 0);
+          if (mode === 'practice' && audioSeconds > 0) {
+            request.durationOverride = audioSeconds + PRACTICE_ANSWER_BUFFER_SECONDS;
+          }
+          const res = await attemptApi.startAttempt(request);
           attempt = res.data.data;
         }
 
@@ -196,9 +240,14 @@ export default function ListeningExamPage() {
           setAttemptId(attempt.attemptId);
           setDeadline(attempt.deadline);
           sessionStorage.setItem(SESSION_KEY, String(attempt.attemptId));
+          try {
+            const draft = localStorage.getItem(draftKey(attempt.attemptId));
+            if (draft) setAnswers(JSON.parse(draft));
+          } catch (_e) { /* malformed draft: start clean */ }
         }
       } catch (err) {
         console.error("Failed to start attempt:", err);
+        if (active) setError(err.message || 'Could not start the exam attempt. Please go back and try again.');
       }
     };
 
@@ -211,10 +260,20 @@ export default function ListeningExamPage() {
       active = false;
       if (timerId) clearTimeout(timerId);
     };
-  }, [partIds, isPreview]);
+  }, [partIds, isPreview, mode]);
 
   const handleAnswer = (questionId, value) =>
-    setAnswers(prev => ({ ...prev, [questionId]: value }));
+    setAnswers(prev => {
+      const next = { ...prev, [questionId]: value };
+      if (attemptId) {
+        try {
+          localStorage.setItem(draftKey(attemptId), JSON.stringify(next));
+        } catch (e) {
+          console.error('Failed to save draft', e);
+        }
+      }
+      return next;
+    });
 
   const handleSubmit = async () => {
     if (submitting || submittingRef.current) return;
@@ -231,6 +290,7 @@ export default function ListeningExamPage() {
         false, // not auto-submitted
       );
       sessionStorage.removeItem(SESSION_KEY);
+      if (attemptId) localStorage.removeItem(draftKey(attemptId));
       navigate(`/listening/result/${res.data?.data?.testId}`, { state: res.data?.data });
     } catch (err) {
       console.error(err);
@@ -248,6 +308,19 @@ export default function ListeningExamPage() {
   if (loading) return (
     <div className="listening-page">
       <div className="loading-spinner"><div className="spinner" /></div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="listening-page">
+      <div className="loading-screen">
+        <div>
+          <p style={{ color: 'var(--error)' }}>{error}</p>
+          <button className="btn btn-primary" onClick={() => navigate(isPreview ? '/admin/listening' : '/listening')} style={{ marginTop: 16 }}>
+            Go Back
+          </button>
+        </div>
+      </div>
     </div>
   );
 

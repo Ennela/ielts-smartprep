@@ -49,6 +49,11 @@ public interface WritingPromptRepository extends JpaRepository<WritingPrompt, Lo
             @Param("essayType") EssayType essayType,
             Pageable pageable);
 
+    // Admin "Archived" view: only soft-deleted rows, newest archive first.
+    @Query("SELECT p FROM WritingPrompt p WHERE p.deletedAt IS NOT NULL " +
+           "AND (:essayType IS NULL OR p.essayType = :essayType) ORDER BY p.deletedAt DESC")
+    Page<WritingPrompt> findArchived(@Param("essayType") EssayType essayType, Pageable pageable);
+
     @Query("SELECT p FROM WritingPrompt p WHERE p.contentStatus = :contentStatus " +
            "AND p.deletedAt IS NULL")
     Page<WritingPrompt> findByContentStatus(

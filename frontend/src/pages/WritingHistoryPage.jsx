@@ -157,7 +157,7 @@ export default function WritingHistoryPage() {
                             <div
                                 key={item.id}
                                 className="card history-card card-clickable"
-                                onClick={() => navigate(`/writing/full-result`, { state: { result: item } })}
+                                onClick={() => navigate(`/writing/full-result/${item.id}`, { state: { result: item } })}
                                 id={`full-history-${item.id}`}
                             >
                                 <div className="history-card-top">

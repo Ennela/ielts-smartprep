@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import statsApi from '../api/statsApi';
@@ -23,21 +23,54 @@ export default function DashboardPage() {
   const [weaknessSkill, setWeaknessSkill] = useState('');
   const [weaknessData, setWeaknessData] = useState(null);
 
+  // Each filtered block fails on its own; only the overview takes the page down.
+  const [sectionErrors, setSectionErrors] = useState({});
+  const setSectionError = (key, err) => setSectionErrors(prev => ({
+    ...prev,
+    [key]: err ? (err.response?.data?.message || err.message || 'Failed to load') : null,
+  }));
+
+  // Per-section request counters: a response only lands if it is the latest one
+  // asked for, so flipping a filter twice quickly cannot show the first filter's data.
+  const requests = useRef({ trend: 0, history: 0, weakness: 0 });
+  const load = useCallback((key, request, setter) => {
+    const id = ++requests.current[key];
+    return request()
+      .then(res => {
+        if (id !== requests.current[key]) return;
+        setter(res.data?.data);
+        setSectionError(key, null);
+      })
+      .catch(err => {
+        if (id !== requests.current[key]) return;
+        console.error(err);
+        setSectionError(key, err);
+      });
+  }, []);
+
+  const loadTrend = useCallback(() =>
+    load('trend', () => statsApi.getScoreTrend(trendSkill, trendPeriod), setTrendData),
+  [load, trendSkill, trendPeriod]);
+  const loadHistory = useCallback(() =>
+    load('history', () => statsApi.getHistory(historySkill || undefined, historyPage, 5), setHistory),
+  [load, historySkill, historyPage]);
+  const loadWeakness = useCallback(() =>
+    load('weakness', () => analyticsApi.getWeakness(weaknessSkill || undefined), setWeaknessData),
+  [load, weaknessSkill]);
+
   const fetchDashboardData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const [overviewRes, trendRes, historyRes, weaknessRes] = await Promise.all([
+      // The overview decides what the page is (empty state, bands); the other three
+      // blocks each render their own error and retry instead of blanking the page.
+      const [overviewRes] = await Promise.all([
         statsApi.getOverview(),
-        statsApi.getScoreTrend(trendSkill, trendPeriod),
-        statsApi.getHistory(historySkill || undefined, historyPage, 5),
-        analyticsApi.getWeakness(weaknessSkill || undefined)
+        loadTrend(),
+        loadHistory(),
+        loadWeakness(),
       ]);
-
       setOverview(overviewRes.data?.data);
-      setTrendData(trendRes.data?.data);
-      setHistory(historyRes.data?.data);
-      setWeaknessData(weaknessRes.data?.data);
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.message || err.message || 'Failed to load dashboard data. Please try again.');
@@ -50,29 +83,18 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, []);
 
-  // Fetch trend data on parameter changes
+  // Refetch a block when its filter changes (the initial load above covers mount)
   useEffect(() => {
-    if (loading) return;
-    statsApi.getScoreTrend(trendSkill, trendPeriod)
-      .then(res => setTrendData(res.data?.data))
-      .catch(err => console.error(err));
-  }, [trendSkill, trendPeriod]);
+    if (!loading) loadTrend();
+  }, [loadTrend]);
 
-  // Fetch history data on parameter changes
   useEffect(() => {
-    if (loading) return;
-    statsApi.getHistory(historySkill || undefined, historyPage, 5)
-      .then(res => setHistory(res.data?.data))
-      .catch(err => console.error(err));
-  }, [historySkill, historyPage]);
+    if (!loading) loadHistory();
+  }, [loadHistory]);
 
-  // Fetch weakness data on parameter changes
   useEffect(() => {
-    if (loading) return;
-    analyticsApi.getWeakness(weaknessSkill || undefined)
-      .then(res => setWeaknessData(res.data?.data))
-      .catch(err => console.error(err));
-  }, [weaknessSkill]);
+    if (!loading) loadWeakness();
+  }, [loadWeakness]);
 
   const displayName = user?.displayName || user?.username || 'Student';
   
@@ -236,7 +258,9 @@ export default function DashboardPage() {
           </div>
           
           <div className="w-full h-[320px] rounded-md overflow-hidden bg-surface-bright flex items-center justify-center p-xs relative">
-            {trendData && trendData.dataPoints?.length > 0 ? (
+            {sectionErrors.trend ? (
+              <SectionError message={sectionErrors.trend} onRetry={loadTrend} />
+            ) : trendData && trendData.dataPoints?.length > 0 ? (
               <ScoreTrendChart
                 dataPoints={trendData.dataPoints}
                 targetScore={trendData.targetScore}
@@ -317,12 +341,19 @@ export default function DashboardPage() {
             <span className="material-symbols-outlined text-tertiary-container icon-fill">warning</span>
             Focus Area Needed
           </h4>
-          <div className="flex justify-between items-center bg-surface-bright p-sm rounded-md border border-outline-variant/30">
-            <span className="font-body-md text-body-md text-on-surface font-bold">{weakestType}</span>
-            <span className="font-label-md text-label-md bg-error-container text-on-error-container px-2.5 py-1 rounded-full font-bold">
-              {weakestAccuracy}% Accuracy
-            </span>
-          </div>
+          {sectionErrors.weakness ? (
+            <div className="flex justify-between items-center gap-sm bg-surface-bright p-sm rounded-md border border-error/30" role="alert">
+              <span className="font-body-md text-body-md text-on-surface-variant">{sectionErrors.weakness}</span>
+              <button onClick={loadWeakness} className="font-label-md text-label-md text-primary font-bold hover:underline">Retry</button>
+            </div>
+          ) : (
+            <div className="flex justify-between items-center bg-surface-bright p-sm rounded-md border border-outline-variant/30">
+              <span className="font-body-md text-body-md text-on-surface font-bold">{weakestType}</span>
+              <span className="font-label-md text-label-md bg-error-container text-on-error-container px-2.5 py-1 rounded-full font-bold">
+                {weakestAccuracy}% Accuracy
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -342,7 +373,9 @@ export default function DashboardPage() {
           </select>
         </div>
 
-        {history?.items?.length > 0 ? (
+        {sectionErrors.history ? (
+          <SectionError message={sectionErrors.history} onRetry={loadHistory} />
+        ) : history?.items?.length > 0 ? (
           <div className="overflow-x-auto w-full">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -429,6 +462,21 @@ export default function DashboardPage() {
 }
 
 // Skeletons, Errors and Empty Views
+function SectionError({ message, onRetry }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-lg text-center gap-sm" role="alert">
+      <span className="material-symbols-outlined text-[40px] text-error">error</span>
+      <p className="font-body-md text-body-md text-on-surface-variant">{message}</p>
+      <button
+        onClick={onRetry}
+        className="px-4 py-2 rounded-lg font-bold text-sm bg-primary text-on-primary hover:bg-primary-container transition-all shadow-sm"
+      >
+        Retry
+      </button>
+    </div>
+  );
+}
+
 function DashboardSkeleton() {
   return (
     <div className="animate-pulse space-y-lg">

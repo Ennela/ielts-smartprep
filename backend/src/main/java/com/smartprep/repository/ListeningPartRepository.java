@@ -48,6 +48,15 @@ public interface ListeningPartRepository extends JpaRepository<ListeningPart, Lo
             @Param("topic") String topic,
             Pageable pageable);
 
+    // Admin "Archived" view: only soft-deleted rows, newest archive first.
+    @Query("SELECT p FROM ListeningPart p WHERE p.deletedAt IS NOT NULL AND " +
+           "(:audioStatus IS NULL OR p.audioStatus = :audioStatus) AND " +
+           "(:topic IS NULL OR p.topic = :topic) ORDER BY p.deletedAt DESC")
+    Page<ListeningPart> findArchivedByFilters(
+            @Param("audioStatus") AudioStatus audioStatus,
+            @Param("topic") String topic,
+            Pageable pageable);
+
     @Query("SELECT p FROM ListeningPart p WHERE p.audioStatus = :audioStatus " +
            "AND p.deletedAt IS NULL")
     List<ListeningPart> findByAudioStatus(@Param("audioStatus") AudioStatus audioStatus);

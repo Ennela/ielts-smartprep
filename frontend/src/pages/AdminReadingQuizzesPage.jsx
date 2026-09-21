@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import adminApi from '../api/adminApi';
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
+import ArchivedToggle from '../components/admin/ArchivedToggle';
 
 const TOPICS = [
   { value: 'ENVIRONMENT', label: 'Environment' },
@@ -51,6 +52,7 @@ export default function AdminReadingQuizzesPage() {
   const [filterTopic, setFilterTopic] = useState('');
   const [filterDifficulty, setFilterDifficulty] = useState('');
   const [filterSource, setFilterSource] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
@@ -84,9 +86,9 @@ export default function AdminReadingQuizzesPage() {
   } = usePaginatedQuery({
     queryKey: ['admin', 'reading-quizzes'],
     queryFn: (pg, sz) => adminApi.listReadingQuizzes(
-      filterTopic || null, filterDifficulty || null, filterSource || null, pg, sz
+      filterTopic || null, filterDifficulty || null, filterSource || null, pg, sz, 'createdAt,desc', showArchived
     ),
-    filters: { filterTopic, filterDifficulty, filterSource },
+    filters: { filterTopic, filterDifficulty, filterSource, showArchived },
   });
 
   const invalidateList = () => {
@@ -253,6 +255,19 @@ export default function AdminReadingQuizzesPage() {
     }
   };
 
+
+  // Archived view: put the row back in the active list.
+  const handleRestore = async (id) => {
+    try {
+      await adminApi.restoreReadingQuiz(id);
+      setSuccessMsg('Reading passage restored.');
+      invalidateList();
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to restore');
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteId) return;
     setDeleting(true);
@@ -280,7 +295,7 @@ export default function AdminReadingQuizzesPage() {
             Overview
           </button>
           <h1>Reading Quizzes Management</h1>
-          <p className="subtitle">{totalElements} sample passages in the system</p>
+          <p className="subtitle">{totalElements} {showArchived ? 'archived ' : ''}sample passages in the system</p>
         </div>
         <button className="btn btn-primary" onClick={openCreate} id="create-quiz-btn">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -327,6 +342,7 @@ export default function AdminReadingQuizzesPage() {
           <option value="ADMIN">Admin Created</option>
           <option value="AI">AI Generated</option>
         </select>
+        <ArchivedToggle archived={showArchived} onChange={(v) => { setShowArchived(v); resetPage(); }} />
       </div>
 
       {/* Table */}
@@ -335,7 +351,7 @@ export default function AdminReadingQuizzesPage() {
           <div className="loading-spinner"><div className="spinner" /></div>
         ) : content.length === 0 ? (
           <div className="empty-state">
-            <p>No reading passages found.</p>
+            <p>No {showArchived ? 'archived ' : ''}reading passages found.</p>
           </div>
         ) : (
           <>
@@ -381,21 +397,31 @@ export default function AdminReadingQuizzesPage() {
                       </td>
                       <td>
                         <div className="admin-action-btns">
-                          <button
-                            className="btn btn-sm btn-outline"
-                            onClick={() => navigate(`/reading/exam/${quiz.quizId}?preview=true&adminView=true`)}
-                            id={`preview-quiz-${quiz.quizId}`}
-                          >👁 Xem thử</button>
-                          <button
-                            className="btn btn-sm btn-outline"
-                            onClick={() => openEdit(quiz)}
-                            id={`edit-quiz-${quiz.quizId}`}
-                          >Edit</button>
-                          <button
-                            className="btn btn-sm admin-btn-danger"
-                            onClick={() => setDeleteId(quiz.quizId)}
-                            id={`delete-quiz-${quiz.quizId}`}
-                          >Delete</button>
+                          {showArchived ? (
+                            <button
+                              className="btn btn-sm btn-outline"
+                              onClick={() => handleRestore(quiz.quizId)}
+                              id={`restore-quiz-${quiz.quizId}`}
+                            >Restore</button>
+                          ) : (
+                            <>
+                              <button
+                                className="btn btn-sm btn-outline"
+                                onClick={() => navigate(`/reading/exam/${quiz.quizId}?preview=true&adminView=true`)}
+                                id={`preview-quiz-${quiz.quizId}`}
+                              >👁 Xem thử</button>
+                              <button
+                                className="btn btn-sm btn-outline"
+                                onClick={() => openEdit(quiz)}
+                                id={`edit-quiz-${quiz.quizId}`}
+                              >Edit</button>
+                              <button
+                                className="btn btn-sm admin-btn-danger"
+                                onClick={() => setDeleteId(quiz.quizId)}
+                                id={`delete-quiz-${quiz.quizId}`}
+                              >Delete</button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

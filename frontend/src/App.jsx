@@ -96,7 +96,7 @@ export default function App() {
               {/* Writing */}
               <Route path="/writing" element={<WritingPromptListPage />} />
               <Route path="/writing/result/:submissionId" element={<WritingResultPage />} />
-              <Route path="/writing/full-result" element={<WritingFullResultPage />} />
+              <Route path="/writing/full-result/:id?" element={<WritingFullResultPage />} />
               <Route path="/writing/history" element={<WritingHistoryPage />} />
 
               {/* Listening (practice, result, history use UserLayout) */}

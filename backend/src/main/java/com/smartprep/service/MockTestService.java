@@ -171,6 +171,39 @@ public class MockTestService {
     }
 
     /**
+     * Give up on a session the candidate does not want to continue.
+     *
+     * <p>Until this existed "Abandon Exam" only cleared client state: startOrResumeSession
+     * handed the same IN_PROGRESS session straight back on the next Start, and the lobby
+     * kept saying "Test in Progress" until the section clock eventually retired it. The
+     * session is marked EXPIRED, which is what startOrResumeSession already does to an
+     * active session when the candidate picks a different test. Nothing is graded.
+     *
+     * <p>Idempotent: a session that is already SUBMITTED or EXPIRED is returned as is.
+     */
+    @Transactional
+    public MockTestSessionResponse abandonSession(Long userId, Long sessionId) {
+        MockTestSession session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Session not found with id: " + sessionId));
+
+        if (!session.getUser().getUserId().equals(userId)) {
+            // Same exception and message as a genuine miss: a caller must not be able to tell
+            // "exists but is not yours" from "does not exist". Matches ReviewService.
+            throw new ResourceNotFoundException("Session not found with id: " + sessionId);
+        }
+
+        if (session.getStatus() == SessionStatus.IN_PROGRESS) {
+            log.info("Abandoning session {} in {} at the candidate's request",
+                    sessionId, session.getCurrentSection());
+            session.setStatus(SessionStatus.EXPIRED);
+            session.setTimeRemainingSeconds(0);
+            session = sessionRepository.save(session);
+        }
+
+        return mapToSessionResponse(session);
+    }
+
+    /**
      * Save progress (autosave)
      */
     @Transactional

@@ -40,6 +40,8 @@ public class AdminListeningController {
             @RequestParam(required = false) String audioStatus,
             @Parameter(description = "Filter by topic")
             @RequestParam(required = false) String topic,
+            @Parameter(description = "true lists archived parts only, so they can be restored")
+            @RequestParam(defaultValue = "false") boolean archived,
             @Parameter(description = "Zero-based page number", example = "0")
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size (max 100)", example = "20")
@@ -47,7 +49,7 @@ public class AdminListeningController {
             @Parameter(description = "Sort field and direction", example = "createdAt,desc")
             @RequestParam(defaultValue = "createdAt,desc") String sort) {
         size = Math.min(size, MAX_PAGE_SIZE);
-        Page<AdminListeningPartResponse> result = adminListeningService.listParts(audioStatus, topic, page, size, sort);
+        Page<AdminListeningPartResponse> result = adminListeningService.listParts(audioStatus, topic, archived, page, size, sort);
         return ResponseEntity.ok(ApiResponse.ok(result));
     }
 

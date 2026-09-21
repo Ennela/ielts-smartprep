@@ -106,19 +106,16 @@ export default function MockTestResultPage() {
   const startPolling = () => {
     if (pollTimerRef.current) return;
     
+    // The status endpoint is a two-field map; the full report (answers, essays,
+    // progressJson) is fetched once more only when grading has finished.
     pollTimerRef.current = setInterval(async () => {
       try {
-        const res = await mockTestApi.getSubmission(submissionId);
-        const data = res.data?.data;
-        if (data) {
-          setResult(data);
-          if (data.status !== 'GRADING') {
-            clearInterval(pollTimerRef.current);
-            pollTimerRef.current = null;
-            if (data.status === 'COMPLETED') {
-              loadAnalytics();
-            }
-          }
+        const res = await mockTestApi.getGradingStatus(submissionId);
+        const status = res.data?.data?.status;
+        if (status && status !== 'GRADING') {
+          clearInterval(pollTimerRef.current);
+          pollTimerRef.current = null;
+          await loadResult();
         }
       } catch (err) {
         console.error('Polling error', err);

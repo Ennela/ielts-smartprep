@@ -18,6 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -62,11 +65,25 @@ public class ExamAttemptService {
                 attempt.setTimeSpentSeconds((int) spent);
                 attemptRepository.save(attempt);
                 log.info("Expired stale attempt {} for user {}", attempt.getAttemptId(), userId);
-            } else {
+            } else if (sameExam(attempt.getExamReferenceIds(), request.getExamReferenceIds())) {
                 // Return existing active attempt (resume / dup-tab scenario)
                 log.info("Returning existing IN_PROGRESS attempt {} for user {} skill {}",
                         attempt.getAttemptId(), userId, skillType);
                 return toResponse(attempt);
+            } else {
+                // Same skill, different exam. Handing this attempt back gave the second
+                // quiz the first one's deadline and let its submit complete the wrong
+                // attempt. The candidate has moved on; retire the old attempt the way a
+                // stale one is retired and start a fresh clock for the exam they opened.
+                attempt.setStatus(SessionStatus.EXPIRED);
+                attempt.setAutoSubmitted(true);
+                attempt.setSubmittedAt(now);
+                long spent = Duration.between(attempt.getStartedAt(), now).getSeconds();
+                attempt.setTimeSpentSeconds((int) spent);
+                attemptRepository.save(attempt);
+                log.info("Retired attempt {} for user {} skill {} (exams {}): a different exam {} was started",
+                        attempt.getAttemptId(), userId, skillType,
+                        attempt.getExamReferenceIds(), request.getExamReferenceIds());
             }
         }
 
@@ -205,15 +222,33 @@ public class ExamAttemptService {
         return attemptRepository.save(attempt);
     }
 
+    /**
+     * Whether two exam-reference JSON strings (e.g. {@code "[42]"}, {@code "[1,2,3]"})
+     * name the same exam. Whitespace is ignored; two nulls match so callers that never
+     * sent references keep the old resume-anything behaviour.
+     */
+    static boolean sameExam(String existingRefs, String requestedRefs) {
+        return Objects.equals(normalizeRefs(existingRefs), normalizeRefs(requestedRefs));
+    }
+
+    private static String normalizeRefs(String refs) {
+        return refs == null ? null : refs.replaceAll("\\s+", "");
+    }
+
     // ── Mapping ──
+
+    /** The entity stores wall-clock LocalDateTime in the server zone; send it with that offset. */
+    private static OffsetDateTime withServerOffset(LocalDateTime value) {
+        return value == null ? null : value.atZone(ZoneId.systemDefault()).toOffsetDateTime();
+    }
 
     private AttemptResponse toResponse(ExamAttempt attempt) {
         AttemptResponse.AttemptResponseBuilder builder = AttemptResponse.builder()
                 .attemptId(attempt.getAttemptId())
                 .skillType(attempt.getSkillType().name())
                 .durationSeconds(attempt.getDurationSeconds())
-                .startedAt(attempt.getStartedAt())
-                .deadline(attempt.getDeadline())
+                .startedAt(withServerOffset(attempt.getStartedAt()))
+                .deadline(withServerOffset(attempt.getDeadline()))
                 .status(attempt.getStatus().name())
                 .autoSubmitted(attempt.getAutoSubmitted())
                 .timeSpentSeconds(attempt.getTimeSpentSeconds())

@@ -1,12 +1,16 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams, Navigate } from 'react-router-dom';
 import analyticsApi from '../api/analyticsApi';
 import AiVocabularyButton from '../components/vocab/AiVocabularyButton';
 
 export default function ReadingFullResultPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const result = location.state?.result;
+  // No endpoint rebuilds a full Reading result, but the sitting is a history row
+  // whose answer review exists; a new tab or bookmark lands there instead of a dead end.
+  const historyId = searchParams.get('historyId');
 
   const [activeTab, setActiveTab] = useState(0); // active passage tab (0, 1, or 2)
   const [weakness, setWeakness] = useState(null);
@@ -18,6 +22,10 @@ export default function ReadingFullResultPage() {
         .catch(() => {});
     }
   }, [result]);
+
+  if (!result && historyId) {
+    return <Navigate to={`/history/${historyId}/review`} replace />;
+  }
 
   if (!result) {
     return (

@@ -40,7 +40,7 @@ export default function ReadingFullExamPage() {
         sessionStorage.removeItem(SESSION_KEY);
         const quizIdsKey = quizIds.join(',');
         try { localStorage.removeItem(`reading_full_draft_${quizIdsKey}`); } catch (_e) { /* ignore */ }
-        navigate('/reading/full-result', { state: { result: res.data.data }, replace: true });
+        navigate(`/reading/full-result?historyId=${res.data.data.historyId ?? ''}`, { state: { result: res.data.data }, replace: true });
       })
       .catch(() => {
         setError('Auto-submit failed. Please try submitting manually.');
@@ -152,7 +152,7 @@ export default function ReadingFullExamPage() {
       sessionStorage.removeItem(SESSION_KEY);
       const quizIdsKey = quizIds.join(',');
       try { localStorage.removeItem(`reading_full_draft_${quizIdsKey}`); } catch (_e) { /* ignore */ }
-      navigate('/reading/full-result', { state: { result: res.data.data }, replace: true });
+      navigate(`/reading/full-result?historyId=${res.data.data.historyId ?? ''}`, { state: { result: res.data.data }, replace: true });
     } catch (err) {
       setError(err.response?.data?.message || 'Submission failed');
       setSubmitting(false);

@@ -15,9 +15,10 @@ const adminApi = {
     getUserDetail: (userId) =>
         axiosClient.get(`/admin/users/${userId}`),
 
-    listWritingPrompts: (essayType, page = 0, size = DEFAULT_SIZE, sort = 'createdAt,desc') => {
+    listWritingPrompts: (essayType, page = 0, size = DEFAULT_SIZE, sort = 'createdAt,desc', archived = false) => {
         const params = { page, size, sort };
         if (essayType) params.essayType = essayType;
+        if (archived) params.archived = true;
         return axiosClient.get('/admin/writing-prompts', { params });
     },
 
@@ -33,11 +34,12 @@ const adminApi = {
     restoreWritingPrompt: (promptId) =>
         axiosClient.post(`/admin/writing-prompts/${promptId}/restore`),
 
-    listReadingQuizzes: (topic, difficulty, source, page = 0, size = DEFAULT_SIZE, sort = 'createdAt,desc') => {
+    listReadingQuizzes: (topic, difficulty, source, page = 0, size = DEFAULT_SIZE, sort = 'createdAt,desc', archived = false) => {
         const params = { page, size, sort };
         if (topic) params.topic = topic;
         if (difficulty) params.difficulty = difficulty;
         if (source) params.source = source;
+        if (archived) params.archived = true;
         return axiosClient.get('/admin/reading-quizzes', { params });
     },
 
@@ -53,8 +55,8 @@ const adminApi = {
     restoreReadingQuiz: (quizId) =>
         axiosClient.post(`/admin/reading-quizzes/${quizId}/restore`),
 
-    listMockTests: (page = 0, size = DEFAULT_SIZE, sort = 'createdAt,desc') =>
-        axiosClient.get('/admin/mock-tests', { params: { page, size, sort } }),
+    listMockTests: (page = 0, size = DEFAULT_SIZE, sort = 'createdAt,desc', archived = false) =>
+        axiosClient.get('/admin/mock-tests', { params: { page, size, sort, ...(archived ? { archived: true } : {}) } }),
 
     createMockTest: (data) =>
         axiosClient.post('/admin/mock-tests', data),
@@ -68,10 +70,11 @@ const adminApi = {
     restoreMockTest: (id) =>
         axiosClient.post(`/admin/mock-tests/${id}/restore`),
 
-    listListeningParts: (audioStatus, topic, page = 0, size = DEFAULT_SIZE, sort = 'createdAt,desc') => {
+    listListeningParts: (audioStatus, topic, page = 0, size = DEFAULT_SIZE, sort = 'createdAt,desc', archived = false) => {
         const params = { page, size, sort };
         if (audioStatus) params.audioStatus = audioStatus;
         if (topic) params.topic = topic;
+        if (archived) params.archived = true;
         return axiosClient.get('/admin/listening/parts', { params });
     },
 

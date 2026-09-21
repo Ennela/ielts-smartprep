@@ -113,7 +113,12 @@ export interface Question {
   groupContext?: string;
 }
 
-/** com.smartprep.dto.response.ReadingQuizResponse */
+/**
+ * com.smartprep.dto.response.ReadingQuizResponse
+ *
+ * GET /reading/templates rows carry `totalQuestions` and a shortened `passageText`
+ * but no `questions`; only GET /reading/{id} and the generate endpoints fill them.
+ */
 export interface Quiz {
   quizId: number;
   topic: string;
@@ -123,7 +128,8 @@ export interface Quiz {
   timeLimitSeconds?: number;
   submitted: boolean;
   createdAt?: string;
-  questions: Question[];
+  questions?: Question[];
+  totalQuestions?: number;
   /** populated for full-test assembly, listing every quiz in the set */
   quizIds?: number[];
 }

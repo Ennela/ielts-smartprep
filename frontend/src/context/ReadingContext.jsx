@@ -5,7 +5,6 @@ export const ReadingContext = createContext(null);
 const initialState = {
   quiz: null,
   answers: {},        // { questionId: userAnswer }
-  timeRemaining: 0,
   isSubmitted: false,
   result: null,
   loading: false,
@@ -33,7 +32,6 @@ function readingReducer(state, action) {
         ...state,
         quiz: action.payload,
         answers: draftAnswers,
-        timeRemaining: action.payload.timeLimitSeconds || 600,
         isSubmitted: action.payload.submitted || false,
         loading: false,
         error: null,
@@ -53,11 +51,6 @@ function readingReducer(state, action) {
         answers: newAnswers,
       };
     }
-    case 'TICK_TIMER':
-      return {
-        ...state,
-        timeRemaining: Math.max(0, state.timeRemaining - 1),
-      };
     case 'SUBMIT':
       return { ...state, isSubmitted: true, loading: true };
     case 'SET_RESULT':
@@ -84,7 +77,6 @@ export function ReadingProvider({ children }) {
   const setQuiz = useCallback((quiz) => dispatch({ type: 'SET_QUIZ', payload: quiz }), []);
   const setAnswer = useCallback((questionId, answer) =>
     dispatch({ type: 'SET_ANSWER', payload: { questionId, answer } }), []);
-  const tickTimer = useCallback(() => dispatch({ type: 'TICK_TIMER' }), []);
   const submitStart = useCallback(() => dispatch({ type: 'SUBMIT' }), []);
   const setResult = useCallback((result) => dispatch({ type: 'SET_RESULT', payload: result }), []);
   const reset = useCallback(() => dispatch({ type: 'RESET' }), []);
@@ -95,7 +87,6 @@ export function ReadingProvider({ children }) {
     setError,
     setQuiz,
     setAnswer,
-    tickTimer,
     submitStart,
     setResult,
     reset,

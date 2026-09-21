@@ -4,6 +4,7 @@ import { useQueryClient, useQuery } from '@tanstack/react-query';
 import adminApi from '../api/adminApi';
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
+import ArchivedToggle from '../components/admin/ArchivedToggle';
 
 const TOPICS = [
   { value: 'ACCOMMODATION', label: 'Accommodation / Booking' },
@@ -29,6 +30,7 @@ export default function AdminListeningListPage() {
   // Delete state
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   // Detect if any PENDING parts exist for auto-polling
   const {
@@ -46,9 +48,9 @@ export default function AdminListeningListPage() {
   } = usePaginatedQuery({
     queryKey: ['admin', 'listening-parts'],
     queryFn: (pg, sz) => adminApi.listListeningParts(
-      filterStatus || null, filterTopic || null, pg, sz
+      filterStatus || null, filterTopic || null, pg, sz, 'createdAt,desc', showArchived
     ),
-    filters: { filterStatus, filterTopic },
+    filters: { filterStatus, filterTopic, showArchived },
     refetchInterval: undefined, // Polling handled below
   });
 
@@ -74,6 +76,18 @@ export default function AdminListeningListPage() {
   const invalidateList = () => {
     queryClient.invalidateQueries({ queryKey: ['admin', 'listening-parts'] });
     refetchStats();
+  };
+
+  // Archived view: put the row back in the active list.
+  const handleRestore = async (id) => {
+    try {
+      await adminApi.restoreListeningPart(id);
+      setSuccessMsg('Listening part restored.');
+      invalidateList();
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to restore');
+    }
   };
 
   const handleDelete = async () => {
@@ -135,7 +149,7 @@ export default function AdminListeningListPage() {
             Overview
           </button>
           <h1>Listening Parts Management</h1>
-          <p className="subtitle">{totalElements} listening parts in the system</p>
+          <p className="subtitle">{totalElements} {showArchived ? 'archived ' : ''}listening parts in the system</p>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem' }}>
           {stats?.statusCounts?.FAILED > 0 && (
@@ -200,6 +214,7 @@ export default function AdminListeningListPage() {
           <option value="PENDING">Pending</option>
           <option value="FAILED">Failed</option>
         </select>
+        <ArchivedToggle archived={showArchived} onChange={(v) => { setShowArchived(v); resetPage(); }} />
       </div>
 
       {/* Table */}
@@ -208,7 +223,7 @@ export default function AdminListeningListPage() {
           <div className="loading-spinner"><div className="spinner" /></div>
         ) : content.length === 0 ? (
           <div className="empty-state">
-            <p>No listening parts found.</p>
+            <p>No {showArchived ? 'archived ' : ''}listening parts found.</p>
           </div>
         ) : (
           <>
@@ -254,6 +269,14 @@ export default function AdminListeningListPage() {
                       <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{part.createdBy}</td>
                       <td>
                         <div className="admin-action-btns">
+                          {showArchived ? (
+                            <button
+                              className="btn btn-sm btn-outline"
+                              onClick={() => handleRestore(part.partId)}
+                              id={`restore-part-${part.partId}`}
+                            >Restore</button>
+                          ) : (
+                          <>
                           <button
                             className="btn btn-sm btn-outline"
                             onClick={() => navigate(`/listening/exam?parts=${part.partId}&preview=true&adminView=true`)}
@@ -282,6 +305,8 @@ export default function AdminListeningListPage() {
                             className="btn btn-sm admin-btn-danger"
                             onClick={() => setDeleteId(part.partId)}
                           >Delete</button>
+                          </>
+                          )}
                         </div>
                       </td>
                     </tr>

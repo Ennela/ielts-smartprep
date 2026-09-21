@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import adminApi from '../api/adminApi';
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
+import ArchivedToggle from '../components/admin/ArchivedToggle';
 
 const TASK1_TYPES = ['LINE_GRAPH', 'BAR_CHART', 'PIE_CHART', 'TABLE', 'MAP', 'DIAGRAM'];
 const TASK2_TYPES = ['OPINION', 'DISCUSSION', 'CAUSE_AND_EFFECT', 'PROBLEM_AND_SOLUTION', 'ADVANTAGES_DISADVANTAGES', 'TWO_PART_QUESTION'];
@@ -20,6 +21,7 @@ export default function AdminWritingPromptsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
@@ -46,8 +48,8 @@ export default function AdminWritingPromptsPage() {
     isPlaceholderData,
   } = usePaginatedQuery({
     queryKey: ['admin', 'writing-prompts'],
-    queryFn: (pg, sz) => adminApi.listWritingPrompts(filter || null, pg, sz),
-    filters: { filter },
+    queryFn: (pg, sz) => adminApi.listWritingPrompts(filter || null, pg, sz, 'createdAt,desc', showArchived),
+    filters: { filter, showArchived },
   });
 
   const invalidateList = () => {
@@ -104,6 +106,19 @@ export default function AdminWritingPromptsPage() {
     }
   };
 
+
+  // Archived view: put the row back in the active list.
+  const handleRestore = async (id) => {
+    try {
+      await adminApi.restoreWritingPrompt(id);
+      setSuccessMsg('Prompt restored.');
+      invalidateList();
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to restore');
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteId) return;
     setDeleting(true);
@@ -132,7 +147,7 @@ export default function AdminWritingPromptsPage() {
             Overview
           </button>
           <h1>Writing Prompts Management</h1>
-          <p className="subtitle">{totalElements} writing prompts in system</p>
+          <p className="subtitle">{totalElements} {showArchived ? 'archived ' : ''}writing prompts in system</p>
         </div>
         <button className="btn btn-primary" onClick={openCreate} id="create-prompt-btn">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -151,6 +166,7 @@ export default function AdminWritingPromptsPage() {
             {TYPE_LABELS[t]}
           </button>
         ))}
+        <ArchivedToggle archived={showArchived} onChange={(v) => { setShowArchived(v); resetPage(); }} />
       </div>
 
       {/* Table */}
@@ -159,7 +175,7 @@ export default function AdminWritingPromptsPage() {
           <div className="loading-spinner"><div className="spinner" /></div>
         ) : content.length === 0 ? (
           <div className="empty-state">
-            <p>No writing prompts found{filter ? ` of type "${TYPE_LABELS[filter]}"` : ''}.</p>
+            <p>No {showArchived ? 'archived ' : ''}writing prompts found{filter ? ` of type "${TYPE_LABELS[filter]}"` : ''}.</p>
           </div>
         ) : (
           <>
@@ -197,21 +213,31 @@ export default function AdminWritingPromptsPage() {
                       <td className="ht-date">{formatDate(p.createdAt)}</td>
                       <td>
                         <div className="admin-action-btns">
-                          <button
-                            className="btn btn-sm btn-outline"
-                            onClick={() => navigate(`/writing/editor/${p.promptId}?preview=true&adminView=true`)}
-                            id={`preview-prompt-${p.promptId}`}
-                          >👁 Xem thử</button>
-                          <button
-                            className="btn btn-sm btn-outline"
-                            onClick={() => openEdit(p)}
-                            id={`edit-prompt-${p.promptId}`}
-                          >Edit</button>
-                          <button
-                            className="btn btn-sm admin-btn-danger"
-                            onClick={() => setDeleteId(p.promptId)}
-                            id={`delete-prompt-${p.promptId}`}
-                          >Delete</button>
+                          {showArchived ? (
+                            <button
+                              className="btn btn-sm btn-outline"
+                              onClick={() => handleRestore(p.promptId)}
+                              id={`restore-prompt-${p.promptId}`}
+                            >Restore</button>
+                          ) : (
+                            <>
+                              <button
+                                className="btn btn-sm btn-outline"
+                                onClick={() => navigate(`/writing/editor/${p.promptId}?preview=true&adminView=true`)}
+                                id={`preview-prompt-${p.promptId}`}
+                              >👁 Xem thử</button>
+                              <button
+                                className="btn btn-sm btn-outline"
+                                onClick={() => openEdit(p)}
+                                id={`edit-prompt-${p.promptId}`}
+                              >Edit</button>
+                              <button
+                                className="btn btn-sm admin-btn-danger"
+                                onClick={() => setDeleteId(p.promptId)}
+                                id={`delete-prompt-${p.promptId}`}
+                              >Delete</button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
