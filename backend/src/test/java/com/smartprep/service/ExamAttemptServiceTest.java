@@ -111,6 +111,7 @@ class ExamAttemptServiceTest {
     void startAttempt_resumeExisting() {
         StartAttemptRequest request = new StartAttemptRequest();
         request.setSkillType("WRITING");
+        request.setExamReferenceIds("[42]");
 
         LocalDateTime now = LocalDateTime.now();
         ExamAttempt existing = ExamAttempt.builder()
@@ -122,6 +123,7 @@ class ExamAttemptServiceTest {
                 .deadline(now.plusMinutes(50))
                 .status(SessionStatus.IN_PROGRESS)
                 .autoSubmitted(false)
+                .examReferenceIds("[ 42 ]")
                 .build();
 
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
@@ -133,6 +135,73 @@ class ExamAttemptServiceTest {
 
         assertEquals(50L, response.getAttemptId());
         verify(attemptRepository, never()).save(any());
+    }
+
+    /**
+     * Opening quiz B while quiz A's attempt was still running handed back A's attempt:
+     * B ran on A's remaining time and B's submit completed A's attempt. The running
+     * attempt is resumed only for the same exam; otherwise it is retired and B starts
+     * its own clock.
+     */
+    @Test
+    @DisplayName("should retire a running attempt for a different exam and start a fresh one")
+    void startAttempt_differentExam_retiresAndStartsNew() {
+        StartAttemptRequest request = new StartAttemptRequest();
+        request.setSkillType("READING");
+        request.setExamReferenceIds("[7]");
+
+        LocalDateTime now = LocalDateTime.now();
+        ExamAttempt quizA = ExamAttempt.builder()
+                .attemptId(50L)
+                .user(user)
+                .skillType(SkillType.READING)
+                .durationSeconds(3600)
+                .startedAt(now.minusMinutes(40))
+                .deadline(now.plusMinutes(20))
+                .status(SessionStatus.IN_PROGRESS)
+                .autoSubmitted(false)
+                .examReferenceIds("[3]")
+                .build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(attemptRepository.findByUserUserIdAndSkillTypeAndStatus(
+                1L, SkillType.READING, SessionStatus.IN_PROGRESS))
+                .thenReturn(Optional.of(quizA));
+        when(attemptRepository.save(any(ExamAttempt.class))).thenAnswer(inv -> {
+            ExamAttempt a = inv.getArgument(0);
+            if (a.getAttemptId() == null) a.setAttemptId(51L);
+            return a;
+        });
+
+        AttemptResponse response = examAttemptService.startAttempt(1L, request);
+
+        assertEquals(51L, response.getAttemptId());
+        assertEquals("[7]", response.getExamReferenceIds());
+        assertEquals(3600, response.getDurationSeconds());
+        assertEquals(SessionStatus.EXPIRED, quizA.getStatus());
+        assertTrue(quizA.getAutoSubmitted());
+        verify(attemptRepository, times(2)).save(any(ExamAttempt.class));
+    }
+
+    @Test
+    @DisplayName("should send deadline and startedAt with the server's UTC offset")
+    void toResponse_datesCarryServerOffset() {
+        StartAttemptRequest request = new StartAttemptRequest();
+        request.setSkillType("READING");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(attemptRepository.findByUserUserIdAndSkillTypeAndStatus(
+                1L, SkillType.READING, SessionStatus.IN_PROGRESS))
+                .thenReturn(Optional.empty());
+        when(attemptRepository.save(any(ExamAttempt.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        AttemptResponse response = examAttemptService.startAttempt(1L, request);
+
+        java.time.ZoneOffset here = java.time.ZoneId.systemDefault().getRules()
+                .getOffset(response.getDeadline().toInstant());
+        assertEquals(here, response.getDeadline().getOffset());
+        assertEquals(here, response.getStartedAt().getOffset());
+        assertEquals(3600, java.time.Duration.between(response.getStartedAt(), response.getDeadline()).getSeconds());
     }
 
     @Test
