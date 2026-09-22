@@ -6,16 +6,10 @@ import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
 import ArchivedToggle from '../components/admin/ArchivedToggle';
 
-const TASK1_TYPES = ['LINE_GRAPH', 'BAR_CHART', 'PIE_CHART', 'TABLE', 'MAP', 'DIAGRAM'];
-const TASK2_TYPES = ['OPINION', 'DISCUSSION', 'CAUSE_AND_EFFECT', 'PROBLEM_AND_SOLUTION', 'ADVANTAGES_DISADVANTAGES', 'TWO_PART_QUESTION'];
-const ALL_TYPES = [...TASK2_TYPES, ...TASK1_TYPES];
-
-const TYPE_LABELS = {
-  OPINION: 'Opinion', DISCUSSION: 'Discussion', CAUSE_AND_EFFECT: 'Cause & Effect',
-  PROBLEM_AND_SOLUTION: 'Problem & Solution', ADVANTAGES_DISADVANTAGES: 'Advantages & Disadvantages',
-  TWO_PART_QUESTION: 'Two-Part Question', LINE_GRAPH: 'Line Graph', BAR_CHART: 'Bar Chart',
-  PIE_CHART: 'Pie Chart', TABLE: 'Table', MAP: 'Map', DIAGRAM: 'Diagram',
-};
+import {
+  TASK1_TYPES, TASK2_TYPES, ALL_ESSAY_TYPES as ALL_TYPES,
+  ESSAY_TYPE_LABELS as TYPE_LABELS, isTask1Type,
+} from '../constants/examTypes';
 
 export default function AdminWritingPromptsPage() {
   const navigate = useNavigate();
@@ -86,7 +80,7 @@ export default function AdminWritingPromptsPage() {
       const payload = {
         promptText: form.promptText.trim(),
         essayType: form.essayType,
-        taskType: TASK1_TYPES.includes(form.essayType) ? 'TASK_1' : 'TASK_2',
+        taskType: isTask1Type(form.essayType) ? 'TASK_1' : 'TASK_2',
         imageUrl: form.imageUrl.trim() || null,
       };
       if (editing) {
@@ -135,7 +129,7 @@ export default function AdminWritingPromptsPage() {
     }
   };
 
-  const isTask1 = (type) => TASK1_TYPES.includes(type);
+  const isTask1 = isTask1Type;
 
   return (
     <div className="admin-dashboard-content">

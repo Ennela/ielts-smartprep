@@ -7,6 +7,7 @@ import FillBlankQuestion from '../components/listening/FillBlankQuestion';
 import PassageViewer from '../components/reading/PassageViewer';
 import MockTestQuestionPanel from '../components/mocktest/MockTestQuestionPanel';
 import { useToast } from '../context/ToastContext';
+import { isTask1Type } from '../constants/examTypes';
 
 export default function MockTestSessionPage() {
   const navigate = useNavigate();
@@ -107,8 +108,8 @@ export default function MockTestSessionPage() {
   // Sort writing prompts so Task 1 (shorter or specific type) comes first
   const sortedWritingPrompts = useMemo(() => {
     return [...writingPrompts].sort((a, b) => {
-      const isA1 = ['LINE_GRAPH', 'BAR_CHART', 'PIE_CHART', 'TABLE', 'MAP', 'DIAGRAM'].includes(a.essayType);
-      const isB1 = ['LINE_GRAPH', 'BAR_CHART', 'PIE_CHART', 'TABLE', 'MAP', 'DIAGRAM'].includes(b.essayType);
+      const isA1 = isTask1Type(a.essayType);
+      const isB1 = isTask1Type(b.essayType);
       if (isA1 && !isB1) return -1;
       if (!isA1 && isB1) return 1;
       return 0;
@@ -324,7 +325,7 @@ export default function MockTestSessionPage() {
             className={`part-tab ${index === activeWritingTask ? 'active' : ''}`}
             onClick={() => setActiveWritingTask(index)}
           >
-            Task {index + 1} ({['LINE_GRAPH', 'BAR_CHART', 'PIE_CHART', 'TABLE', 'MAP', 'DIAGRAM'].includes(prompt.essayType) ? 'Report' : 'Essay'})
+            Task {index + 1} ({isTask1Type(prompt.essayType) ? 'Report' : 'Essay'})
           </button>
         ))}
       </div>

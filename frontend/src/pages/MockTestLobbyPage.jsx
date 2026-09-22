@@ -129,16 +129,10 @@ export default function MockTestLobbyPage() {
       audio.pause();
       setAudioTesting(false);
     } else {
-      audio.play().catch(err => console.log('Audio play failed', err));
+      audio.play().catch(err => console.warn('Audio play failed', err));
       setAudioTesting(true);
     }
   };
-
-  // Compute quick statistics
-  const completedHistory = history.filter(h => h.status === 'COMPLETED');
-  const avgBand = completedHistory.length > 0 
-    ? (completedHistory.reduce((acc, h) => acc + (h.overallBand || 0), 0) / completedHistory.length).toFixed(1)
-    : '—';
 
   // WIZARD VIEW RENDERING
   if (selectedTestForSetup) {

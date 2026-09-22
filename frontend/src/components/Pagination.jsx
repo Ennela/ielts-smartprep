@@ -89,7 +89,7 @@ export default function Pagination({
           </button>
 
           <div className="pagination-pages">
-            {pageNumbers.map((p, idx) =>
+            {pageNumbers.map((p) =>
               typeof p === 'string' ? (
                 <span key={p} className="pagination-ellipsis">
                   …

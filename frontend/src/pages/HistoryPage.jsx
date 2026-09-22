@@ -1,30 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import historyApi from '../api/historyApi';
+import { TASK1_TYPES, formatEssayType } from '../constants/examTypes';
 
 const PAGE_SIZE = 8;
 const SKILL_PARAM = { 'Reading': 'READING', 'Writing': 'WRITING', 'Listening': 'LISTENING', 'Mock Tests': 'MOCK_TEST' };
 const TIME_DAYS = { 'Last 30 Days': 30, 'Last 3 Months': 90 };
 const SKILL_LABEL = { READING: 'Reading', LISTENING: 'Listening', WRITING: 'Writing', MOCK_TEST: 'Mock Test' };
-const TASK1_TYPES = ['LINE_GRAPH', 'BAR_CHART', 'PIE_CHART', 'TABLE', 'MAP', 'DIAGRAM'];
-
-const formatEssayType = (type) => {
-  if (!type) return 'Writing Essay';
-  switch (type) {
-    case 'CAUSE_AND_EFFECT': return 'Cause & Effect';
-    case 'PROBLEM_AND_SOLUTION': return 'Problem & Solution';
-    case 'ADVANTAGES_DISADVANTAGES': return 'Advantages & Disadvantages';
-    case 'TWO_PART_QUESTION': return 'Two-Part Question';
-    case 'LINE_GRAPH': return 'Line Graph';
-    case 'BAR_CHART': return 'Bar Chart';
-    case 'PIE_CHART': return 'Pie Chart';
-    case 'TABLE': return 'Table';
-    case 'MAP': return 'Map';
-    case 'DIAGRAM': return 'Diagram';
-    default: return type.charAt(0) + type.slice(1).toLowerCase();
-  }
-};
-
 // Time spent as recorded for the sitting; older sittings recorded none.
 const formatTimeSpent = (seconds) => {
   if (seconds === null || seconds === undefined) return '—';
@@ -48,7 +30,7 @@ const toRow = (item) => {
         actionUrl: item.historyId ? `/history/${item.historyId}/review` : `/listening/result/${item.refId}`,
       };
     case 'WRITING':
-      return { title: `Task ${item.title?.includes('TASK1') || TASK1_TYPES.includes(item.title) ? '1' : '2'} Essay: ${formatEssayType(item.title)}`, score: band, timeSpent, actionUrl: `/writing/result/${item.refId}` };
+      return { title: `Task ${item.title?.includes('TASK1') || TASK1_TYPES.includes(item.title) ? '1' : '2'} Essay: ${(formatEssayType(item.title) || 'Writing Essay')}`, score: band, timeSpent, actionUrl: `/writing/result/${item.refId}` };
     default:
       return { title: item.title || 'Full Mock Test', score: item.status === 'GRADING' ? 'Grading...' : band, timeSpent, actionUrl: `/mock-tests/result/${item.refId}` };
   }

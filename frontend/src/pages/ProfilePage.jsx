@@ -281,7 +281,7 @@ export default function ProfilePage() {
       });
 
       success('Preferences saved successfully.');
-    } catch (err) {
+    } catch (_err) {
       // Revert optimistic state on failure
       setNotifications(prevNotifs);
       localStorage.setItem('pref_notifications', prevNotifs.toString());

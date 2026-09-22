@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import authService from '../api/authService';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -7,10 +7,8 @@ import { useToast } from '../context/ToastContext';
 export default function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
-  const navigate = useNavigate();
-  
-  const { user, isAuthenticated, updateUser } = useAuth();
-  const { success, error, info } = useToast();
+  const { isAuthenticated, updateUser } = useAuth();
+  const { success, error } = useToast();
   
   const [verifying, setVerifying] = useState(!!token);
   const [verifyStatus, setVerifyStatus] = useState(null); // 'success' | 'error' | null

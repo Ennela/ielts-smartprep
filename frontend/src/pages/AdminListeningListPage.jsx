@@ -135,7 +135,7 @@ export default function AdminListeningListPage() {
     setPreviewAudioUrl(url);
     if (audioRef.current) {
       audioRef.current.load();
-      audioRef.current.play().catch(e => console.log('Audio autoplay blocked', e));
+      audioRef.current.play().catch(e => console.warn('Audio autoplay blocked', e));
     }
   };
 

@@ -19,5 +19,9 @@ export default defineConfig({
     // Page-level tests (lazy routes, react-query, a dozen mocked modules) transform
     // slowly when the whole suite runs in parallel; 5 s tripped on a busy machine.
     testTimeout: 15000,
+    // One jsdom worker per core starves them on a 16-core machine that is also
+    // running the Docker stack: three page tests timed out at 15 s with the default
+    // worker count and all of them pass with four.
+    maxWorkers: 4,
   },
 });
