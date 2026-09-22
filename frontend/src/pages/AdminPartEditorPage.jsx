@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import adminApi from '../api/adminApi';
+import { nextRowKey, withRowKeys } from '../utils/rowKey';
 
 const TOPICS = [
   { value: 'ACCOMMODATION', label: 'Accommodation / Booking' },
@@ -45,8 +46,9 @@ export default function AdminPartEditorPage() {
               topic: part.topic || 'ACCOMMODATION',
               transcriptText: part.transcriptText || '',
               durationSeconds: part.durationSeconds || 180,
-              questions: part.questions ? part.questions.map(q => {
+              questions: part.questions ? withRowKeys(part.questions).map(q => {
                 const mappedQ = {
+                  rowKey: q.rowKey,
                   questionId: q.questionId,
                   questionType: q.questionType || 'MCQ',
                   questionText: q.questionText || '',
@@ -79,6 +81,7 @@ export default function AdminPartEditorPage() {
       questions: [
         ...f.questions,
         {
+          rowKey: nextRowKey(),
           questionType: 'MCQ',
           questionText: '',
           optionA: '',
@@ -139,7 +142,7 @@ export default function AdminPartEditorPage() {
     }
 
     // Format payload
-    const formattedQuestions = form.questions.map(q => {
+    const formattedQuestions = form.questions.map(({ rowKey: _rowKey, ...q }) => {
       const copy = { ...q };
       if (q.questionType === 'MCQ') {
         const opts = [];
@@ -287,7 +290,7 @@ export default function AdminPartEditorPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               {form.questions.map((q, idx) => (
                 <div
-                  key={idx}
+                  key={q.rowKey}
                   style={{
                     border: '1px solid var(--border-color)',
                     borderRadius: '8px',

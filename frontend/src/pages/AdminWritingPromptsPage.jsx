@@ -308,7 +308,7 @@ export default function AdminWritingPromptsPage() {
                 />
                 {form.imageUrl && (
                   <div className="prompt-image-container" style={{ marginTop: 12 }}>
-                    <img src={form.imageUrl} alt="Preview" className="prompt-image" onError={(e) => { e.target.style.display = 'none'; }} />
+                    <img src={form.imageUrl} alt="Preview" className="prompt-image" loading="lazy" onError={(e) => { e.target.style.display = 'none'; }} />
                   </div>
                 )}
               </div>
