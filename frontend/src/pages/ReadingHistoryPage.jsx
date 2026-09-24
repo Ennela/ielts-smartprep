@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import readingApi from '../api/readingApi';
+import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
 import { formatBand } from '../utils/formatBand';
 
@@ -8,30 +8,19 @@ const PAGE_SIZE = 10;
 
 export default function ReadingHistoryPage() {
   const navigate = useNavigate();
-  const [history, setHistory] = useState([]);
-  const [page, setPage] = useState(0);
-  const [pageInfo, setPageInfo] = useState({ totalPages: 0, totalElements: 0 });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
   // The endpoint returns one page at a time; the whole history is no longer shipped.
-  useEffect(() => {
-    const fetchHistory = async () => {
-      try {
-        const res = await readingApi.getHistory(page, PAGE_SIZE);
-        const data = res.data.data;
-        setHistory(data?.content || []);
-        setPageInfo({ totalPages: data?.totalPages || 0, totalElements: data?.totalElements || 0 });
-      } catch (err) {
-        setError(err.response?.data?.message || 'Unable to load history');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchHistory();
-  }, [page]);
+  const {
+    content: history, totalPages, totalElements, page, setPage,
+    isLoading, isFetching, isPlaceholderData, isError, error, refetch,
+  } = usePaginatedQuery({
+    queryKey: ['reading', 'history'],
+    queryFn: (pg, size) => readingApi.getHistory(pg, size),
+    defaultSize: PAGE_SIZE,
+  });
+  const pageInfo = { totalPages, totalElements };
 
-  if (loading) {
+  if (isLoading) {
     return <div className="loading-screen">Loading history...</div>;
   }
 
@@ -47,7 +36,12 @@ export default function ReadingHistoryPage() {
           <p className="subtitle">Your previous Reading practice sessions</p>
         </div>
 
-        {error && <div className="error-msg">{error}</div>}
+        {isError && (
+          <div className="error-msg" role="alert">
+            <span>{error?.response?.data?.message || error?.message || 'Unable to load history'}</span>
+            <button className="btn btn-outline" onClick={refetch}>Retry</button>
+          </div>
+        )}
 
         {history.length === 0 ? (
           <div className="empty-state">
@@ -132,6 +126,8 @@ export default function ReadingHistoryPage() {
               totalElements={pageInfo.totalElements}
               size={PAGE_SIZE}
               onPageChange={setPage}
+              isFetching={isFetching}
+              isPlaceholderData={isPlaceholderData}
             />
           </div>
         )}

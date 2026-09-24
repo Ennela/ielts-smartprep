@@ -10,8 +10,21 @@ const vocabApi = {
     getStats: () =>
         axiosClient.get('/vocab/stats'),
 
-    getAllVocab: () =>
-        axiosClient.get('/vocab'),
+    /**
+     * One page of the user's words. Filtering happens in SQL now; `q` matches the
+     * word, its Vietnamese meaning or its part of speech, and 'ALL' is no filter.
+     * @returns {Promise<import('axios').AxiosResponse<import('./types').ApiResponse<import('./types').SpringPage<any>>>>}
+     */
+    getVocab: ({ q, cefr, skill, page = 0, size = 20 } = {}) =>
+        axiosClient.get('/vocab', {
+            params: {
+                page,
+                size,
+                ...(q ? { q } : {}),
+                ...(cefr && cefr !== 'ALL' ? { cefr } : {}),
+                ...(skill && skill !== 'ALL' ? { skill } : {}),
+            },
+        }),
 
     reviewVocab: (vocabId, grade) =>
         axiosClient.post(`/vocab/${vocabId}/review`, { grade }),

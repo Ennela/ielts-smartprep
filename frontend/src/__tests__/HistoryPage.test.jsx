@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import HistoryPage from '../pages/HistoryPage';
 
 /*
@@ -18,10 +19,13 @@ const page = (content, { totalElements = content.length, totalPages = 1, number 
 });
 
 function renderPage() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter>
-      <HistoryPage />
-    </MemoryRouter>
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <HistoryPage />
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
@@ -62,13 +66,15 @@ describe('HistoryPage over the merged feed', () => {
       { skill: 'LISTENING', refId: 22, title: 'MOCK_TEST', score: 5, submittedAt: '2026-09-01T10:00:00' },
     ]));
     render(
-      <MemoryRouter initialEntries={['/history']}>
-        <Routes>
-          <Route path="/history" element={<HistoryPage />} />
-          <Route path="/history/:historyId/review" element={<div>REVIEW 77</div>} />
-          <Route path="/listening/result/:testId" element={<div>RESULT 22</div>} />
-        </Routes>
-      </MemoryRouter>
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={['/history']}>
+          <Routes>
+            <Route path="/history" element={<HistoryPage />} />
+            <Route path="/history/:historyId/review" element={<div>REVIEW 77</div>} />
+            <Route path="/listening/result/:testId" element={<div>RESULT 22</div>} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
     );
 
     const buttons = await screen.findAllByRole('button', { name: 'View Review' });

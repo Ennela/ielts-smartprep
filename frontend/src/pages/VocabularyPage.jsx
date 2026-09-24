@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import Pagination from '../components/Pagination';
+import useDebouncedValue from '../hooks/useDebouncedValue';
 import vocabApi from '../api/vocabApi';
 
+const WORDS_PAGE_SIZE = 12;
+
 export default function VocabularyPage() {
-  const [vocabList, setVocabList] = useState([]);
   const [dueList, setDueList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -15,6 +19,7 @@ export default function VocabularyPage() {
   });
   const [filterCefr, setFilterCefr] = useState('ALL');
   const [filterSkill, setFilterSkill] = useState('ALL');
+  const [wordPage, setWordPage] = useState(0);
 
   // Manual Add Modal State
   const [showAddModal, setShowAddModal] = useState(false);
@@ -37,6 +42,30 @@ export default function VocabularyPage() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [, setReviewCount] = useState(0);
 
+  // The word bank is one server page, filtered in SQL: this page used to fetch the
+  // whole collection and filter it in the browser, so it grew with the user's own
+  // vocabulary. The search box is debounced, so typing a word is one request.
+  const queryClient = useQueryClient();
+  const debouncedSearch = useDebouncedValue(searchTerm, 300);
+
+  const wordsQuery = useQuery({
+    queryKey: ['vocab', 'words', { q: debouncedSearch, cefr: filterCefr, skill: filterSkill, page: wordPage }],
+    queryFn: () => vocabApi.getVocab({
+      q: debouncedSearch, cefr: filterCefr, skill: filterSkill, page: wordPage, size: WORDS_PAGE_SIZE,
+    }),
+    placeholderData: keepPreviousData,
+    select: (res) => res.data?.data,
+  });
+
+  const filteredAllList = wordsQuery.data?.content || [];
+  const totalWords = wordsQuery.data?.totalElements ?? 0;
+  const reloadWords = () => queryClient.invalidateQueries({ queryKey: ['vocab', 'words'] });
+
+  // A filter change starts again from the first page.
+  useEffect(() => {
+    setWordPage(0);
+  }, [debouncedSearch, filterCefr, filterSkill]);
+
   useEffect(() => {
     loadVocabulary();
   }, []);
@@ -45,16 +74,14 @@ export default function VocabularyPage() {
     setLoading(true);
     setError('');
     try {
-      const [allRes, dueRes, statsRes] = await Promise.all([
-        vocabApi.getAllVocab(),
+      const [dueRes, statsRes] = await Promise.all([
         vocabApi.getDueVocab(0, 10),
         vocabApi.getStats()
       ]);
-      setVocabList(allRes.data?.data || []);
-      
+
       const duePage = dueRes.data?.data;
       setDueList(duePage?.content || duePage || []);
-      
+
       setStats(statsRes.data?.data || { masteredCount: 0, learningCount: 0, dueTodayCount: 0 });
       setReviewIndex(0);
       setIsFlipped(false);
@@ -88,6 +115,7 @@ export default function VocabularyPage() {
         sourceRef: ''
       });
       await loadVocabulary();
+      reloadWords();
     } catch (err) {
       setAddError(err.message || 'Failed to add word.');
     } finally {
@@ -122,25 +150,11 @@ export default function VocabularyPage() {
     try {
       await vocabApi.deleteVocab(vocabId);
       loadVocabulary();
+      reloadWords();
     } catch (err) {
       setError('Failed to delete word: ' + err.message);
     }
   };
-
-  const filteredAllList = vocabList.filter((item) => {
-    const term = searchTerm.toLowerCase();
-    const matchesSearch = (
-      item.word.toLowerCase().includes(term) ||
-      item.meaningVi.toLowerCase().includes(term) ||
-      (item.partOfSpeech && item.partOfSpeech.toLowerCase().includes(term))
-    );
-
-    const matchesCefr = filterCefr === 'ALL' || item.cefrLevel === filterCefr;
-    const matchesSkill = filterSkill === 'ALL' || 
-      (item.sourceSkill && item.sourceSkill.toUpperCase() === filterSkill.toUpperCase());
-
-    return matchesSearch && matchesCefr && matchesSkill;
-  });
 
   const getCefrBadgeStyle = (level) => {
     switch (level) {
@@ -438,7 +452,7 @@ export default function VocabularyPage() {
           onClick={() => setActiveTab('all')}
         >
           Word Bank
-          <span className="vocab-badge-count">{vocabList.length}</span>
+          <span className="vocab-badge-count">{totalWords}</span>
         </button>
       </div>
 
@@ -660,7 +674,17 @@ export default function VocabularyPage() {
                 </div>
               </div>
 
-              {filteredAllList.length === 0 ? (
+              {wordsQuery.isLoading ? (
+                <div className="loading-spinner" style={{ margin: '48px auto' }}>
+                  <span className="spinner" />
+                  <span>Loading words...</span>
+                </div>
+              ) : wordsQuery.isError ? (
+                <div className="error-msg" role="alert">
+                  <span>{wordsQuery.error?.message || 'Could not load your word bank.'}</span>
+                  <button className="btn btn-outline" onClick={reloadWords}>Retry</button>
+                </div>
+              ) : filteredAllList.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '48px', color: 'var(--outline)' }}>
                   No vocabulary words found matching your search.
                 </div>
@@ -671,7 +695,7 @@ export default function VocabularyPage() {
                       <button className="vocab-delete-btn" onClick={() => handleDeleteWord(item.vocabId)}>
                         <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
                       </button>
-                      
+
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                         <span style={{
                           padding: '1px 8px',
@@ -725,6 +749,16 @@ export default function VocabularyPage() {
                   ))}
                 </div>
               )}
+
+              <Pagination
+                page={wordPage}
+                totalPages={wordsQuery.data?.totalPages || 0}
+                totalElements={totalWords}
+                size={WORDS_PAGE_SIZE}
+                onPageChange={setWordPage}
+                isFetching={wordsQuery.isFetching}
+                isPlaceholderData={wordsQuery.isPlaceholderData}
+              />
             </div>
           )}
         </div>
@@ -746,7 +780,7 @@ export default function VocabularyPage() {
             <form onSubmit={handleManualAdd}>
               <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 {addError && <div className="error-msg">{addError}</div>}
-                
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div className="form-group" style={{ margin: 0 }}>
                     <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '6px' }}>Word *</label>

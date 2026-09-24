@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import historyApi from '../api/historyApi';
 import { TASK1_TYPES, formatEssayType } from '../constants/examTypes';
@@ -55,10 +56,6 @@ const pageWindow = (current, total) => {
 
 export default function HistoryPage() {
   const navigate = useNavigate();
-  const [historyItems, setHistoryItems] = useState([]);
-  const [pageInfo, setPageInfo] = useState({ totalPages: 0, totalElements: 0 });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
   // Filters state -- applied by the server; changing one goes back to the first page.
   const [skillFilter, setSkillFilter] = useState('All Skills');
@@ -75,35 +72,38 @@ export default function HistoryPage() {
     return () => clearTimeout(handle);
   }, [searchTerm]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const params = { page: currentPage - 1, size: PAGE_SIZE };
-    if (SKILL_PARAM[skillFilter]) params.skill = SKILL_PARAM[skillFilter];
-    if (TIME_DAYS[timeFilter]) params.from = localIso(new Date(Date.now() - TIME_DAYS[timeFilter] * 24 * 60 * 60 * 1000));
-    if (search) params.q = search;
+  // react-query keeps the previous page on screen while the next one loads and
+  // drops the response of a filter the user has already moved on from, which the
+  // hand-rolled effect needed a cancelled flag for.
+  const feedParams = {
+    page: currentPage - 1,
+    size: PAGE_SIZE,
+    ...(SKILL_PARAM[skillFilter] ? { skill: SKILL_PARAM[skillFilter] } : {}),
+    ...(TIME_DAYS[timeFilter]
+      ? { from: localIso(new Date(Date.now() - TIME_DAYS[timeFilter] * 24 * 60 * 60 * 1000)) }
+      : {}),
+    ...(search ? { q: search } : {}),
+  };
 
-    setLoading(true);
-    setError('');
-    historyApi.getFeed(params)
-      .then(res => {
-        if (cancelled) return;
-        const data = res.data?.data;
-        setHistoryItems((data?.content || []).map(item => ({
-          id: `${item.skill}-${item.refId}`,
-          date: new Date(item.submittedAt),
-          skill: SKILL_LABEL[item.skill] || item.skill,
-          ...toRow(item),
-        })));
-        setPageInfo({ totalPages: data?.totalPages || 0, totalElements: data?.totalElements || 0 });
-      })
-      .catch(err => {
-        if (cancelled) return;
-        setError('Failed to fetch test history records.');
-        console.error(err);
-      })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [skillFilter, timeFilter, search, currentPage]);
+  const feedQuery = useQuery({
+    queryKey: ['history', 'feed', { skillFilter, timeFilter, search, page: currentPage }],
+    queryFn: () => historyApi.getFeed(feedParams),
+    placeholderData: keepPreviousData,
+    select: (res) => res.data?.data,
+  });
+
+  const loading = feedQuery.isLoading;
+  const error = feedQuery.isError ? 'Failed to fetch test history records.' : '';
+  const historyItems = (feedQuery.data?.content || []).map(item => ({
+    id: `${item.skill}-${item.refId}`,
+    date: new Date(item.submittedAt),
+    skill: SKILL_LABEL[item.skill] || item.skill,
+    ...toRow(item),
+  }));
+  const pageInfo = {
+    totalPages: feedQuery.data?.totalPages || 0,
+    totalElements: feedQuery.data?.totalElements || 0,
+  };
 
   const filtersActive = skillFilter !== 'All Skills' || timeFilter !== 'All Time' || search !== '';
   const totalItems = pageInfo.totalElements;

@@ -2,6 +2,7 @@ import '@testing-library/jest-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MockTestProvider } from '../context/MockTestContext';
 import MockTestLobbyPage from '../pages/MockTestLobbyPage';
 
@@ -25,6 +26,14 @@ vi.mock('../context/ToastContext', () => ({
 
 import mockTestApi from '../api/mockTestApi';
 
+const renderLobby = () => render(
+  <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    <MemoryRouter>
+      <MockTestProvider><MockTestLobbyPage /></MockTestProvider>
+    </MemoryRouter>
+  </QueryClientProvider>
+);
+
 const ok = (data) => ({ data: { success: true, data } });
 
 describe('MockTestLobbyPage abandon', () => {
@@ -43,11 +52,7 @@ describe('MockTestLobbyPage abandon', () => {
   });
 
   it('retires the session on the server before dropping it locally', async () => {
-    render(
-      <MemoryRouter>
-        <MockTestProvider><MockTestLobbyPage /></MockTestProvider>
-      </MemoryRouter>
-    );
+    renderLobby();
 
     fireEvent.click(await screen.findByText('Abandon Exam'));
 
@@ -58,11 +63,7 @@ describe('MockTestLobbyPage abandon', () => {
 
   it('keeps the session when the server refuses', async () => {
     mockTestApi.abandonSession.mockRejectedValue(new Error('Network Error'));
-    render(
-      <MemoryRouter>
-        <MockTestProvider><MockTestLobbyPage /></MockTestProvider>
-      </MemoryRouter>
-    );
+    renderLobby();
 
     fireEvent.click(await screen.findByText('Abandon Exam'));
 
