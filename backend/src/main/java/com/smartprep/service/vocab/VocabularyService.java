@@ -1,7 +1,10 @@
 package com.smartprep.service.vocab;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartprep.dto.request.VocabBulkSaveRequest;
 import com.smartprep.dto.request.VocabCreateRequest;
+import com.smartprep.dto.response.VocabInsight;
+import com.smartprep.dto.response.VocabInsightResponse;
 import com.smartprep.dto.response.VocabResponse;
 import com.smartprep.exception.ResourceNotFoundException;
 import com.smartprep.model.entity.*;
@@ -38,6 +41,7 @@ public class VocabularyService {
     private final Sm2Service sm2Service;
     private final VocabAiService vocabAiService;
     private final List<VocabSourceResolver> resolvers;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public VocabResponse addVocabulary(Long userId, VocabCreateRequest request) {
@@ -348,6 +352,137 @@ public class VocabularyService {
         vocabularyRepository.delete(vocab);
     }
 
+    /**
+     * The stored explanation for one word, if there is one.
+     *
+     * <p>Cheap and unmetered: it reads the row and nothing else. A word nobody has asked
+     * about yet comes back as {@code NOT_GENERATED} rather than as an error, and the caller
+     * decides whether to pay for one.
+     */
+    @Transactional(readOnly = true)
+    public VocabInsightResponse getInsight(Long userId, Long vocabId) {
+        Vocabulary vocab = findOwned(userId, vocabId);
+        VocabInsight stored = readStoredInsight(vocab);
+        if (stored == null) {
+            return VocabInsightResponse.builder()
+                    .vocabId(vocab.getVocabId())
+                    .word(vocab.getWord())
+                    .status(VocabInsightResponse.Status.NOT_GENERATED)
+                    .build();
+        }
+        return ready(vocab, stored, null);
+    }
+
+    /**
+     * Generate the context-aware explanation for one word and store it on the row.
+     *
+     * <p>Not transactional, for the same reason {@link #suggestVocabulary} is not: the Gemini
+     * round trip is measured in tens of seconds and must not hold a pooled connection for its
+     * duration. The repository calls around it are each transactional on their own.
+     *
+     * <p>Generation is expensive, so an explanation that already exists is returned as it is
+     * unless the caller explicitly asks for a new one.
+     *
+     * @param refresh regenerate even when an explanation is already stored
+     */
+    public VocabInsightResponse generateInsight(Long userId, Long vocabId, boolean refresh) {
+        Vocabulary vocab = findOwned(userId, vocabId);
+
+        VocabInsight stored = readStoredInsight(vocab);
+        if (stored != null && !refresh) {
+            return ready(vocab, stored, null);
+        }
+
+        try {
+            VocabInsight generated = vocabAiService.generateInsight(
+                    vocab.getWord(), vocab.getPartOfSpeech(), buildContextHint(vocab));
+
+            // Only the two insight columns are touched. The word, the meaning, the example and
+            // the review schedule are the learner's, and a regeneration must not rewrite them.
+            vocab.setInsightJson(objectMapper.writeValueAsString(generated));
+            vocab.setInsightGeneratedAt(LocalDateTime.now());
+            vocab = vocabularyRepository.save(vocab);
+
+            return ready(vocab, generated, null);
+        } catch (Exception e) {
+            log.warn("Could not generate the explanation for vocab {} ({})", vocabId, e.getClass().getSimpleName());
+
+            // A failed refresh must not cost the learner the explanation they already had.
+            if (stored != null) {
+                return ready(vocab, stored, "Chưa tạo được giải thích mới. Đây là bản đã lưu trước đó.");
+            }
+            return VocabInsightResponse.builder()
+                    .vocabId(vocab.getVocabId())
+                    .word(vocab.getWord())
+                    .status(VocabInsightResponse.Status.UNAVAILABLE)
+                    .message("Chưa tạo được giải thích cho từ này. Bạn hãy thử lại sau ít phút.")
+                    .build();
+        }
+    }
+
+    private Vocabulary findOwned(Long userId, Long vocabId) {
+        Vocabulary vocab = vocabularyRepository.findById(vocabId)
+                .orElseThrow(() -> new ResourceNotFoundException("Vocabulary item not found"));
+        if (!vocab.getUser().getUserId().equals(userId)) {
+            // Same exception and message as a genuine miss, matching the rest of this service.
+            throw new ResourceNotFoundException("Vocabulary item not found");
+        }
+        return vocab;
+    }
+
+    private VocabInsightResponse ready(Vocabulary vocab, VocabInsight insight, String message) {
+        return VocabInsightResponse.builder()
+                .vocabId(vocab.getVocabId())
+                .word(vocab.getWord())
+                .status(VocabInsightResponse.Status.READY)
+                .generatedAt(vocab.getInsightGeneratedAt())
+                .insight(insight)
+                .message(message)
+                .build();
+    }
+
+    /**
+     * Reads the stored explanation, treating an unreadable one as absent.
+     *
+     * <p>A row written by an older version of the schema should send the learner down the
+     * regeneration path, not throw on a page that would otherwise have rendered.
+     */
+    private VocabInsight readStoredInsight(Vocabulary vocab) {
+        if (vocab.getInsightJson() == null || vocab.getInsightJson().isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(vocab.getInsightJson(), VocabInsight.class);
+        } catch (Exception e) {
+            log.warn("Stored explanation for vocab {} could not be read; regenerating", vocab.getVocabId());
+            return null;
+        }
+    }
+
+    /**
+     * The context the word was collected in, so the explanation starts from the sense the
+     * learner actually met rather than from a dictionary's first entry.
+     */
+    private String buildContextHint(Vocabulary vocab) {
+        StringBuilder hint = new StringBuilder();
+        if (vocab.getExample() != null && !vocab.getExample().isBlank()) {
+            hint.append(vocab.getExample().trim());
+        }
+        if (vocab.getCollocation() != null && !vocab.getCollocation().isBlank()) {
+            if (hint.length() > 0) {
+                hint.append(" | ");
+            }
+            hint.append("collocation: ").append(vocab.getCollocation().trim());
+        }
+        if (vocab.getSourceSkill() != null) {
+            if (hint.length() > 0) {
+                hint.append(" | ");
+            }
+            hint.append("collected while practising IELTS ").append(vocab.getSourceSkill().name().toLowerCase());
+        }
+        return hint.length() == 0 ? null : hint.toString();
+    }
+
     private VocabResponse toResponse(Vocabulary vocab) {
         return VocabResponse.builder()
                 .vocabId(vocab.getVocabId())
@@ -364,6 +499,7 @@ public class VocabularyService {
                 .sourceSkill(vocab.getSourceSkill() != null ? vocab.getSourceSkill().name() : null)
                 .sourceRef(vocab.getSourceRef())
                 .cefrLevel(vocab.getCefrLevel())
+                .hasInsight(vocab.getInsightJson() != null && !vocab.getInsightJson().isBlank())
                 .build();
     }
 }
