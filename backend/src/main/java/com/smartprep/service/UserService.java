@@ -14,6 +14,7 @@ import com.smartprep.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -174,15 +175,30 @@ public class UserService {
         return buildAuthResponse(user, null, null);
     }
 
+    /**
+     * Update the parts of the profile the settings page owns.
+     *
+     * <p>Transactional because it is a read-modify-write: without it the load and the save
+     * ran in two separate transactions.
+     */
+    @Transactional
     public AuthResponse updateProfile(Long userId, UpdateProfileRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         
         user.setDisplayName(request.getDisplayName());
-        user.setAvatarUrl(request.getAvatarUrl());
+        // Only when one was sent. Assigning null unconditionally meant any client that
+        // omitted the field silently deleted the user's profile picture.
+        if (request.getAvatarUrl() != null) {
+            user.setAvatarUrl(request.getAvatarUrl());
+        }
         user.setTargetReadingScore(request.getTargetReadingScore());
         user.setTargetWritingScore(request.getTargetWritingScore());
         user.setTargetListeningScore(request.getTargetListeningScore());
+        // Same reasoning: an older client that does not send this has not turned it off.
+        if (request.getEmailNotifications() != null) {
+            user.setEmailNotifications(request.getEmailNotifications());
+        }
         
         user = userRepository.save(user);
         statsService.evictOverviewCache(userId);
@@ -236,6 +252,7 @@ public class UserService {
                 .targetReadingScore(user.getTargetReadingScore())
                 .targetWritingScore(user.getTargetWritingScore())
                 .targetListeningScore(user.getTargetListeningScore())
+                .emailNotifications(user.getEmailNotifications())
                 .build();
     }
 }

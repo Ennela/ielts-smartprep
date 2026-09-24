@@ -11,7 +11,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 /**
- * Sends transactional emails (password reset, email verification) via SMTP.
+ * Sends transactional emails (password reset, email verification, review reminders) via SMTP.
  */
 @Service
 @Slf4j
@@ -48,6 +48,24 @@ public class EmailService {
         String html = buildVerificationEmailHtml(verifyUrl);
 
         sendHtmlEmail(toEmail, subject, html);
+    }
+
+    /**
+     * Tell a learner that vocabulary is waiting for review.
+     *
+     * <p>Not {@code @Async}, unlike the two above. This one is called from a scheduled job
+     * that already runs off the request path and paces itself between sends; handing each
+     * message to the async pool would undo that pacing and let one run flood the SMTP
+     * connection.
+     *
+     * @param dueCount how many words are due; the caller only calls this when it is positive
+     */
+    public void sendVocabReviewReminder(String toEmail, String displayName, long dueCount) {
+        String subject = dueCount == 1
+                ? "1 word is waiting for review"
+                : dueCount + " words are waiting for review";
+        sendHtmlEmail(toEmail, "IELTS SmartPrep — " + subject,
+                buildVocabReminderHtml(displayName, dueCount));
     }
 
     private void sendHtmlEmail(String to, String subject, String html) {
@@ -89,6 +107,38 @@ public class EmailService {
               </p>
             </div>
             """.formatted(resetUrl);
+    }
+
+    private String buildVocabReminderHtml(String displayName, long dueCount) {
+        String greeting = (displayName == null || displayName.isBlank()) ? "Hi" : "Hi " + displayName;
+        String countLine = dueCount == 1
+                ? "You have <strong>1 word</strong> due for review today."
+                : "You have <strong>" + dueCount + " words</strong> due for review today.";
+        String reviewUrl = frontendUrl + "/vocabulary";
+
+        return """
+            <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 520px; margin: 0 auto; padding: 32px; background: #f8f9fa; border-radius: 12px;">
+              <div style="text-align: center; margin-bottom: 24px;">
+                <h1 style="color: #6c5ce7; margin: 0; font-size: 24px;">IELTS SmartPrep</h1>
+              </div>
+              <div style="background: white; padding: 32px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+                <h2 style="margin-top: 0; color: #2d3436;">%s</h2>
+                <p style="color: #636e72; line-height: 1.6;">
+                  %s Spaced repetition works best when you review on the day a word comes up,
+                  so a short session now is worth more than a long one later.
+                </p>
+                <div style="text-align: center; margin: 28px 0;">
+                  <a href="%s" style="display: inline-block; padding: 14px 36px; background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">Review now</a>
+                </div>
+                <p style="color: #b2bec3; font-size: 13px; margin-bottom: 0;">
+                  Don't want these? Turn off Email Notifications in Profile &amp; Settings → Preferences.
+                </p>
+              </div>
+              <p style="text-align: center; color: #b2bec3; font-size: 12px; margin-top: 16px;">
+                © IELTS SmartPrep — AI-Powered IELTS Practice
+              </p>
+            </div>
+            """.formatted(greeting, countLine, reviewUrl);
     }
 
     private String buildVerificationEmailHtml(String verifyUrl) {

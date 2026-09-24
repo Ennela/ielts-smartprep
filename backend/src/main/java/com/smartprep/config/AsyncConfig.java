@@ -3,12 +3,17 @@ package com.smartprep.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
 
 @Configuration
 @EnableAsync
+// Nothing in the application was scheduled until the vocabulary review reminder. The job
+// itself is behind app.vocab-reminder.enabled, so switching scheduling on here does not by
+// itself make the server send anything.
+@EnableScheduling
 public class AsyncConfig {
 
     /**
