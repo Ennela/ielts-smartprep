@@ -1,0 +1,565 @@
+/*
+ * The context-aware vocabulary explanation, presented as a side panel.
+ *
+ * Everything is a token, so the panel reads correctly in the light theme and in the dark
+ * one without a second set of colours. The hierarchy is editorial rather than dashboard:
+ * one accent rule per section, generous line height, small uppercase labels, and no card
+ * inside a card inside a card.
+ *
+ * Below 720px the panel becomes a full-height sheet and every comparison column stacks,
+ * so nothing scrolls sideways on a phone.
+ */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 14, 20, 0.55);
+  backdrop-filter: blur(3px);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 1000;
+}
+
+.panel {
+  background: var(--surface-container-lowest);
+  border-left: 1px solid var(--outline-variant);
+  width: 100%;
+  max-width: 560px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-lg);
+}
+
+/* ===== Header: everything the learner needs before expanding anything ===== */
+
+.header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--outline-variant);
+  /* The one decorative detail: a thin rule that marks the panel as an entry, not a dialog. */
+  border-top: 3px solid var(--primary);
+  flex-shrink: 0;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.word {
+  font-family: var(--font-heading);
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--primary);
+  margin: 0;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.pronunciation {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.ipa {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--on-surface-variant);
+}
+
+.pos {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--outline);
+}
+
+.close {
+  background: none;
+  border: none;
+  color: var(--outline);
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+}
+
+.close:hover {
+  color: var(--on-surface);
+  background: var(--surface-container);
+}
+
+.core-meaning {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--on-surface);
+  margin: 12px 0 0;
+  line-height: 1.55;
+}
+
+.definition-en {
+  font-size: 0.88rem;
+  color: var(--on-surface-variant);
+  margin: 4px 0 0;
+  line-height: 1.55;
+}
+
+.summary {
+  font-size: 0.88rem;
+  color: var(--on-surface-variant);
+  line-height: 1.6;
+  margin: 12px 0 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--outline-variant);
+}
+
+/* ===== Register badges: flat, outlined, one colour. ===== */
+
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 9px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--outline-variant);
+  color: var(--on-surface-variant);
+  background: var(--surface-container-low);
+}
+
+.badge-note {
+  font-size: 0.82rem;
+  color: var(--on-surface-variant);
+  line-height: 1.55;
+  margin: 8px 0 0;
+}
+
+/* ===== Collapsible sections ===== */
+
+.body {
+  overflow-y: auto;
+  flex: 1;
+  padding: 0 24px 32px;
+}
+
+.section {
+  border-bottom: 1px solid var(--outline-variant);
+}
+
+.section-toggle {
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 16px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--font-heading);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--on-surface);
+}
+
+.section-toggle:hover {
+  color: var(--primary);
+}
+
+.section-count {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--outline);
+  margin-left: auto;
+}
+
+.section-content {
+  padding: 0 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--outline);
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* ===== Senses ===== */
+
+.sense {
+  border-left: 2px solid var(--primary);
+  padding-left: 14px;
+}
+
+.sense-meaning {
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: var(--on-surface);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.sense-def {
+  font-size: 0.85rem;
+  color: var(--on-surface-variant);
+  margin: 4px 0 0;
+  line-height: 1.55;
+}
+
+.sense-context {
+  font-size: 0.86rem;
+  color: var(--on-surface-variant);
+  margin: 8px 0 0;
+  line-height: 1.6;
+}
+
+/* ===== Examples ===== */
+
+.examples {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.example {
+  background: var(--surface-container-low);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+}
+
+.example-en {
+  font-size: 0.92rem;
+  color: var(--on-surface);
+  margin: 0;
+  line-height: 1.55;
+}
+
+.example-vi {
+  font-size: 0.85rem;
+  color: var(--on-surface-variant);
+  margin: 4px 0 0;
+  line-height: 1.55;
+}
+
+.example-why {
+  font-size: 0.82rem;
+  color: var(--on-surface-variant);
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 1px dashed var(--outline-variant);
+  line-height: 1.55;
+}
+
+.setting {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--outline);
+  display: block;
+  margin-bottom: 6px;
+}
+
+/* ===== Synonym comparison: a table on wide panels, stacked below 720px ===== */
+
+.comparison + .comparison {
+  margin-top: 24px;
+}
+
+.comparison-focus {
+  font-family: var(--font-heading);
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  margin: 0 0 12px;
+}
+
+.compare-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 1fr;
+}
+
+.compare-card {
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+}
+
+.compare-word {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin: 0 0 8px;
+}
+
+.compare-row + .compare-row {
+  margin-top: 8px;
+}
+
+.compare-value {
+  font-size: 0.85rem;
+  color: var(--on-surface-variant);
+  margin: 0;
+  line-height: 1.55;
+}
+
+.interchange {
+  font-size: 0.85rem;
+  color: var(--on-surface-variant);
+  line-height: 1.6;
+  margin: 12px 0 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--outline-variant);
+}
+
+/* ===== Collocations and grammar patterns ===== */
+
+.pattern-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pattern {
+  border-left: 2px solid var(--outline-variant);
+  padding-left: 12px;
+}
+
+.pattern-name {
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--on-surface);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.pattern-meaning {
+  font-size: 0.84rem;
+  color: var(--on-surface-variant);
+  margin: 4px 0 0;
+  line-height: 1.55;
+}
+
+.pattern-example {
+  font-size: 0.84rem;
+  font-style: italic;
+  color: var(--on-surface-variant);
+  margin: 4px 0 0;
+  line-height: 1.55;
+}
+
+.subheading {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--outline);
+  margin: 0 0 10px;
+}
+
+/* ===== Mistakes ===== */
+
+.mistake {
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+}
+
+.mistake-type {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--outline);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.mistake-line {
+  font-size: 0.88rem;
+  margin: 0;
+  line-height: 1.55;
+  display: flex;
+  gap: 8px;
+}
+
+.mistake-line + .mistake-line {
+  margin-top: 4px;
+}
+
+.mark-wrong {
+  color: var(--error);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.mark-right {
+  color: var(--color-success);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.wrong-text {
+  color: var(--on-surface-variant);
+  text-decoration: line-through;
+  text-decoration-color: var(--outline);
+}
+
+.right-text {
+  color: var(--on-surface);
+  font-weight: 600;
+}
+
+.mistake-why {
+  font-size: 0.82rem;
+  color: var(--on-surface-variant);
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 1px dashed var(--outline-variant);
+  line-height: 1.55;
+}
+
+/* ===== IELTS guidance ===== */
+
+.guidance-item + .guidance-item {
+  margin-top: 14px;
+}
+
+.guidance-text {
+  font-size: 0.87rem;
+  color: var(--on-surface-variant);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* ===== States ===== */
+
+.state {
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--on-surface-variant);
+}
+
+.state-title {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  margin: 0 0 8px;
+}
+
+.state-text {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  margin: 0 0 20px;
+}
+
+.notice {
+  font-size: 0.82rem;
+  color: var(--on-surface-variant);
+  background: var(--surface-container-low);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin: 16px 0 0;
+  line-height: 1.5;
+}
+
+.footer {
+  padding: 12px 24px;
+  border-top: 1px solid var(--outline-variant);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.generated-at {
+  font-size: 0.74rem;
+  color: var(--outline);
+}
+
+/* ===== The button that opens the panel, used on cards and on the flashcard ===== */
+
+.open-btn {
+  background: none;
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-full);
+  color: var(--on-surface-variant);
+  font-family: var(--font-heading);
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 5px 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: color var(--transition), border-color var(--transition);
+}
+
+.open-btn:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+@media (min-width: 721px) {
+  /* Aligned columns read as a comparison table; the labels inside each card are what
+     make the same markup work when they stack. */
+  .compare-grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .compare-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .panel {
+    max-width: 100%;
+  }
+
+  .header {
+    padding: 16px 16px 14px;
+  }
+
+  .body {
+    padding: 0 16px 24px;
+  }
+
+  .footer {
+    padding: 12px 16px;
+  }
+
+  .word {
+    font-size: 1.35rem;
+  }
+}

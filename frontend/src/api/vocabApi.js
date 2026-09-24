@@ -35,6 +35,21 @@ const vocabApi = {
     bulkSaveVocab: (vocabularies) =>
         axiosClient.post('/vocab/bulk-save', { vocabularies }),
 
+    /**
+     * The stored context-aware explanation for one word. Reads the row, so it costs
+     * nothing and is safe to call whenever the learner opens a word.
+     */
+    getInsight: (vocabId) =>
+        axiosClient.get(`/vocab/${vocabId}/insight`),
+
+    /**
+     * Asks the server to generate the explanation. Spends an AI call and is rate limited,
+     * so the page only calls it when the learner asked for an explanation that is not there
+     * yet, or explicitly asked for a new one.
+     */
+    generateInsight: (vocabId, refresh = false) =>
+        axiosClient.post(`/vocab/${vocabId}/insight/generate`, null, { params: { refresh } }),
+
     deleteVocab: (vocabId) =>
         axiosClient.delete(`/vocab/${vocabId}`),
 };

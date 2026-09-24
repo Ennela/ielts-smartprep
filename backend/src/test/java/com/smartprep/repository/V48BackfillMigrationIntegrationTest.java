@@ -80,7 +80,12 @@ class V48BackfillMigrationIntegrationTest {
                 .locations("classpath:db/migration")
                 .load();
         latest.migrate();
-        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("48");
+        // That V48 ran, not that it is the newest migration in the repository. The original
+        // assertion pinned the latest version to "48", so every migration added afterwards
+        // failed this test for a reason that has nothing to do with the backfill it covers.
+        assertThat(latest.info().applied())
+                .extracting(info -> info.getVersion() == null ? null : info.getVersion().getVersion())
+                .contains("48");
     }
 
     @Test
