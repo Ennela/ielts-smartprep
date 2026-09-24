@@ -309,6 +309,24 @@
   font-weight: 600;
   color: var(--on-surface);
   margin: 0 0 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Marks a control that is deliberately inert, so the row does not read as broken. */
+.pref-badge {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--on-surface-variant);
+  background: var(--surface-container-high);
+  border: 1px solid var(--outline-variant);
+  border-radius: var(--radius-full);
+  padding: 2px 8px;
 }
 
 .pref-info-desc {
