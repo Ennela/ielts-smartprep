@@ -1,9 +1,12 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import statsApi from '../api/statsApi';
 import analyticsApi from '../api/analyticsApi';
-import ScoreTrendChart from '../components/analytics/ScoreTrendChart';
+// recharts is the largest chunk in the build (336 kB) and the dashboard is the
+// first page after login; the trend card is one of eight and often has no data to
+// draw, so the library is fetched only when a chart is actually rendered.
+const ScoreTrendChart = lazy(() => import('../components/analytics/ScoreTrendChart'));
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -262,11 +265,13 @@ export default function DashboardPage() {
             {sectionErrors.trend ? (
               <SectionError message={sectionErrors.trend} onRetry={loadTrend} />
             ) : trendData && trendData.dataPoints?.length > 0 ? (
-              <ScoreTrendChart
-                dataPoints={trendData.dataPoints}
-                targetScore={trendData.targetScore}
-                skill={trendData.skill}
-              />
+              <Suspense fallback={<div className="spinner" style={{ width: 24, height: 24 }} />}>
+                <ScoreTrendChart
+                  dataPoints={trendData.dataPoints}
+                  targetScore={trendData.targetScore}
+                  skill={trendData.skill}
+                />
+              </Suspense>
             ) : (
               <div className="flex flex-col items-center justify-center text-center p-md">
                 <span className="material-symbols-outlined text-[48px] text-outline-variant mb-sm">show_chart</span>

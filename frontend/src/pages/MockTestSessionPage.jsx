@@ -419,6 +419,7 @@ export default function MockTestSessionPage() {
                   <img 
                     src={currentWritingPrompt.imageUrl} 
                     alt="Task Visual" 
+                    loading="lazy" 
                     style={{ maxWidth: '100%', height: 'auto', border: '1px solid var(--outline-variant)', borderRadius: 'var(--radius-md)' }} 
                   />
                 </div>

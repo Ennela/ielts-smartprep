@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 
 /**
  * Renders one quiz's questions, grouped by groupId.
@@ -124,39 +124,66 @@ function QuestionGroup({ group, answers, setAnswer, disabled, showCorrectAnswers
         }
 
         return (
-          <div key={q.questionId} className="question-item">
-            <div className="question-number">Question {q.orderIndex || idx + 1}</div>
-            <p className="question-text">{q.questionText}</p>
-
-            <QuestionInput
-              question={q}
-              selected={answers[q.questionId]}
-              onChange={(val) => setAnswer(q.questionId, val)}
-              disabled={disabled}
-              groupOptions={groupOptions}
-            />
-
-            {showCorrectAnswers && q.correctAnswer && (
-              <div style={{
-                marginTop: '8px',
-                padding: '6px 12px',
-                backgroundColor: 'rgba(0,108,74,0.06)',
-                color: '#006c4a',
-                borderRadius: '4px',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                border: '1px solid rgba(0,108,74,0.15)',
-                display: 'inline-block'
-              }}>
-                Đáp án đúng: {q.correctAnswer} {q.explanation ? `(${q.explanation})` : ''}
-              </div>
-            )}
-          </div>
+          <QuestionItem
+            key={q.questionId}
+            question={q}
+            number={q.orderIndex || idx + 1}
+            value={answers[q.questionId]}
+            setAnswer={setAnswer}
+            disabled={disabled}
+            groupOptions={groupOptions}
+            showCorrectAnswers={showCorrectAnswers}
+          />
         );
       })}
     </div>
   );
 }
+
+// ============================================================
+// QuestionItem — one numbered question
+//
+// Memoised, and handed `setAnswer` rather than a fresh closure, so typing an
+// answer re-renders that question instead of all forty in the passage.
+// ============================================================
+const ANSWER_KEY_STYLE = {
+  marginTop: '8px',
+  padding: '6px 12px',
+  backgroundColor: 'rgba(0,108,74,0.06)',
+  color: '#006c4a',
+  borderRadius: '4px',
+  fontSize: '0.8rem',
+  fontWeight: 600,
+  border: '1px solid rgba(0,108,74,0.15)',
+  display: 'inline-block',
+};
+
+const QuestionItem = memo(function QuestionItem({
+  question, number, value, setAnswer, disabled, groupOptions, showCorrectAnswers,
+}) {
+  const onChange = useCallback((val) => setAnswer(question.questionId, val), [setAnswer, question.questionId]);
+
+  return (
+    <div className="question-item">
+      <div className="question-number">Question {number}</div>
+      <p className="question-text">{question.questionText}</p>
+
+      <QuestionInput
+        question={question}
+        selected={value}
+        onChange={onChange}
+        disabled={disabled}
+        groupOptions={groupOptions}
+      />
+
+      {showCorrectAnswers && question.correctAnswer && (
+        <div style={ANSWER_KEY_STYLE}>
+          Đáp án đúng: {question.correctAnswer} {question.explanation ? `(${question.explanation})` : ''}
+        </div>
+      )}
+    </div>
+  );
+});
 
 // ============================================================
 // QuestionInput — routes to the correct input component by type

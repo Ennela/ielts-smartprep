@@ -449,7 +449,7 @@ export default function WritingEditorPage() {
           {/* Task 1 image */}
           {prompt?.imageUrl && (
             <div className="prompt-image-container">
-              <img src={prompt.imageUrl} alt="Prompt Chart" className="prompt-image" />
+              <img src={prompt.imageUrl} alt="Prompt Chart" className="prompt-image" loading="lazy" />
             </div>
           )}
 

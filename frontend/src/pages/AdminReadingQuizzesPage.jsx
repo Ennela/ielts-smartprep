@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import adminApi from '../api/adminApi';
+import { nextRowKey, withRowKeys } from '../utils/rowKey';
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
 import ArchivedToggle from '../components/admin/ArchivedToggle';
@@ -114,7 +115,7 @@ export default function AdminReadingQuizzesPage() {
       difficulty: quiz.difficulty || 'PASSAGE_1',
       passageText: quiz.passageText || '',
       timeLimitSeconds: quiz.timeLimitSeconds || 600,
-      questions: quiz.questions ? quiz.questions.map(q => {
+      questions: quiz.questions ? withRowKeys(quiz.questions).map(q => {
         const mappedQ = { ...q };
         if (q.options && q.options.length > 0) {
           const optA = q.options.find(o => o.label === 'A')?.content || '';
@@ -154,6 +155,7 @@ export default function AdminReadingQuizzesPage() {
       questions: [
         ...f.questions,
         {
+          rowKey: nextRowKey(),
           questionType: 'MCQ',
           questionText: '',
           optionA: '',
@@ -215,7 +217,7 @@ export default function AdminReadingQuizzesPage() {
     }
 
     // Format request payload to include structured options list
-    const formattedQuestions = form.questions.map(q => {
+    const formattedQuestions = form.questions.map(({ rowKey: _rowKey, ...q }) => {
       const copy = { ...q };
       if (q.questionType === 'MCQ') {
         const opts = [];
@@ -522,7 +524,7 @@ export default function AdminReadingQuizzesPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                   {form.questions.map((q, idx) => (
                     <div
-                      key={idx}
+                      key={q.rowKey}
                       style={{
                         border: '1px solid var(--border-color)',
                         borderRadius: '8px',
