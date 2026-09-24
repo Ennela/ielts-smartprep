@@ -52,3 +52,10 @@ Thumbs.db
 
 # Agent folders
 .agents/
+
+# Extracted Cambridge 19 content (answer keys, OCR text). The files stay on disk
+# where the import scripts expect them; they must not be committed -- the repo is
+# public and the frontend copies were already removed in the 2026-09-20 audit.
+scripts/cam19_import_review.json
+scripts/cam19_ocr_cache.json
+scripts/cam19_reading_keys.json

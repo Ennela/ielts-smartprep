@@ -9,8 +9,7 @@ import useExamWarnings from '../hooks/useExamWarnings';
 import useElapsedSeconds, { formatElapsed } from '../hooks/useElapsedSeconds';
 import { useToast } from '../context/ToastContext';
 import { mayHaveGradedAnyway, latestSubmissionId, findNewSubmission } from '../utils/gradingRecovery';
-
-const TASK1_TYPES = ['LINE_GRAPH', 'BAR_CHART', 'PIE_CHART', 'TABLE', 'MAP', 'DIAGRAM'];
+import { isTask1Type, formatEssayType } from '../constants/examTypes';
 
 const SESSION_KEY_PREFIX = 'writing_single_attemptId_';
 // Mirrors the draft mechanism ReadingContext already uses for quiz answers.
@@ -39,16 +38,6 @@ const GRADING_CRITERIA = [
   },
 ];
 
-const FORMAT_TYPE = (type) => {
-  const map = {
-    CAUSE_AND_EFFECT: 'Cause & Effect', PROBLEM_AND_SOLUTION: 'Problem & Solution',
-    ADVANTAGES_DISADVANTAGES: 'Advantages & Disadvantages', TWO_PART_QUESTION: 'Two-Part Question',
-    LINE_GRAPH: 'Line Graph', BAR_CHART: 'Bar Chart', PIE_CHART: 'Pie Chart',
-    TABLE: 'Table', MAP: 'Map', DIAGRAM: 'Diagram',
-  };
-  return map[type] || (type ? type.charAt(0) + type.slice(1).toLowerCase() : '');
-};
-
 export default function WritingEditorPage() {
   const { promptId } = useParams();
   const navigate = useNavigate();
@@ -76,7 +65,7 @@ export default function WritingEditorPage() {
   const essayTextRef = useRef(essayText);
   useEffect(() => { essayTextRef.current = essayText; }, [essayText]);
 
-  const isTask1 = prompt ? TASK1_TYPES.includes(prompt.essayType) : false;
+  const isTask1 = prompt ? isTask1Type(prompt.essayType) : false;
   const minWords = isTask1 ? 150 : 250;
 
   // ── Load prompt ──
@@ -92,7 +81,7 @@ export default function WritingEditorPage() {
           promptData = res.data.data;
         }
         setPrompt(promptData);
-      } catch (err) {
+      } catch (_err) {
         setError('Failed to load prompt.');
       } finally {
         setLoading(false);
@@ -125,7 +114,7 @@ export default function WritingEditorPage() {
 
         // Create new attempt if none found
         if (!attempt) {
-          const task1 = TASK1_TYPES.includes(prompt.essayType);
+          const task1 = isTask1Type(prompt.essayType);
           const res = await attemptApi.startAttempt({
             skillType: 'WRITING',
             examReferenceIds: JSON.stringify([Number(promptId)]),
@@ -139,7 +128,7 @@ export default function WritingEditorPage() {
         sessionStorage.setItem(sessionKey, String(attempt.attemptId));
 
         // Set suggested time based on task type
-        const task1 = TASK1_TYPES.includes(prompt.essayType);
+        const task1 = isTask1Type(prompt.essayType);
         setSuggestedTime(task1
           ? (attempt.suggestedTask1Duration || 1200)
           : (attempt.suggestedTask2Duration || 2400));
@@ -373,7 +362,7 @@ export default function WritingEditorPage() {
             background: 'rgba(0,63,177,0.06)', color: 'var(--primary)',
             fontSize: '0.75rem', fontWeight: 600,
           }}>
-            {isTask1 ? 'Task 1' : 'Task 2'} · {FORMAT_TYPE(prompt?.essayType)}
+            {isTask1 ? 'Task 1' : 'Task 2'} · {formatEssayType(prompt?.essayType)}
           </span>
         </div>
 

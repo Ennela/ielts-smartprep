@@ -20,7 +20,8 @@ export default function DashboardPage() {
   const [historySkill, setHistorySkill] = useState('');
   const [historyPage, setHistoryPage] = useState(0);
 
-  const [weaknessSkill, setWeaknessSkill] = useState('');
+  // No control changes this yet; the weakness block is fetched for all skills.
+  const [weaknessSkill] = useState('');
   const [weaknessData, setWeaknessData] = useState(null);
 
   // Each filtered block fails on its own; only the overview takes the page down.

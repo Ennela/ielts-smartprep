@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import writingApi from '../api/writingApi';
 import Pagination from '../components/Pagination';
 import { formatBand } from '../utils/formatBand';
+import { formatEssayType } from '../constants/examTypes';
 
 const PAGE_SIZE = 10;
 
@@ -37,23 +38,6 @@ export default function WritingHistoryPage() {
             year: 'numeric', month: 'short', day: 'numeric',
             hour: '2-digit', minute: '2-digit',
         });
-    };
-
-    const formatType = (type) => {
-        switch (type) {
-            case 'CAUSE_AND_EFFECT': return 'Cause & Effect';
-            case 'PROBLEM_AND_SOLUTION': return 'Problem & Solution';
-            case 'ADVANTAGES_DISADVANTAGES': return 'Advantages & Disadvantages';
-            case 'TWO_PART_QUESTION': return 'Two-Part Question';
-            case 'LINE_GRAPH': return 'Line Graph';
-            case 'BAR_CHART': return 'Bar Chart';
-            case 'PIE_CHART': return 'Pie Chart';
-            case 'TABLE': return 'Table';
-            case 'MAP': return 'Map';
-            case 'DIAGRAM': return 'Diagram';
-            case 'LETTER': return 'Letter';
-            default: return type ? type.charAt(0) + type.slice(1).toLowerCase() : '';
-        }
     };
 
     const getScoreColor = (score) => {
@@ -126,7 +110,7 @@ export default function WritingHistoryPage() {
                             >
                                 <div className="history-card-top">
                                     <span className={`essay-type-badge badge-${item.essayType?.toLowerCase()}`}>
-                                        {formatType(item.essayType)}
+                                        {formatEssayType(item.essayType)}
                                     </span>
                                     <span className="history-date">{formatDate(item.submittedAt)}</span>
                                 </div>
@@ -167,8 +151,8 @@ export default function WritingHistoryPage() {
                                     <span className="history-date">{formatDate(item.submittedAt)}</span>
                                 </div>
                                 <p className="history-prompt-preview" style={{ fontSize: '0.85rem', lineHeight: 1.5 }}>
-                                    Task 1: {formatType(item.task1Result?.essayType)} (Band {formatBand(item.task1Result?.overallBand)})<br/>
-                                    Task 2: {formatType(item.task2Result?.essayType)} (Band {formatBand(item.task2Result?.overallBand)})
+                                    Task 1: {formatEssayType(item.task1Result?.essayType)} (Band {formatBand(item.task1Result?.overallBand)})<br/>
+                                    Task 2: {formatEssayType(item.task2Result?.essayType)} (Band {formatBand(item.task2Result?.overallBand)})
                                 </p>
                                 <div className="history-card-bottom">
                                     <span className="history-words" style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

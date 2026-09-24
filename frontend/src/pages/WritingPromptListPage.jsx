@@ -1,29 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import writingApi from '../api/writingApi';
+import { TASK1_TYPES, TASK2_TYPES, ESSAY_TYPE_LABELS, formatEssayType } from '../constants/examTypes';
 
-const TASK1_TYPES = ['LINE_GRAPH', 'BAR_CHART', 'PIE_CHART', 'TABLE', 'MAP', 'DIAGRAM'];
-const TASK2_TYPES = ['OPINION', 'DISCUSSION', 'CAUSE_AND_EFFECT', 'PROBLEM_AND_SOLUTION', 'ADVANTAGES_DISADVANTAGES', 'TWO_PART_QUESTION'];
-
-const TASK2_FILTERS = [
-    { value: '', label: 'All Types' },
-    { value: 'OPINION', label: 'Opinion' },
-    { value: 'DISCUSSION', label: 'Discussion' },
-    { value: 'CAUSE_AND_EFFECT', label: 'Cause & Effect' },
-    { value: 'PROBLEM_AND_SOLUTION', label: 'Problem & Solution' },
-    { value: 'ADVANTAGES_DISADVANTAGES', label: 'Advantages & Disadvantages' },
-    { value: 'TWO_PART_QUESTION', label: 'Two-Part Question' },
-];
-
-const TASK1_FILTERS = [
-    { value: '', label: 'All Types' },
-    { value: 'LINE_GRAPH', label: 'Line Graph' },
-    { value: 'BAR_CHART', label: 'Bar Chart' },
-    { value: 'PIE_CHART', label: 'Pie Chart' },
-    { value: 'TABLE', label: 'Table' },
-    { value: 'MAP', label: 'Map' },
-    { value: 'DIAGRAM', label: 'Diagram' },
-];
+const ALL_TYPES_FILTER = { value: '', label: 'All Types' };
+const toFilters = (types) => [ALL_TYPES_FILTER, ...types.map((t) => ({ value: t, label: ESSAY_TYPE_LABELS[t] }))];
+const TASK2_FILTERS = toFilters(TASK2_TYPES);
+const TASK1_FILTERS = toFilters(TASK1_TYPES);
 
 export default function WritingPromptListPage() {
     const navigate = useNavigate();
@@ -122,22 +105,6 @@ export default function WritingPromptListPage() {
             case 'MAP': return 'badge-map';
             case 'DIAGRAM': return 'badge-diagram';
             default: return '';
-        }
-    };
-
-    const formatType = (type) => {
-        switch (type) {
-            case 'CAUSE_AND_EFFECT': return 'Cause & Effect';
-            case 'PROBLEM_AND_SOLUTION': return 'Problem & Solution';
-            case 'ADVANTAGES_DISADVANTAGES': return 'Advantages & Disadvantages';
-            case 'TWO_PART_QUESTION': return 'Two-Part Question';
-            case 'LINE_GRAPH': return 'Line Graph';
-            case 'BAR_CHART': return 'Bar Chart';
-            case 'PIE_CHART': return 'Pie Chart';
-            case 'TABLE': return 'Table';
-            case 'MAP': return 'Map';
-            case 'DIAGRAM': return 'Diagram';
-            default: return type ? type.charAt(0) + type.slice(1).toLowerCase() : '';
         }
     };
 
@@ -357,7 +324,7 @@ export default function WritingPromptListPage() {
                                     <div className="prompt-card-body">
                                         <div className="prompt-card-header">
                                             <span className={`essay-type-badge ${getTypeBadgeClass(p.essayType)}`}>
-                                                {formatType(p.essayType)}
+                                                {formatEssayType(p.essayType)}
                                             </span>
                                         </div>
                                         <p className="prompt-text">{p.promptText}</p>
