@@ -142,6 +142,17 @@ spring:
           writetimeout: 5000
 
 app:
+  # The daily "your words are waiting" email.
+  #
+  # Off by default, and deliberately so: a machine with no SMTP credentials -- every
+  # development machine -- would otherwise try to mail real learners every morning and fill
+  # the log with failures. Turn it on only where mail is actually configured.
+  vocab-reminder:
+    enabled: ${VOCAB_REMINDER_ENABLED:false}
+    # Second, minute, hour, day, month, weekday. 07:00 every day.
+    cron: ${VOCAB_REMINDER_CRON:0 0 7 * * *}
+    # The learners' zone, not the server's, so 07:00 means their morning.
+    zone: ${VOCAB_REMINDER_ZONE:Asia/Ho_Chi_Minh}
   jwt:
     secret: ${JWT_SECRET}
     expiration-ms: 900000  # 15 minutes (access token)
