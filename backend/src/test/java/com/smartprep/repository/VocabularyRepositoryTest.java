@@ -8,6 +8,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
@@ -195,6 +197,68 @@ class VocabularyRepositoryTest extends AbstractMySQLContainerTest {
     // ===================================================================
     //  Helpers
     // ===================================================================
+
+    // ===================================================================
+    //  findForUser (the vocabulary page's list, paged and filtered in SQL)
+    // ===================================================================
+
+    @Test
+    @DisplayName("findForUser — pages a user's words newest first, and only theirs")
+    void findForUser_pagesOwnWordsNewestFirst() {
+        for (int i = 1; i <= 3; i++) {
+            entityManager.persistAndFlush(buildVocab("word" + i, "nghĩa " + i, LocalDateTime.now()));
+        }
+        User other = entityManager.persistAndFlush(User.builder()
+                .username("other_vocab_user").email("other_vocab@test.com")
+                .passwordHash("hash").role(Role.STUDENT).build());
+        entityManager.persistAndFlush(Vocabulary.builder()
+                .user(other).word("theirs").meaningVi("của họ")
+                .easeFactor(2.5).intervalDays(1).repetitions(0).dueDate(LocalDateTime.now()).build());
+
+        Page<Vocabulary> firstPage = vocabularyRepository.findForUser(
+                testUser.getUserId(), null, null, null, PageRequest.of(0, 2));
+
+        assertThat(firstPage.getTotalElements()).isEqualTo(3);
+        assertThat(firstPage.getContent()).hasSize(2);
+        assertThat(firstPage.getContent()).extracting(Vocabulary::getWord).doesNotContain("theirs");
+    }
+
+    @Test
+    @DisplayName("findForUser — matches the search term against word, meaning and part of speech")
+    void findForUser_searchesTheThreeTextFields() {
+        Vocabulary v = buildVocab("ubiquitous", "phổ biến khắp nơi", LocalDateTime.now());
+        v.setPartOfSpeech("adjective");
+        entityManager.persistAndFlush(v);
+        entityManager.persistAndFlush(buildVocab("kettle", "ấm đun nước", LocalDateTime.now()));
+
+        assertThat(vocabularyRepository.findForUser(testUser.getUserId(), "%ubiq%", null, null, PageRequest.of(0, 10)))
+                .extracting(Vocabulary::getWord).containsExactly("ubiquitous");
+        assertThat(vocabularyRepository.findForUser(testUser.getUserId(), "%khắp%", null, null, PageRequest.of(0, 10)))
+                .extracting(Vocabulary::getWord).containsExactly("ubiquitous");
+        assertThat(vocabularyRepository.findForUser(testUser.getUserId(), "%adject%", null, null, PageRequest.of(0, 10)))
+                .extracting(Vocabulary::getWord).containsExactly("ubiquitous");
+    }
+
+    @Test
+    @DisplayName("findForUser — filters by CEFR level and source skill, null means every value")
+    void findForUser_filtersByLevelAndSkill() {
+        Vocabulary reading = buildVocab("harvest", "thu hoạch", LocalDateTime.now());
+        reading.setCefrLevel("B2");
+        reading.setSourceSkill(SkillType.READING);
+        entityManager.persistAndFlush(reading);
+
+        Vocabulary listening = buildVocab("platform", "sân ga", LocalDateTime.now());
+        listening.setCefrLevel("C1");
+        listening.setSourceSkill(SkillType.LISTENING);
+        entityManager.persistAndFlush(listening);
+
+        assertThat(vocabularyRepository.findForUser(testUser.getUserId(), null, "B2", null, PageRequest.of(0, 10)))
+                .extracting(Vocabulary::getWord).containsExactly("harvest");
+        assertThat(vocabularyRepository.findForUser(testUser.getUserId(), null, null, SkillType.LISTENING, PageRequest.of(0, 10)))
+                .extracting(Vocabulary::getWord).containsExactly("platform");
+        assertThat(vocabularyRepository.findForUser(testUser.getUserId(), null, null, null, PageRequest.of(0, 10)))
+                .hasSize(2);
+    }
 
     private Vocabulary buildVocab(String word, String meaningVi, LocalDateTime dueDate) {
         return Vocabulary.builder()

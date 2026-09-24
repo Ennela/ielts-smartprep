@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import listeningApi from '../api/listeningApi';
 
 const TOPICS = [
@@ -27,27 +28,22 @@ export default function ListeningPracticePage() {
   const [generateLoading, setGenerateLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Curated list states
-  const [parts, setParts] = useState([]);
-  const [curatedLoading, setCuratedLoading] = useState(false);
-  const [curatedError, setCuratedError] = useState('');
   const [mockLoading, setMockLoading] = useState(false);
 
-  const loadCurated = () => {
-    setCuratedLoading(true);
-    setCuratedError('');
-    listeningApi.getAllParts()
-      .then(res => setParts(res.data?.data || []))
-      .catch(err => {
-        console.error(err);
-        setCuratedError(err.response?.data?.message || err.message || 'Failed to load curated tests');
-      })
-      .finally(() => setCuratedLoading(false));
-  };
-
-  useEffect(() => {
-    if (activeTab === 'curated') loadCurated();
-  }, [activeTab]);
+  // The curated catalogue is admin content that rarely changes, so react-query
+  // keeps it between visits to this tab instead of refetching on every switch.
+  const curatedQuery = useQuery({
+    queryKey: ['listening', 'parts'],
+    queryFn: () => listeningApi.getAllParts(),
+    enabled: activeTab === 'curated',
+    select: (res) => res.data?.data || [],
+  });
+  const parts = curatedQuery.data || [];
+  const curatedLoading = curatedQuery.isLoading && activeTab === 'curated';
+  const curatedError = curatedQuery.isError
+    ? (curatedQuery.error?.response?.data?.message || curatedQuery.error?.message || 'Failed to load curated tests')
+    : '';
+  const loadCurated = curatedQuery.refetch;
 
   const startMockTest = async () => {
     setMockLoading(true);

@@ -1,4 +1,5 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useMockTest } from '../context/MockTestContext';
 import mockTestApi from '../api/mockTestApi';
@@ -15,14 +16,7 @@ export default function MockTestLobbyPage() {
   const navigate = useNavigate();
   const { activeSession, startOrResumeTest, loadActiveSession, abandonSession } = useMockTest();
   const { error: showErrorToast } = useToast();
-  const [tests, setTests] = useState([]);
-  const [history, setHistory] = useState([]);
   const [historyPage, setHistoryPage] = useState(0);
-  const [historyPageInfo, setHistoryPageInfo] = useState({ totalPages: 0, totalElements: 0 });
-  const [loading, setLoading] = useState(false);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [testsError, setTestsError] = useState('');
-  const [historyError, setHistoryError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
 
   // Wizard state
@@ -32,46 +26,40 @@ export default function MockTestLobbyPage() {
   const [isTermsChecked, setIsTermsChecked] = useState(false);
   const audioRef = useRef(null);
 
-  const loadTests = useCallback(() => {
-    setLoading(true);
-    setTestsError('');
-    mockTestApi.getAllMockTests()
-      .then(res => {
-        setTests(res.data?.data || []);
-      })
-      .catch(err => {
-        console.error('Failed to load mock tests', err);
-        setTestsError(err.response?.data?.message || err.message || 'Failed to load mock tests');
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  const testsQuery = useQuery({
+    queryKey: ['mock-tests', 'catalogue'],
+    queryFn: () => mockTestApi.getAllMockTests(),
+    select: (res) => res.data?.data || [],
+  });
+  const tests = testsQuery.data || [];
+  const loading = testsQuery.isLoading;
+  const testsError = testsQuery.isError
+    ? (testsQuery.error?.response?.data?.message || testsQuery.error?.message || 'Failed to load mock tests')
+    : '';
+  const loadTests = testsQuery.refetch;
 
   useEffect(() => {
     // Load active session on mount
     loadActiveSession().catch(() => {});
-    loadTests();
-  }, [loadTests]);
+  }, []);
 
   // Attempt history, one page at a time; the whole history is no longer shipped.
-  const loadHistory = useCallback(() => {
-    setHistoryLoading(true);
-    setHistoryError('');
-    mockTestApi.getHistory(historyPage, HISTORY_PAGE_SIZE)
-      .then(res => {
-        const data = res.data?.data;
-        setHistory(data?.content || []);
-        setHistoryPageInfo({ totalPages: data?.totalPages || 0, totalElements: data?.totalElements || 0 });
-      })
-      .catch(err => {
-        console.error('Failed to load history', err);
-        setHistoryError(err.response?.data?.message || err.message || 'Failed to load your exam history');
-      })
-      .finally(() => setHistoryLoading(false));
-  }, [historyPage]);
-
-  useEffect(() => {
-    loadHistory();
-  }, [loadHistory]);
+  const historyQuery = useQuery({
+    queryKey: ['mock-tests', 'history', historyPage],
+    queryFn: () => mockTestApi.getHistory(historyPage, HISTORY_PAGE_SIZE),
+    placeholderData: keepPreviousData,
+    select: (res) => res.data?.data,
+  });
+  const history = historyQuery.data?.content || [];
+  const historyPageInfo = {
+    totalPages: historyQuery.data?.totalPages || 0,
+    totalElements: historyQuery.data?.totalElements || 0,
+  };
+  const historyLoading = historyQuery.isLoading;
+  const historyError = historyQuery.isError
+    ? (historyQuery.error?.response?.data?.message || historyQuery.error?.message || 'Failed to load your exam history')
+    : '';
+  const loadHistory = historyQuery.refetch;
 
   useEffect(() => {
     return () => {

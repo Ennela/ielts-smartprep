@@ -9,6 +9,7 @@ import com.smartprep.dto.response.VocabResponse;
 import com.smartprep.model.entity.User;
 import com.smartprep.service.vocab.VocabAiService;
 import com.smartprep.service.vocab.VocabularyService;
+import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -53,10 +54,24 @@ public class VocabularyController {
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
+    /**
+     * One page of the caller's words, newest first, with the vocabulary page's filters.
+     *
+     * Returns a Page like every other list endpoint. It used to return the whole
+     * collection, which the browser then filtered — linear in the size of the user's
+     * own vocabulary.
+     */
     @GetMapping
-    public ResponseEntity<ApiResponse<List<VocabResponse>>> getAllVocabulary(
-            @AuthenticationPrincipal User user) {
-        List<VocabResponse> response = vocabularyService.getAllVocabularies(user.getUserId());
+    public ResponseEntity<ApiResponse<Page<VocabResponse>>> getVocabulary(
+            @AuthenticationPrincipal User user,
+            @Parameter(description = "Matches the word, its Vietnamese meaning or its part of speech")
+            @RequestParam(required = false) String q,
+            @Parameter(description = "CEFR level, or ALL") @RequestParam(required = false) String cefr,
+            @Parameter(description = "Source skill, or ALL") @RequestParam(required = false) String skill,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Page<VocabResponse> response = vocabularyService.getVocabularies(
+                user.getUserId(), q, cefr, skill, page, size);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 

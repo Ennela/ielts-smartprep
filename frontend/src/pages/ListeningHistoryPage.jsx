@@ -1,39 +1,24 @@
-import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import listeningApi from '../api/listeningApi';
+import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
 import styles from '../styles/History.module.css';
 
 const PAGE_SIZE = 12;
 
 export default function ListeningHistoryPage() {
-  const [history, setHistory] = useState([]);
-  const [page, setPage] = useState(0);
-  const [pageInfo, setPageInfo] = useState({ totalPages: 0, totalElements: 0 });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   // The endpoint returns one page at a time; the whole history is no longer shipped.
-  const loadHistory = useCallback(() => {
-    setLoading(true);
-    setError('');
-    listeningApi.getHistory(page, PAGE_SIZE)
-      .then(res => {
-        const data = res.data?.data;
-        setHistory(data?.content || []);
-        setPageInfo({ totalPages: data?.totalPages || 0, totalElements: data?.totalElements || 0 });
-      })
-      .catch(err => {
-        console.error(err);
-        setError(err.response?.data?.message || err.message || 'Unable to load listening history');
-      })
-      .finally(() => setLoading(false));
-  }, [page]);
-
-  useEffect(() => {
-    loadHistory();
-  }, [loadHistory]);
+  const {
+    content: history, totalPages, totalElements, page, setPage,
+    isLoading: loading, isFetching, isPlaceholderData, isError, error, refetch: loadHistory,
+  } = usePaginatedQuery({
+    queryKey: ['listening', 'history'],
+    queryFn: (pg, size) => listeningApi.getHistory(pg, size),
+    defaultSize: PAGE_SIZE,
+  });
+  const pageInfo = { totalPages, totalElements };
 
   const getScoreColor = (score) => {
     const s = parseFloat(score);
@@ -60,9 +45,9 @@ export default function ListeningHistoryPage() {
           <span className="spinner" />
           <span>Loading listening history...</span>
         </div>
-      ) : error ? (
+      ) : isError ? (
         <div className="error-msg" role="alert">
-          <span>{error}</span>
+          <span>{error?.response?.data?.message || error?.message || 'Unable to load listening history'}</span>
           <button className="btn btn-outline" onClick={loadHistory}>Retry</button>
         </div>
       ) : history.length === 0 ? (
@@ -148,6 +133,8 @@ export default function ListeningHistoryPage() {
           totalElements={pageInfo.totalElements}
           size={PAGE_SIZE}
           onPageChange={setPage}
+          isFetching={isFetching}
+          isPlaceholderData={isPlaceholderData}
         />
       )}
 

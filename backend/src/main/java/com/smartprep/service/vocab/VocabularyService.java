@@ -12,6 +12,7 @@ import com.smartprep.repository.MockTestSubmissionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,9 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class VocabularyService {
+
+    /** Same ceiling the other paged endpoints use. */
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final VocabularyRepository vocabularyRepository;
     private final UserRepository userRepository;
@@ -93,6 +97,29 @@ public class VocabularyService {
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * One page of a user's words, with the vocabulary page's filters applied in SQL.
+     *
+     * The page used to fetch the whole collection and filter it in the browser.
+     */
+    @Transactional(readOnly = true)
+    public Page<VocabResponse> getVocabularies(Long userId, String search, String cefrLevel,
+                                               String sourceSkill, int page, int size) {
+        String likeTerm = (search != null && !search.isBlank())
+                ? "%" + search.toLowerCase().trim() + "%"
+                : null;
+        String cefr = (cefrLevel != null && !cefrLevel.isBlank() && !"ALL".equalsIgnoreCase(cefrLevel))
+                ? cefrLevel.toUpperCase()
+                : null;
+        SkillType skill = (sourceSkill != null && !sourceSkill.isBlank() && !"ALL".equalsIgnoreCase(sourceSkill))
+                ? SkillType.valueOf(sourceSkill.toUpperCase())
+                : null;
+
+        return vocabularyRepository
+                .findForUser(userId, likeTerm, cefr, skill, PageRequest.of(page, Math.min(size, MAX_PAGE_SIZE)))
+                .map(this::toResponse);
     }
 
     @Transactional
