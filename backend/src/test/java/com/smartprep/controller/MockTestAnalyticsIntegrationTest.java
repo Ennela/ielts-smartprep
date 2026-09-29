@@ -1,5 +1,7 @@
 package com.smartprep.controller;
 
+import org.springframework.jdbc.core.JdbcTemplate;
+import com.smartprep.repository.SeededContentFixture;
 import com.smartprep.model.entity.*;
 import com.smartprep.model.enums.Role;
 import com.smartprep.model.enums.SessionStatus;
@@ -60,6 +62,7 @@ class MockTestAnalyticsIntegrationTest extends AbstractMySQLContainerTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private UserRepository userRepository;
     @Autowired private MockTestRepository mockTestRepository;
+    @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private MockTestSessionRepository sessionRepository;
     @Autowired private MockTestSubmissionRepository submissionRepository;
     @Autowired private WritingSubmissionRepository writingSubmissionRepository;
@@ -90,8 +93,11 @@ class MockTestAnalyticsIntegrationTest extends AbstractMySQLContainerTest {
 
         // The Cambridge 19 paper: seeded with four listening parts AND three reading
         // passages, unlike the original sample test which has no reading section.
+        // Used for its shape; V52 hides it because its reading passages are placeholders.
+        SeededContentFixture.restorePaper(jdbcTemplate);
+        SeededContentFixture.restoreReadingTemplates(jdbcTemplate);
         MockTest test = mockTestRepository.findAll().stream()
-                .filter(m -> "Cambridge IELTS 19 Test 1".equals(m.getTitle()))
+                .filter(m -> SeededContentFixture.PAPER_TITLE.equals(m.getTitle()))
                 .findFirst().orElseThrow();
         List<WritingPrompt> prompts = writingPromptRepository.findAll();
 

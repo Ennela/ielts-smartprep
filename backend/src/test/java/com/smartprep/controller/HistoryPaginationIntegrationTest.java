@@ -1,5 +1,7 @@
 package com.smartprep.controller;
 
+import org.springframework.jdbc.core.JdbcTemplate;
+import com.smartprep.repository.SeededContentFixture;
 import com.smartprep.model.entity.*;
 import com.smartprep.model.enums.*;
 import com.smartprep.repository.*;
@@ -54,6 +56,7 @@ class HistoryPaginationIntegrationTest extends AbstractMySQLContainerTest {
     @Autowired private ListeningTestRepository listeningTestRepository;
     @Autowired private ReadingQuizRepository readingQuizRepository;
     @Autowired private MockTestRepository mockTestRepository;
+    @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private MockTestSessionRepository sessionRepository;
     @Autowired private MockTestSubmissionRepository submissionRepository;
     @Autowired private ScoreHistoryRepository scoreHistoryRepository;
@@ -192,6 +195,9 @@ class HistoryPaginationIntegrationTest extends AbstractMySQLContainerTest {
     @Test
     @DisplayName("the template catalogue carries a question count and no questions")
     void templateCatalogue() throws Exception {
+        // The only templates a fresh database has are V32's, which V52 hides; this test is
+        // about the catalogue's response shape, not about that content.
+        SeededContentFixture.restoreReadingTemplates(jdbcTemplate);
         mockMvc.perform(get("/api/v1/reading/templates").param("size", "3").with(asUser()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content", not(empty())))
