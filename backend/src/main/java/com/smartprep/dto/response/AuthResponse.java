@@ -46,4 +46,7 @@ public class AuthResponse {
 
     @Schema(description = "Target score for Listening section", example = "7.0")
     private BigDecimal targetListeningScore;
+
+    @Schema(description = "Whether the user wants progress emails")
+    private Boolean emailNotifications;
 }

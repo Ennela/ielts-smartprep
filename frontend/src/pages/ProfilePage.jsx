@@ -7,8 +7,11 @@ import authService from '../api/authService';
 import analyticsApi from '../api/analyticsApi';
 import styles from '../styles/Profile.module.css';
 
+/** Bundled with the app, so it always resolves. */
+const DEFAULT_AVATAR = '/assets/avatars/avatar_sarah.png';
+
 export default function ProfilePage() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
   const { success, error } = useToast();
   const { theme: currentTheme, setTheme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -44,7 +47,10 @@ export default function ProfilePage() {
   const [overviewError, setOverviewError] = useState('');
 
   // --- TAB 3: Preferences ---
-  const [language, setLanguage] = useState('English (US)');
+  // No language state: the app has no translations yet, so the control is rendered
+  // disabled rather than pretending to switch anything. It stays on the page because the
+  // feature is planned, and a disabled control with a reason beats a working-looking
+  // dropdown that does nothing.
   const [notifications, setNotifications] = useState(true);
   const darkMode = currentTheme === 'dark';
   const [savingPrefs, setSavingPrefs] = useState(false);
@@ -58,17 +64,10 @@ export default function ProfilePage() {
       setTargetReading(parseFloat(user.targetReadingScore) || 6.5);
       setTargetWriting(parseFloat(user.targetWritingScore) || 6.5);
       setTargetListening(parseFloat(user.targetListeningScore) || 6.5);
+      setNotifications(user.emailNotifications !== false);
       setAvatarPreview(null); // Reset local preview when user changes
     }
   }, [user]);
-
-  // Load preferences from localStorage on mount
-  useEffect(() => {
-    const savedLang = localStorage.getItem('pref_lang');
-    if (savedLang) setLanguage(savedLang);
-    const savedNotifs = localStorage.getItem('pref_notifications');
-    if (savedNotifs !== null) setNotifications(savedNotifs !== 'false');
-  }, []);
 
   // Fetch estimated scores when Goals tab is loaded
   const loadOverview = () => {
@@ -107,11 +106,9 @@ export default function ProfilePage() {
     parseFloat(targetWriting) !== initialWriting || 
     parseFloat(targetListening) !== initialListening;
 
-  const initialLang = localStorage.getItem('pref_lang') || 'English (US)';
-  const initialNotifs = localStorage.getItem('pref_notifications') !== 'false';
-  const isPrefsDirty = 
-    language !== initialLang || 
-    notifications !== initialNotifs;
+  // Dark mode applies the instant it is toggled and persists itself, so it is not part of
+  // this form. The notification toggle is, and it compares against the saved account.
+  const isPrefsDirty = notifications !== (user?.emailNotifications !== false);
 
   // --- Route Blocker for Unsaved Changes ---
   const isAnyFormDirty = isPersonalDirty || isPasswordDirty || isGoalsDirty || isPrefsDirty;
@@ -182,13 +179,14 @@ export default function ProfilePage() {
       const res = await authService.uploadAvatar(file);
       const { avatarUrl } = res.data.data;
 
-      // Update the user profile with the new avatar url
+      // Saved values, not the current form state. Sending the edited name here meant
+      // uploading a picture also committed name changes the learner had not saved.
       await updateUser({
-        displayName: `${firstName} ${lastName}`.trim(),
+        displayName: user.displayName,
         avatarUrl,
-        targetReadingScore: parseFloat(targetReading),
-        targetWritingScore: parseFloat(targetWriting),
-        targetListeningScore: parseFloat(targetListening)
+        targetReadingScore: parseFloat(user.targetReadingScore) || 6.5,
+        targetWritingScore: parseFloat(user.targetWritingScore) || 6.5,
+        targetListeningScore: parseFloat(user.targetListeningScore) || 6.5
       });
       success('Profile picture updated successfully.');
     } catch (err) {
@@ -230,9 +228,13 @@ export default function ProfilePage() {
     setSavingPassword(true);
     try {
       await authService.changePassword(currentPw, newPw);
-      success('Password changed successfully.');
       setCurrentPw('');
       setNewPw('');
+      // The server blacklists the access token and revokes the refresh token on a password
+      // change, so this session is already dead. Without logging out the page looked fine
+      // and then every request failed with 401 until the user reloaded by hand.
+      success('Password changed. Please sign in again with your new password.');
+      setTimeout(() => logout(), 1200);
     } catch (err) {
       error(err.message || 'Failed to change password.');
     } finally {
@@ -265,27 +267,22 @@ export default function ProfilePage() {
     if (!isPrefsDirty) return;
     setSavingPrefs(true);
 
-    const prevNotifs = localStorage.getItem('pref_notifications') !== 'false';
-    
-    // Optimistic UI state updates for notifications
+    const prevNotifs = user?.emailNotifications !== false;
     try {
-      // Save local preferences
-      localStorage.setItem('pref_lang', language);
-      localStorage.setItem('pref_notifications', notifications.toString());
-
-      // Simulate a backend update for notifications using optimistic UI state
-      await new Promise((resolve) => {
-        setTimeout(() => {
-          resolve(true);
-        }, 500);
+      // A real save. This used to write localStorage, wait 500ms and report success, so
+      // the setting was lost on every other device and the server never learned of it.
+      await updateUser({
+        displayName: user.displayName,
+        avatarUrl: user?.avatarUrl,
+        targetReadingScore: parseFloat(user.targetReadingScore) || 6.5,
+        targetWritingScore: parseFloat(user.targetWritingScore) || 6.5,
+        targetListeningScore: parseFloat(user.targetListeningScore) || 6.5,
+        emailNotifications: notifications
       });
-
       success('Preferences saved successfully.');
-    } catch (_err) {
-      // Revert optimistic state on failure
+    } catch (err) {
       setNotifications(prevNotifs);
-      localStorage.setItem('pref_notifications', prevNotifs.toString());
-      error('Failed to sync notification settings with backend.');
+      error(err.message || 'Failed to save preferences.');
     } finally {
       setSavingPrefs(false);
     }
@@ -300,7 +297,7 @@ export default function ProfilePage() {
     ? (user.avatarUrl.startsWith('http') 
         ? user.avatarUrl 
         : (import.meta.env.VITE_API_URL || '/api/v1').replace('/api/v1', '') + user.avatarUrl)
-    : '/assets/avatars/avatar_sarah.png');
+    : DEFAULT_AVATAR);
 
   // --- Skeleton Screen Loading States ---
   if (!user) {
@@ -362,10 +359,18 @@ export default function ProfilePage() {
                     <div className="spinner border-white border-t-transparent !mr-0"></div>
                   </div>
                 ) : null}
-                <img 
-                  alt="User avatar" 
-                  className={styles['avatar-img']} 
+                <img
+                  alt="User avatar"
+                  className={styles['avatar-img']}
                   src={avatarSrc}
+                  onError={(e) => {
+                    // Storage can lose an object and an old row can point at a file that is
+                    // no longer there. Either way the learner should see the default
+                    // picture rather than a broken-image icon.
+                    if (!e.currentTarget.src.endsWith(DEFAULT_AVATAR)) {
+                      e.currentTarget.src = DEFAULT_AVATAR;
+                    }
+                  }}
                 />
                 <div className={styles['avatar-overlay']}>
                   <span className={`material-symbols-outlined ${styles['avatar-icon']}`}>photo_camera</span>
@@ -388,9 +393,10 @@ export default function ProfilePage() {
             <form onSubmit={handleSavePersonal}>
               <div className={styles['form-grid']}>
                 <div className={styles['form-group']}>
-                  <label className={styles.label}>First Name</label>
-                  <input 
-                    type="text" 
+                  <label className={styles.label} htmlFor="profile-first-name">First Name</label>
+                  <input
+                    id="profile-first-name"
+                    type="text"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     className={styles.input} 
@@ -398,28 +404,31 @@ export default function ProfilePage() {
                   />
                 </div>
                 <div className={styles['form-group']}>
-                  <label className={styles.label}>Last Name</label>
-                  <input 
-                    type="text" 
+                  <label className={styles.label} htmlFor="profile-last-name">Last Name</label>
+                  <input
+                    id="profile-last-name"
+                    type="text"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    className={styles.input} 
-                    required
+                    className={styles.input}
+                    placeholder="Optional"
                   />
                 </div>
                 <div className={`${styles['form-group']} ${styles['full-width']}`}>
-                  <label className={styles.label}>Username</label>
-                  <input 
-                    type="text" 
+                  <label className={styles.label} htmlFor="profile-username">Username</label>
+                  <input
+                    id="profile-username"
+                    type="text"
                     value={user.username || ''} 
                     disabled 
                     className={styles.input} 
                   />
                 </div>
                 <div className={`${styles['form-group']} ${styles['full-width']}`}>
-                  <label className={styles.label}>Email Address</label>
-                  <input 
-                    type="email" 
+                  <label className={styles.label} htmlFor="profile-email">Email Address</label>
+                  <input
+                    id="profile-email"
+                    type="email"
                     value={user.email || ''} 
                     disabled 
                     className={styles.input} 
@@ -444,9 +453,10 @@ export default function ProfilePage() {
               <form onSubmit={handleSavePassword}>
                 <div className="space-y-md">
                   <div className={styles['form-group']}>
-                    <label className={styles.label}>Current Password</label>
-                    <input 
-                      type="password" 
+                    <label className={styles.label} htmlFor="profile-current-password">Current Password</label>
+                    <input
+                      id="profile-current-password"
+                      type="password"
                       value={currentPw}
                       onChange={(e) => setCurrentPw(e.target.value)}
                       placeholder="••••••••" 
@@ -455,9 +465,10 @@ export default function ProfilePage() {
                     />
                   </div>
                   <div className={styles['form-group']}>
-                    <label className={styles.label}>New Password</label>
-                    <input 
-                      type="password" 
+                    <label className={styles.label} htmlFor="profile-new-password">New Password</label>
+                    <input
+                      id="profile-new-password"
+                      type="password"
                       value={newPw}
                       onChange={(e) => setNewPw(e.target.value)}
                       placeholder="••••••••" 
@@ -515,14 +526,15 @@ export default function ProfilePage() {
                     <span className="font-semibold text-on-surface">{currentReading > 0 ? currentReading.toFixed(1) : 'No tests yet'}</span>
                   </div>
                   <div className="flex justify-between items-center mb-md">
-                    <label className={styles['slider-label']}>Reading Band Target</label>
+                    <label className={styles['slider-label']} htmlFor="target-reading">Reading Band Target</label>
                     <span className={styles['slider-value']}>{parseFloat(targetReading).toFixed(1)}</span>
                   </div>
-                  <input 
-                    type="range" 
-                    min="0" 
-                    max="9.0" 
-                    step="0.5" 
+                  <input
+                    id="target-reading"
+                    type="range"
+                    min="0"
+                    max="9.0"
+                    step="0.5"
                     value={targetReading}
                     onChange={(e) => setTargetReading(parseFloat(e.target.value))}
                     className={styles['range-input']} 
@@ -545,14 +557,15 @@ export default function ProfilePage() {
                     <span className="font-semibold text-on-surface">{currentWriting > 0 ? currentWriting.toFixed(1) : 'No tests yet'}</span>
                   </div>
                   <div className="flex justify-between items-center mb-md">
-                    <label className={styles['slider-label']}>Writing Band Target</label>
+                    <label className={styles['slider-label']} htmlFor="target-writing">Writing Band Target</label>
                     <span className={styles['slider-value']}>{parseFloat(targetWriting).toFixed(1)}</span>
                   </div>
-                  <input 
-                    type="range" 
-                    min="0" 
-                    max="9.0" 
-                    step="0.5" 
+                  <input
+                    id="target-writing"
+                    type="range"
+                    min="0"
+                    max="9.0"
+                    step="0.5"
                     value={targetWriting}
                     onChange={(e) => setTargetWriting(parseFloat(e.target.value))}
                     className={styles['range-input']} 
@@ -575,14 +588,15 @@ export default function ProfilePage() {
                     <span className="font-semibold text-on-surface">{currentListening > 0 ? currentListening.toFixed(1) : 'No tests yet'}</span>
                   </div>
                   <div className="flex justify-between items-center mb-md">
-                    <label className={styles['slider-label']}>Listening Band Target</label>
+                    <label className={styles['slider-label']} htmlFor="target-listening">Listening Band Target</label>
                     <span className={styles['slider-value']}>{parseFloat(targetListening).toFixed(1)}</span>
                   </div>
-                  <input 
-                    type="range" 
-                    min="0" 
-                    max="9.0" 
-                    step="0.5" 
+                  <input
+                    id="target-listening"
+                    type="range"
+                    min="0"
+                    max="9.0"
+                    step="0.5"
                     value={targetListening}
                     onChange={(e) => setTargetListening(parseFloat(e.target.value))}
                     className={styles['range-input']} 
@@ -622,17 +636,23 @@ export default function ProfilePage() {
               {/* Interface Language */}
               <div className={styles['pref-row']}>
                 <div>
-                  <h3 className={styles['pref-info-title']}>Interface Language</h3>
-                  <p className={styles['pref-info-desc']}>Choose your preferred language for the dashboard.</p>
+                  <h3 className={styles['pref-info-title']}>
+                    Interface Language
+                    <span className={styles['pref-badge']}>Coming soon</span>
+                  </h3>
+                  <p className={styles['pref-info-desc']}>
+                    The interface is English only for now. Vietnamese is planned; this control
+                    stays disabled until the translations ship.
+                  </p>
                 </div>
-                <select 
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  className="bg-surface border border-outline-variant text-on-surface font-body-lg text-body-lg rounded-lg px-md py-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none cursor-pointer"
+                <select
+                  value="English (US)"
+                  disabled
+                  readOnly
+                  aria-label="Interface language"
+                  className="bg-surface border border-outline-variant text-on-surface font-body-lg text-body-lg rounded-lg px-md py-sm outline-none opacity-60 cursor-not-allowed"
                 >
                   <option value="English (US)">English (US)</option>
-                  <option value="English (UK)">English (UK)</option>
-                  <option value="Vietnamese">Vietnamese</option>
                 </select>
               </div>
 
@@ -640,14 +660,18 @@ export default function ProfilePage() {
               <div className={styles['pref-row']}>
                 <div>
                   <h3 className={styles['pref-info-title']}>Email Notifications</h3>
-                  <p className={styles['pref-info-desc']}>Receive weekly progress reports and study reminders.</p>
+                  <p className={styles['pref-info-desc']}>
+                    Saved to your account, so it follows you to any device. Progress emails
+                    are not being sent yet; this records whether you want them.
+                  </p>
                 </div>
                 <div className={styles['toggle-switch-wrapper']}>
-                  <input 
+                  <input
                     type="checkbox"
                     checked={notifications}
                     onChange={(e) => setNotifications(e.target.checked)}
                     id="notif-toggle"
+                    aria-label="Email notifications"
                     className={styles['toggle-switch-input']}
                   />
                   <label 
@@ -664,11 +688,12 @@ export default function ProfilePage() {
                   <p className={styles['pref-info-desc']}>Switch to a darker theme for nighttime studying.</p>
                 </div>
                 <div className={styles['toggle-switch-wrapper']}>
-                  <input 
+                  <input
                     type="checkbox"
                     checked={darkMode}
                     onChange={(e) => handleToggleDarkMode(e.target.checked)}
                     id="dark-toggle"
+                    aria-label="Dark mode"
                     className={styles['toggle-switch-input']}
                   />
                   <label 

@@ -57,6 +57,11 @@ public class User {
     @Builder.Default
     private Boolean emailVerified = false;
 
+    /** Whether the learner wants progress emails. Defaults to true, as the toggle always showed. */
+    @Column(name = "email_notifications", nullable = false)
+    @Builder.Default
+    private Boolean emailNotifications = true;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

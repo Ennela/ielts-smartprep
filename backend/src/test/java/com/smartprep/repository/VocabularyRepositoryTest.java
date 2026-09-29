@@ -260,6 +260,84 @@ class VocabularyRepositoryTest extends AbstractMySQLContainerTest {
                 .hasSize(2);
     }
 
+    // ===================================================================
+    //  findDueReminderTargets
+    // ===================================================================
+
+    @Test
+    @DisplayName("findDueReminderTargets — one row per learner, counting the words due")
+    void reminderTargets_groupsPerUser() {
+        testUser.setEmailVerified(true);
+        testUser.setEmailNotifications(true);
+        entityManager.persistAndFlush(testUser);
+
+        entityManager.persistAndFlush(buildVocab("harvest", "thu hoạch", LocalDateTime.now().minusDays(1)));
+        entityManager.persistAndFlush(buildVocab("platform", "sân ga", LocalDateTime.now().minusHours(2)));
+        // Not due yet, so it must not be counted.
+        entityManager.persistAndFlush(buildVocab("later", "sau", LocalDateTime.now().plusDays(3)));
+
+        List<VocabularyRepository.DueReminderTarget> targets =
+                vocabularyRepository.findDueReminderTargets(LocalDateTime.now(), PageRequest.of(0, 10));
+
+        assertThat(targets).hasSize(1);
+        assertThat(targets.get(0).getUserId()).isEqualTo(testUser.getUserId());
+        assertThat(targets.get(0).getEmail()).isEqualTo("vocab@test.com");
+        assertThat(targets.get(0).getDueCount()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("findDueReminderTargets — skips a learner who turned the preference off")
+    void reminderTargets_respectsThePreference() {
+        testUser.setEmailVerified(true);
+        testUser.setEmailNotifications(false);
+        entityManager.persistAndFlush(testUser);
+        entityManager.persistAndFlush(buildVocab("harvest", "thu hoạch", LocalDateTime.now().minusDays(1)));
+
+        assertThat(vocabularyRepository.findDueReminderTargets(LocalDateTime.now(), PageRequest.of(0, 10)))
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("findDueReminderTargets — skips an address that was never confirmed")
+    void reminderTargets_requiresAVerifiedAddress() {
+        testUser.setEmailVerified(false);
+        testUser.setEmailNotifications(true);
+        entityManager.persistAndFlush(testUser);
+        entityManager.persistAndFlush(buildVocab("harvest", "thu hoạch", LocalDateTime.now().minusDays(1)));
+
+        assertThat(vocabularyRepository.findDueReminderTargets(LocalDateTime.now(), PageRequest.of(0, 10)))
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("findDueReminderTargets — honours the ceiling the job passes in")
+    void reminderTargets_respectsTheLimit() {
+        testUser.setEmailVerified(true);
+        testUser.setEmailNotifications(true);
+        entityManager.persistAndFlush(testUser);
+
+        User other = User.builder()
+                .username("vocab_test_user_2")
+                .email("vocab2@test.com")
+                .passwordHash("hash")
+                .role(Role.STUDENT)
+                .emailVerified(true)
+                .emailNotifications(true)
+                .build();
+        other = entityManager.persistAndFlush(other);
+
+        entityManager.persistAndFlush(buildVocab("harvest", "thu hoạch", LocalDateTime.now().minusDays(1)));
+        entityManager.persistAndFlush(Vocabulary.builder()
+                .user(other).word("platform").meaningVi("sân ga")
+                .easeFactor(2.5).intervalDays(1).repetitions(0)
+                .dueDate(LocalDateTime.now().minusDays(1)).build());
+
+        assertThat(vocabularyRepository.findDueReminderTargets(LocalDateTime.now(), PageRequest.of(0, 10)))
+                .hasSize(2);
+        assertThat(vocabularyRepository.findDueReminderTargets(LocalDateTime.now(), PageRequest.of(0, 1)))
+                .hasSize(1);
+    }
+
     private Vocabulary buildVocab(String word, String meaningVi, LocalDateTime dueDate) {
         return Vocabulary.builder()
                 .user(testUser)

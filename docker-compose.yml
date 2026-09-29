@@ -58,6 +58,11 @@ services:
       MAIL_USERNAME: ${MAIL_USERNAME:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
+      # Daily vocabulary review reminder. Off unless asked for, because a stack without
+      # SMTP credentials would otherwise try to mail real learners every morning.
+      VOCAB_REMINDER_ENABLED: ${VOCAB_REMINDER_ENABLED:-false}
+      VOCAB_REMINDER_CRON: ${VOCAB_REMINDER_CRON:-0 0 7 * * *}
+      VOCAB_REMINDER_ZONE: ${VOCAB_REMINDER_ZONE:-Asia/Ho_Chi_Minh}
       SENTRY_DSN: ${SENTRY_DSN:-}
       SENTRY_ENV: production
     healthcheck:

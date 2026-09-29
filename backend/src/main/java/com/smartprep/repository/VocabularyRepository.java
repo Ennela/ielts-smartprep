@@ -47,4 +47,35 @@ public interface VocabularyRepository extends JpaRepository<Vocabulary, Long> {
     long countByUserUserIdAndRepetitionsLessThan(Long userId, int repetitions);
 
     long countByUserUserIdAndDueDateBefore(Long userId, LocalDateTime now);
+
+    /** One learner who has words waiting, and how many. */
+    interface DueReminderTarget {
+        Long getUserId();
+        String getEmail();
+        String getDisplayName();
+        long getDueCount();
+    }
+
+    /**
+     * Everyone who should be reminded that words are waiting for review.
+     *
+     * <p>Two filters carry the whole policy of the reminder. {@code emailNotifications}
+     * is the learner's own answer in Preferences, and {@code emailVerified} means the
+     * address was actually confirmed -- mailing an unconfirmed address reaches either
+     * nobody or somebody who never asked to hear from us.
+     *
+     * <p>Grouping happens in SQL so the job sends one email per learner rather than one
+     * per word, and takes a Pageable so a run can never fan out without a bound.
+     */
+    @Query("SELECT v.user.userId AS userId, "
+            + "v.user.email AS email, "
+            + "v.user.displayName AS displayName, "
+            + "COUNT(v) AS dueCount "
+            + "FROM Vocabulary v "
+            + "WHERE v.dueDate <= :now "
+            + "AND v.user.emailNotifications = true "
+            + "AND v.user.emailVerified = true "
+            + "GROUP BY v.user.userId, v.user.email, v.user.displayName "
+            + "ORDER BY v.user.userId")
+    List<DueReminderTarget> findDueReminderTargets(@Param("now") LocalDateTime now, Pageable pageable);
 }
