@@ -7,10 +7,13 @@ import com.smartprep.model.enums.Topic;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -74,4 +77,20 @@ public interface ReadingQuizRepository extends JpaRepository<ReadingQuiz, Long> 
     Page<ReadingQuiz> findByContentStatus(
             @Param("contentStatus") ContentStatus contentStatus,
             Pageable pageable);
+
+    /**
+     * Mark the caller's quizzes submitted, but only those not submitted yet.
+     *
+     * <p>Returns how many rows it changed. Grading reads {@code submittedAt} and then writes
+     * it, and two concurrent submits both read it as null; a check alone cannot stop both
+     * from grading. This single conditional UPDATE can: InnoDB makes the second one wait for
+     * the first to commit, re-evaluates the condition, and finds nothing left to claim. A
+     * count lower than the number of ids asked for means the caller lost that race.
+     */
+    @Modifying
+    @Query("UPDATE ReadingQuiz q SET q.submittedAt = :now "
+            + "WHERE q.quizId IN :quizIds AND q.user.userId = :userId AND q.submittedAt IS NULL")
+    int claimForSubmission(@Param("quizIds") Collection<Long> quizIds,
+                           @Param("userId") Long userId,
+                           @Param("now") LocalDateTime now);
 }

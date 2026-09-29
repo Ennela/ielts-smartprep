@@ -45,14 +45,10 @@ public class ListeningGradingService {
     public ListeningTestResponse submitTest(Long userId, ListeningSubmitRequest request) {
         // Unlike Reading, this method creates a new ListeningTest on every call rather than
         // marking an existing one submitted, so there is no submittedAt flag to guard on.
-        // The attempt is the only idempotency key available: without this check a repeated
-        // submit writes a second ListeningTest and a second ScoreHistory row, duplicating
-        // the user's history and progress. Submissions sent without an attemptId remain
-        // unguarded — see B-63.
-        if (request.getAttemptId() != null
-                && examAttemptService.isAlreadySubmitted(request.getAttemptId(), userId)) {
-            throw new IllegalArgumentException("This listening test has already been submitted");
-        }
+        // The attempt is the idempotency key, and it is now required (see the request DTO).
+        // This check gives a clear error; the unique attempt_id column on listening_tests
+        // is what holds when two submits race past it.
+        examAttemptService.assertSubmittable(request.getAttemptId(), userId, SkillType.LISTENING);
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -97,7 +93,8 @@ public class ListeningGradingService {
         // Save test
         ListeningTest test = ListeningTest.builder()
                 .user(user).testMode(mode).score(bandScore)
-                .totalQuestions(totalQuestions).correctAnswers(correctCount).build();
+                .totalQuestions(totalQuestions).correctAnswers(correctCount)
+                .attemptId(request.getAttemptId()).build();
 
         List<ListeningTestPart> testParts = new ArrayList<>();
         for (ListeningPart part : parts) {
