@@ -25,4 +25,12 @@ public class VocabResponse {
     private String sourceSkill;
     private String sourceRef;
     private String cefrLevel;
+
+    /**
+     * Whether a context-aware explanation has already been generated for this word.
+     *
+     * <p>Lets the vocabulary page label the button "Xem giải thích" rather than
+     * "Tạo giải thích" without fetching the whole explanation for every card.
+     */
+    private Boolean hasInsight;
 }

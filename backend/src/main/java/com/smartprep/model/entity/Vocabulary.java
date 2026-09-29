@@ -69,6 +69,19 @@ public class Vocabulary {
     @Column(name = "cefr_level", length = 10)
     private String cefrLevel;
 
+    /**
+     * The validated AI explanation for this word, serialised as JSON.
+     *
+     * <p>Null until a learner opens the explanation for the first time. It is written only
+     * by the insight generator and never by the learner, so nothing the learner typed is
+     * at risk when it is regenerated.
+     */
+    @Column(name = "insight_json", columnDefinition = "LONGTEXT")
+    private String insightJson;
+
+    @Column(name = "insight_generated_at")
+    private LocalDateTime insightGeneratedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

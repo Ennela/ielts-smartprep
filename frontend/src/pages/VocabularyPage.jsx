@@ -3,6 +3,8 @@ import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-quer
 import Pagination from '../components/Pagination';
 import useDebouncedValue from '../hooks/useDebouncedValue';
 import vocabApi from '../api/vocabApi';
+import VocabInsightPanel from '../components/vocab/VocabInsightPanel';
+import insightStyles from '../styles/VocabInsight.module.css';
 
 const WORDS_PAGE_SIZE = 12;
 
@@ -36,6 +38,10 @@ export default function VocabularyPage() {
   });
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState('');
+
+  // The word whose explanation is open, or null. Holding it here rather than routing to a
+  // detail page is what lets a review session keep its card and the word bank keep its page.
+  const [insightVocab, setInsightVocab] = useState(null);
 
   // Review Session State
   const [reviewIndex, setReviewIndex] = useState(0);
@@ -143,6 +149,13 @@ export default function VocabularyPage() {
     } catch (err) {
       setError('Failed to submit review: ' + err.message);
     }
+  };
+
+  // A generated explanation is stored on the word, so the list's hasInsight flag is stale
+  // once the panel closes.
+  const handleCloseInsight = () => {
+    setInsightVocab(null);
+    reloadWords();
   };
 
   const handleDeleteWord = async (vocabId) => {
@@ -561,6 +574,24 @@ export default function VocabularyPage() {
                             </div>
                           )}
 
+                          <div>
+                            <button
+                              type="button"
+                              className={insightStyles['open-btn']}
+                              onClick={(e) => {
+                                // The card flips on click, so opening the panel must not
+                                // bubble up to it.
+                                e.stopPropagation();
+                                setInsightVocab(dueList[reviewIndex]);
+                              }}
+                            >
+                              <span className="material-symbols-outlined" style={{ fontSize: 16 }} aria-hidden="true">
+                                menu_book
+                              </span>
+                              Giải thích chi tiết
+                            </button>
+                          </div>
+
                           {dueList[reviewIndex].sourceSkill && (
                             <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '4px' }}>
                               <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--outline)' }}>link</span>
@@ -741,7 +772,20 @@ export default function VocabularyPage() {
                         )}
                       </div>
 
-                      <div style={{ borderTop: '1px solid var(--outline-variant)', marginTop: '16px', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--outline)' }}>
+                      <div style={{ marginTop: '16px' }}>
+                        <button
+                          type="button"
+                          className={insightStyles['open-btn']}
+                          onClick={() => setInsightVocab(item)}
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 16 }} aria-hidden="true">
+                            menu_book
+                          </span>
+                          {item.hasInsight ? 'Xem giải thích' : 'Giải thích chi tiết'}
+                        </button>
+                      </div>
+
+                      <div style={{ borderTop: '1px solid var(--outline-variant)', marginTop: '12px', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: 'var(--outline)' }}>
                         <div>Due: {getRelativeDueDate(item.dueDate)}</div>
                         <div style={{ fontWeight: 600 }}>Interval: {item.intervalDays}d</div>
                       </div>
@@ -762,6 +806,10 @@ export default function VocabularyPage() {
             </div>
           )}
         </div>
+      )}
+
+      {insightVocab && (
+        <VocabInsightPanel vocab={insightVocab} onClose={handleCloseInsight} />
       )}
 
       {/* ADD CUSTOM WORD MODAL */}

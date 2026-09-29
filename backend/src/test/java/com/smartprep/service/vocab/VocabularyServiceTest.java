@@ -1,8 +1,12 @@
 package com.smartprep.service.vocab;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartprep.dto.request.VocabBulkSaveRequest;
 import com.smartprep.dto.request.VocabCreateRequest;
+import com.smartprep.dto.response.VocabInsight;
+import com.smartprep.dto.response.VocabInsightResponse;
 import com.smartprep.dto.response.VocabResponse;
+import com.smartprep.exception.InvalidAiResponseException;
 import com.smartprep.exception.ResourceNotFoundException;
 import com.smartprep.model.entity.User;
 import com.smartprep.model.entity.Vocabulary;
@@ -21,6 +25,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
@@ -57,6 +62,11 @@ class VocabularyServiceTest {
 
     @Mock
     private List<VocabSourceResolver> resolvers;
+
+    // Real, not mocked: these tests care about what actually round-trips through
+    // vocabulary.insight_json, which a stubbed mapper would hide.
+    @Spy
+    private ObjectMapper objectMapper = new ObjectMapper();
 
     @InjectMocks
     private VocabularyService vocabularyService;
@@ -454,6 +464,148 @@ class VocabularyServiceTest {
         void emptyRequest() {
             int count = vocabularyService.bulkSaveVocabulary(1L, new VocabBulkSaveRequest());
             assertThat(count).isZero();
+        }
+    }
+
+    // ===================================================================
+    //  Context-aware explanations
+    // ===================================================================
+
+    @Nested
+    @DisplayName("vocabulary explanations")
+    class VocabularyInsight {
+
+        private Vocabulary owned(String insightJson) {
+            Vocabulary vocab = buildVocab(7L, "trust", "tin tuong", 2.5, 0, 0);
+            vocab.setUser(testUser);
+            vocab.setPartOfSpeech("verb");
+            vocab.setExample("I trust him to keep his promises.");
+            vocab.setInsightJson(insightJson);
+            if (insightJson != null) {
+                vocab.setInsightGeneratedAt(LocalDateTime.now());
+            }
+            return vocab;
+        }
+
+        private VocabInsight generated() {
+            return VocabInsight.builder()
+                    .word("trust")
+                    .coreMeaningVi("Tin tuong vao su dang tin cay cua ai do.")
+                    .senses(List.of(VocabInsight.Sense.builder().meaningVi("Tin ai do.").build()))
+                    .build();
+        }
+
+        @Test
+        @DisplayName("should report a word with no explanation instead of generating one")
+        void notGeneratedIsNotAnError() {
+            when(vocabularyRepository.findById(7L)).thenReturn(Optional.of(owned(null)));
+
+            VocabInsightResponse response = vocabularyService.getInsight(1L, 7L);
+
+            assertThat(response.getStatus()).isEqualTo(VocabInsightResponse.Status.NOT_GENERATED);
+            assertThat(response.getInsight()).isNull();
+            verifyNoInteractions(vocabAiService);
+        }
+
+        @Test
+        @DisplayName("should serve the stored explanation without calling the AI again")
+        void servesStoredExplanation() throws Exception {
+            String stored = new ObjectMapper().writeValueAsString(generated());
+            when(vocabularyRepository.findById(7L)).thenReturn(Optional.of(owned(stored)));
+
+            VocabInsightResponse response = vocabularyService.generateInsight(1L, 7L, false);
+
+            assertThat(response.getStatus()).isEqualTo(VocabInsightResponse.Status.READY);
+            assertThat(response.getInsight().getCoreMeaningVi()).contains("Tin tuong");
+            verifyNoInteractions(vocabAiService);
+            verify(vocabularyRepository, never()).save(any(Vocabulary.class));
+        }
+
+        @Test
+        @DisplayName("should generate, persist and pass the saved context to the AI")
+        void generatesAndPersists() {
+            Vocabulary vocab = owned(null);
+            when(vocabularyRepository.findById(7L)).thenReturn(Optional.of(vocab));
+            when(vocabAiService.generateInsight(eq("trust"), eq("verb"), anyString())).thenReturn(generated());
+            when(vocabularyRepository.save(any(Vocabulary.class))).thenAnswer(i -> i.getArgument(0));
+
+            VocabInsightResponse response = vocabularyService.generateInsight(1L, 7L, false);
+
+            assertThat(response.getStatus()).isEqualTo(VocabInsightResponse.Status.READY);
+            assertThat(vocab.getInsightJson()).contains("coreMeaningVi");
+            assertThat(vocab.getInsightGeneratedAt()).isNotNull();
+
+            ArgumentCaptor<String> context = ArgumentCaptor.forClass(String.class);
+            verify(vocabAiService).generateInsight(eq("trust"), eq("verb"), context.capture());
+            assertThat(context.getValue()).contains("I trust him to keep his promises.");
+        }
+
+        @Test
+        @DisplayName("should not touch the fields the learner owns when regenerating")
+        void preservesLearnerFields() {
+            Vocabulary vocab = owned("{\"word\":\"trust\"}");
+            vocab.setMeaningVi("ghi chu cua toi");
+            when(vocabularyRepository.findById(7L)).thenReturn(Optional.of(vocab));
+            when(vocabAiService.generateInsight(anyString(), any(), any())).thenReturn(generated());
+            when(vocabularyRepository.save(any(Vocabulary.class))).thenAnswer(i -> i.getArgument(0));
+
+            vocabularyService.generateInsight(1L, 7L, true);
+
+            assertThat(vocab.getMeaningVi()).isEqualTo("ghi chu cua toi");
+            assertThat(vocab.getExample()).isEqualTo("I trust him to keep his promises.");
+        }
+
+        @Test
+        @DisplayName("should stay usable when the AI fails and nothing was stored")
+        void unavailableRatherThanBroken() {
+            when(vocabularyRepository.findById(7L)).thenReturn(Optional.of(owned(null)));
+            when(vocabAiService.generateInsight(anyString(), any(), any()))
+                    .thenThrow(new InvalidAiResponseException("bad json"));
+
+            VocabInsightResponse response = vocabularyService.generateInsight(1L, 7L, false);
+
+            assertThat(response.getStatus()).isEqualTo(VocabInsightResponse.Status.UNAVAILABLE);
+            assertThat(response.getWord()).isEqualTo("trust");
+            assertThat(response.getMessage()).isNotBlank();
+            verify(vocabularyRepository, never()).save(any(Vocabulary.class));
+        }
+
+        @Test
+        @DisplayName("should keep the previous explanation when a refresh fails")
+        void failedRefreshKeepsPreviousExplanation() throws Exception {
+            String stored = new ObjectMapper().writeValueAsString(generated());
+            when(vocabularyRepository.findById(7L)).thenReturn(Optional.of(owned(stored)));
+            when(vocabAiService.generateInsight(anyString(), any(), any()))
+                    .thenThrow(new InvalidAiResponseException("bad json"));
+
+            VocabInsightResponse response = vocabularyService.generateInsight(1L, 7L, true);
+
+            assertThat(response.getStatus()).isEqualTo(VocabInsightResponse.Status.READY);
+            assertThat(response.getInsight().getWord()).isEqualTo("trust");
+            assertThat(response.getMessage()).isNotBlank();
+        }
+
+        @Test
+        @DisplayName("should regenerate rather than throw when the stored JSON is unreadable")
+        void unreadableStoredJsonRegenerates() {
+            Vocabulary vocab = owned("not json at all");
+            when(vocabularyRepository.findById(7L)).thenReturn(Optional.of(vocab));
+            when(vocabAiService.generateInsight(anyString(), any(), any())).thenReturn(generated());
+            when(vocabularyRepository.save(any(Vocabulary.class))).thenAnswer(i -> i.getArgument(0));
+
+            VocabInsightResponse response = vocabularyService.generateInsight(1L, 7L, false);
+
+            assertThat(response.getStatus()).isEqualTo(VocabInsightResponse.Status.READY);
+        }
+
+        @Test
+        @DisplayName("should hide another user's word behind the same not-found error")
+        void ownershipIsEnforced() {
+            when(vocabularyRepository.findById(7L)).thenReturn(Optional.of(owned(null)));
+
+            assertThatThrownBy(() -> vocabularyService.getInsight(999L, 7L))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessageContaining("Vocabulary item not found");
         }
     }
 

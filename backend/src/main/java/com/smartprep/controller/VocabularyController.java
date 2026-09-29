@@ -5,6 +5,7 @@ import com.smartprep.dto.request.VocabCreateRequest;
 import com.smartprep.dto.request.VocabReviewRequest;
 import com.smartprep.dto.request.VocabAiSuggestRequest;
 import com.smartprep.dto.response.ApiResponse;
+import com.smartprep.dto.response.VocabInsightResponse;
 import com.smartprep.dto.response.VocabResponse;
 import com.smartprep.model.entity.User;
 import com.smartprep.service.vocab.VocabAiService;
@@ -90,6 +91,42 @@ public class VocabularyController {
             @Valid @RequestBody VocabAiSuggestRequest request) {
         List<VocabAiService.SuggestedVocab> response = vocabularyService.suggestVocabulary(
                 user.getUserId(), request.getSkillType(), request.getSourceId());
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    /**
+     * The stored context-aware explanation for one saved word.
+     *
+     * <p>Reads the row and nothing else, so it is not metered as an AI endpoint: a learner
+     * browsing explanations they have already generated must not burn their daily AI quota.
+     * A word with no explanation yet returns {@code status = NOT_GENERATED}.
+     */
+    @GetMapping("/{id}/insight")
+    public ResponseEntity<ApiResponse<VocabInsightResponse>> getInsight(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id) {
+        VocabInsightResponse response = vocabularyService.getInsight(user.getUserId(), id);
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
+    /**
+     * Generate the explanation for one word, or regenerate it with {@code refresh=true}.
+     *
+     * <p>A POST because it spends an AI call, and metered for the same reason. It sits on
+     * its own path rather than on the GET's, because the rate limiter matches paths and not
+     * methods, and metering the read would be wrong. Without {@code refresh} an explanation
+     * that already exists is returned untouched, so a double-click costs nothing.
+     *
+     * <p>Always 200: when the model cannot be reached the body carries
+     * {@code status = UNAVAILABLE} and the vocabulary page keeps working.
+     */
+    @PostMapping("/{id}/insight/generate")
+    public ResponseEntity<ApiResponse<VocabInsightResponse>> generateInsight(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id,
+            @Parameter(description = "Discard the stored explanation and generate a new one")
+            @RequestParam(defaultValue = "false") boolean refresh) {
+        VocabInsightResponse response = vocabularyService.generateInsight(user.getUserId(), id, refresh);
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 

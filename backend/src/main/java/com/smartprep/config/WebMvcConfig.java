@@ -44,7 +44,15 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/v1/writing/grade",
                         "/api/v1/listening/ai-analyze/**",
                         "/api/v1/listening/vocabulary/**",
-                        "/api/v1/vocab/ai-suggest"
+                        "/api/v1/vocab/ai-suggest",
+                        // Generating a word explanation is one Gemini call per word, and the
+                        // vocabulary page can trigger it from every card in the bank. Only the
+                        // generate path is listed: GET /insight serves the stored explanation
+                        // and spends nothing, so metering it would lock a learner out of AI for
+                        // the day for doing nothing but re-reading their own word bank. These
+                        // patterns match by path and not by method, which is why generating
+                        // has a path of its own.
+                        "/api/v1/vocab/*/insight/generate"
                 )
                 .order(1);
 

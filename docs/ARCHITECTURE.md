@@ -253,6 +253,8 @@ Quy ước cột **Auth**:
 | POST | `/api/v1/vocab/{id}/review` | JWT | `@Valid VocabReviewRequest`: `@NotBlank grade` (String, không enum-check) | `VocabResponse` (SM-2) | `controller/VocabularyController.java:63-70` |
 | POST | `/api/v1/vocab/ai-suggest` | JWT | `@Valid VocabAiSuggestRequest` (`dto/request/VocabAiSuggestRequest.java:14-18`) | `List<SuggestedVocab>` — **AI 💰** | `controller/VocabularyController.java:72-79` |
 | POST | `/api/v1/vocab/bulk-save` | JWT | `@Valid VocabBulkSaveRequest` — ⚠️ list **không `@NotEmpty`/`@Size`** (`dto/request/VocabBulkSaveRequest.java:15-16`) | `Map` {savedCount} | `controller/VocabularyController.java:81-90` |
+| GET | `/api/v1/vocab/{id}/insight` | JWT | `@PathVariable` | `VocabInsightResponse` — đọc `vocabulary.insight_json`, **không gọi AI** nên không bị rate limit; chưa có thì trả `status=NOT_GENERATED` | `controller/VocabularyController.java` |
+| POST | `/api/v1/vocab/{id}/insight/generate` | JWT | `@PathVariable` + `refresh` (mặc định `false`) | `VocabInsightResponse` — **AI 💰**; luôn 200, thất bại thì `status=UNAVAILABLE` | `controller/VocabularyController.java` |
 | DELETE | `/api/v1/vocab/{id}` | JWT | `@PathVariable` | `Map<String,String>` | `controller/VocabularyController.java:92-98` |
 
 ### C.7. Nhóm admin (`/api/v1/admin/**` — ADMIN)
@@ -795,7 +797,7 @@ Ba cơ chế độc lập:
 
 Cả 2 interceptor dùng **Bucket4j token bucket lưu trên Redis** qua `LettuceBasedProxyManager` (`config/RateLimitConfig.java:26-43`) → hoạt động đúng cả khi scale ngang.
 
-⚠️ Danh sách 6 path được `RateLimitInterceptor` bảo vệ (`config/WebMvcConfig.java:36-45`): `/api/v1/reading/generate`, `/api/v1/listening/generate`, `/api/v1/writing/grade`, `/api/v1/listening/ai-analyze/**`, `/api/v1/listening/vocabulary/**`, `/api/v1/vocab/ai-suggest`. Nhiều endpoint tốn tiền khác **không nằm trong danh sách này** — chi tiết ở `docs/AUDIT.md`.
+⚠️ Danh sách 9 path được `RateLimitInterceptor` bảo vệ (`config/WebMvcConfig.java`): `/api/v1/reading/generate`, `/api/v1/listening/generate`, `/api/v1/listening/generate-mock`, `/api/v1/listening/*/generate-audio`, `/api/v1/writing/grade`, `/api/v1/listening/ai-analyze/**`, `/api/v1/listening/vocabulary/**`, `/api/v1/vocab/ai-suggest`, `/api/v1/vocab/*/insight/generate`. Nhiều endpoint tốn tiền khác **không nằm trong danh sách này** — chi tiết ở `docs/AUDIT.md`.
 
 ### F.5. Các luồng auth
 
