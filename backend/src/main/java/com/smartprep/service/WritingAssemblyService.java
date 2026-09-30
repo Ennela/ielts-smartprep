@@ -1,5 +1,6 @@
 package com.smartprep.service;
 
+import com.smartprep.service.ai.WritingGradingService;
 import com.smartprep.dto.request.WritingSubmitFullRequest;
 import com.smartprep.dto.response.WritingFullResultResponse;
 import com.smartprep.service.ai.WritingGradingService.GradingResult;
@@ -107,9 +108,9 @@ public class WritingAssemblyService {
 
         // Both AI calls happen here, with no transaction open.
         GradingResult result1 = writingService.gradeOnly(
-                prompt1.getPromptText(), request.getTask1EssayText(), true);
+                WritingGradingService.promptForGrading(prompt1), request.getTask1EssayText(), true);
         GradingResult result2 = writingService.gradeOnly(
-                prompt2.getPromptText(), request.getTask2EssayText(), false);
+                WritingGradingService.promptForGrading(prompt2), request.getTask2EssayText(), false);
 
         return gradingPersistence.saveFullWriting(
                 userId, request, w1, w2, result1, result2,

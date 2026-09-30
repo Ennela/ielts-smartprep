@@ -378,6 +378,12 @@ export default function WritingFullExamPage() {
               <p style={{ lineHeight: 1.8, fontSize: '0.95rem', whiteSpace: 'pre-wrap' }}>
                 {activeTask.promptText}
               </p>
+              {/* Either form of chart, like the single-essay editor. */}
+              {activeTab === 1 && activeTask.imageUrl && (
+                <div style={{ marginTop: 16 }}>
+                  <img src={activeTask.imageUrl} alt="Prompt Chart" className="prompt-image" loading="lazy" />
+                </div>
+              )}
               {activeTab === 1 && activeTask.visualData && (
                 <div style={{ marginTop: 16 }}>
                   <VisualDataRenderer visualDataJson={activeTask.visualData} essayType={activeTask.essayType} />

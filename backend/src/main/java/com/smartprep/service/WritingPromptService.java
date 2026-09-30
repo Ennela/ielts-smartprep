@@ -48,6 +48,9 @@ public class WritingPromptService {
                 .essayType(p.getEssayType().name())
                 .taskType(p.getTaskType() != null ? p.getTaskType().name() : null)
                 .imageUrl(p.getImageUrl())
+                // The DTO always had this field; the builder never set it, so a generated
+                // Task 1 prompt reached the editor with its chart removed.
+                .visualData(p.getVisualData())
                 .build();
     }
 }
