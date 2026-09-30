@@ -433,7 +433,7 @@ public class MockTestService {
             for (ReadingQuestion q : quiz.getQuestions()) {
                 totalReadingQuestions++;
                 String userAnswer = answersMap.get(q.getQuestionId().toString());
-                boolean isCorrect = IeltsScoringUtils.isReadingCorrect(q.getQuestionType(), q.getCorrectAnswer(), userAnswer);
+                boolean isCorrect = IeltsScoringUtils.isReadingCorrect(q.getQuestionType(), q.getCorrectAnswer(), userAnswer, q.getWordLimit());
                 if (isCorrect) {
                     readingCorrect++;
                 }
@@ -598,7 +598,7 @@ public class MockTestService {
                     List<ReadingResultResponse.QuestionResultDto> questionResults = quiz.getQuestions().stream()
                             .map(q -> {
                                 String userAnswer = finalAnswersMap.get(q.getQuestionId().toString());
-                                boolean isCorrect = IeltsScoringUtils.isReadingCorrect(q.getQuestionType(), q.getCorrectAnswer(), userAnswer);
+                                boolean isCorrect = IeltsScoringUtils.isReadingCorrect(q.getQuestionType(), q.getCorrectAnswer(), userAnswer, q.getWordLimit());
                                 return ReadingResultResponse.QuestionResultDto.builder()
                                         .questionId(q.getQuestionId())
                                         .questionType(q.getQuestionType().name())

@@ -55,7 +55,7 @@ public class ReadingGradingService {
         for (ReadingQuestion question : quiz.getQuestions()) {
             String userAnswer = answers.getOrDefault(question.getQuestionId(), "");
             question.setUserAnswer(userAnswer);
-            boolean correct = IeltsScoringUtils.isReadingCorrect(question.getQuestionType(), question.getCorrectAnswer(), userAnswer);
+            boolean correct = IeltsScoringUtils.isReadingCorrect(question.getQuestionType(), question.getCorrectAnswer(), userAnswer, question.getWordLimit());
             log.debug("Q#{} ({}): correctAnswer='{}', userAnswer='{}', match={}",
                     question.getQuestionId(), question.getQuestionType(),
                     question.getCorrectAnswer(), userAnswer, correct);
@@ -94,7 +94,7 @@ public class ReadingGradingService {
         List<UserAnswer> userAnswerList = new ArrayList<>();
         for (ReadingQuestion question : quiz.getQuestions()) {
             String ua = answers.getOrDefault(question.getQuestionId(), "");
-            boolean correct = IeltsScoringUtils.isReadingCorrect(question.getQuestionType(), question.getCorrectAnswer(), ua);
+            boolean correct = IeltsScoringUtils.isReadingCorrect(question.getQuestionType(), question.getCorrectAnswer(), ua, question.getWordLimit());
             userAnswerList.add(UserAnswerSnapshots.forReading(history, question.getOrderIndex(), question, ua, correct, objectMapper));
         }
         history.setUserAnswers(userAnswerList);
@@ -124,7 +124,7 @@ public class ReadingGradingService {
                 questionCounter++;
                 String userAnswer = answers.getOrDefault(question.getQuestionId(), "");
                 question.setUserAnswer(userAnswer);
-                boolean correct = IeltsScoringUtils.isReadingCorrect(question.getQuestionType(), question.getCorrectAnswer(), userAnswer);
+                boolean correct = IeltsScoringUtils.isReadingCorrect(question.getQuestionType(), question.getCorrectAnswer(), userAnswer, question.getWordLimit());
                 if (correct) { quizCorrect++; totalCorrect++; }
                 allUserAnswers.add(UserAnswerSnapshots.forReading(null, questionCounter, question, userAnswer, correct, objectMapper));
             }
