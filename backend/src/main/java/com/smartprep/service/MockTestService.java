@@ -62,7 +62,7 @@ public class MockTestService {
      */
     @Transactional(readOnly = true)
     public List<MockTestResponse> getAllMockTests() {
-        return mockTestRepository.findAll().stream()
+        return mockTestRepository.findAllPublished().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }

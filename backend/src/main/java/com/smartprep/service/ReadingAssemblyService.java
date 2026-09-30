@@ -50,11 +50,11 @@ public class ReadingAssemblyService {
         Difficulty[] difficulties = {Difficulty.PASSAGE_1, Difficulty.PASSAGE_2, Difficulty.PASSAGE_3};
 
         for (Difficulty difficulty : difficulties) {
-            var templatePage = quizRepository.findQuizzesForAdmin(null, difficulty, "ADMIN", PageRequest.of(0, 100));
+            var templatePage = quizRepository.findPublishedQuizzes(null, difficulty, "ADMIN", PageRequest.of(0, 100));
             List<ReadingQuiz> candidates = new ArrayList<>(templatePage.getContent());
 
             if (candidates.isEmpty()) {
-                var aiPage = quizRepository.findQuizzesForAdmin(null, difficulty, "AI", PageRequest.of(0, 100));
+                var aiPage = quizRepository.findPublishedQuizzes(null, difficulty, "AI", PageRequest.of(0, 100));
                 candidates.addAll(aiPage.getContent());
             }
             if (candidates.isEmpty()) {

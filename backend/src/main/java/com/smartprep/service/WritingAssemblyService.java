@@ -42,7 +42,7 @@ public class WritingAssemblyService {
 
     @Transactional(readOnly = true)
     public List<WritingPromptResponse> assembleMockTest() {
-        List<WritingPrompt> allPrompts = promptRepository.findAll();
+        List<WritingPrompt> allPrompts = promptRepository.findPublishedOrderByCreatedAtDesc();
         List<WritingPrompt> task1Prompts = allPrompts.stream()
                 .filter(p -> p.getEssayType().isTask1()).collect(Collectors.toList());
         List<WritingPrompt> task2Prompts = allPrompts.stream()

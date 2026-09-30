@@ -40,7 +40,7 @@ public class ListeningQueryService {
 
     @Transactional(readOnly = true)
     public List<ListeningPartResponse> getAllParts() {
-        return partRepository.findAllByOrderByPartNumberAscPartIdAsc().stream()
+        return partRepository.findPublishedOrderByPartNumber().stream()
                 .map(this::toPartResponse)
                 .collect(Collectors.toList());
     }

@@ -27,9 +27,9 @@ public class WritingPromptService {
         List<WritingPrompt> prompts;
         if (essayTypeFilter != null && !essayTypeFilter.isBlank()) {
             EssayType type = EssayType.valueOf(essayTypeFilter.toUpperCase().trim());
-            prompts = promptRepository.findByEssayTypeOrderByCreatedAtDesc(type);
+            prompts = promptRepository.findPublishedByEssayType(type);
         } else {
-            prompts = promptRepository.findAllByOrderByCreatedAtDesc();
+            prompts = promptRepository.findPublishedOrderByCreatedAtDesc();
         }
         return prompts.stream().map(this::toResponse).collect(Collectors.toList());
     }

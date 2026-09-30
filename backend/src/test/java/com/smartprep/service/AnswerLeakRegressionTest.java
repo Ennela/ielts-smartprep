@@ -152,7 +152,7 @@ class AnswerLeakRegressionTest {
     @Test
     @DisplayName("GET /listening/parts never carries correctAnswer or transcript")
     void listeningGetAllParts_neverExposesAnswers() throws Exception {
-        when(partRepository.findAllByOrderByPartNumberAscPartIdAsc()).thenReturn(List.of(partWithAnswers()));
+        when(partRepository.findPublishedOrderByPartNumber()).thenReturn(List.of(partWithAnswers()));
 
         List<ListeningPartResponse> res = listeningQueryService().getAllParts();
 
