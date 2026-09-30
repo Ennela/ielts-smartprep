@@ -18,4 +18,15 @@ public class WritingGradeRequest {
     @NotBlank(message = "Essay text is required")
     @Size(max = 10000, message = "Essay must not exceed 10000 characters")
     private String essayText;
+
+    /**
+     * True when the timer ran out and the page submitted on the candidate's behalf.
+     * Optional, so an older client that never sends it keeps the old behaviour.
+     */
+    private Boolean autoSubmitted;
+
+    /** A submission the candidate made themselves, which is every one but the timer's. */
+    public WritingGradeRequest(Long promptId, String essayText) {
+        this(promptId, essayText, null);
+    }
 }
