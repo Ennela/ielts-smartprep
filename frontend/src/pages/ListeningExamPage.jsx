@@ -465,6 +465,7 @@ export default function ListeningExamPage() {
               <AudioPlayer
                 src={`${audioBaseUrl}${currentPart.audioUrl}`}
                 mode={mode}
+                playedStorageKey={attemptId ? `listening_played_${attemptId}` : undefined}
               />
             </div>
 
