@@ -217,8 +217,15 @@ function QuestionInput({ question, selected, onChange, disabled, groupOptions })
           disabled={disabled}
         />
       );
+    // Every written answer gets the same box. FILL_BLANK, SHORT_ANSWER and
+    // DIAGRAM_LABEL_COMPLETION used to reach "Unsupported question type" instead, which
+    // left the candidate nowhere to type and scored each of them zero, although the
+    // backend grades all three.
     case 'SENTENCE_COMPLETION':
     case 'SUMMARY_COMPLETION':
+    case 'FILL_BLANK':
+    case 'SHORT_ANSWER':
+    case 'DIAGRAM_LABEL_COMPLETION':
       return (
         <CompletionInput
           questionId={question.questionId}
