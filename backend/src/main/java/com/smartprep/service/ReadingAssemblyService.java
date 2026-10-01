@@ -83,7 +83,7 @@ public class ReadingAssemblyService {
                             .questionText(q.getQuestionText()).correctAnswer(q.getCorrectAnswer())
                             .explanation(q.getExplanation()).orderIndex(q.getOrderIndex())
                             .optionsJson(q.getOptionsJson()).wordLimit(q.getWordLimit())
-                            .groupLabel(q.getGroupLabel()).selectCount(q.getSelectCount()).groupId(q.getGroupId())
+                            .groupLabel(q.getGroupLabel()).selectCount(q.getSelectCount()).imageUrl(q.getImageUrl()).groupId(q.getGroupId())
                             .groupContext(q.getGroupContext())
                             .evidenceText(q.getEvidenceText())
                             .evidenceOffset(q.getEvidenceOffset())

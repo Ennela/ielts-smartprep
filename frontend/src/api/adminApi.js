@@ -110,6 +110,15 @@ const adminApi = {
 
     getListeningPartPreview: (partId) =>
         axiosClient.get(`/admin/listening/${partId}/preview`),
+
+    // A question diagram or a Task 1 chart; returns { url } on this site.
+    uploadImage: (file) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        return axiosClient.post('/admin/images', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+    },
 };
 
 export default adminApi;

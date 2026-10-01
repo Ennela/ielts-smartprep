@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import adminApi from '../api/adminApi';
+import ImageUploadField from '../components/admin/ImageUploadField';
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
 import ArchivedToggle from '../components/admin/ArchivedToggle';
@@ -297,20 +298,12 @@ export default function AdminWritingPromptsPage() {
 
             {isTask1(form.essayType) && (
               <div className="admin-form-group">
-                <label className="admin-form-label">Image URL (Task 1)</label>
-                <input
-                  type="text"
-                  className="completion-input"
+                <ImageUploadField
+                  id="writing-prompt-image"
+                  label="Chart / diagram (Task 1)"
                   value={form.imageUrl}
-                  onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))}
-                  placeholder="https://example.com/image.jpg"
-                  style={{ maxWidth: '100%' }}
+                  onChange={url => setForm(f => ({ ...f, imageUrl: url }))}
                 />
-                {form.imageUrl && (
-                  <div className="prompt-image-container" style={{ marginTop: 12 }}>
-                    <img src={form.imageUrl} alt="Preview" className="prompt-image" loading="lazy" onError={(e) => { e.target.style.display = 'none'; }} />
-                  </div>
-                )}
               </div>
             )}
 

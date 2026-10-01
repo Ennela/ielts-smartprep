@@ -59,6 +59,8 @@ public class SecurityConfig {
                     ).permitAll()
                     .requestMatchers("/api/v1/listening/audio/**").permitAll()
                     .requestMatchers("/api/v1/auth/avatar/**").permitAll()
+                    // Content images (ImageController): shown to anyone who can see the question.
+                    .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/images/**").permitAll()
                     .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                     .requestMatchers("/review_portal.html").permitAll();
 
