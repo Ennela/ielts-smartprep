@@ -200,7 +200,7 @@ public class ReadingQueryService {
                         .orderIndex(q.getOrderIndex())
                         .correctAnswer(q.getCorrectAnswer())
                         .userAnswer(q.getUserAnswer())
-                        .correct(IeltsScoringUtils.isReadingCorrect(q.getQuestionType(), q.getCorrectAnswer(), q.getUserAnswer()))
+                        .correct(IeltsScoringUtils.isReadingCorrect(q.getQuestionType(), q.getCorrectAnswer(), q.getUserAnswer(), q.getWordLimit()))
                         .explanation(q.getExplanation())
                         .optionsJson(q.getOptionsJson())
                         .wordLimit(q.getWordLimit())
