@@ -3,6 +3,28 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import listeningApi from '../api/listeningApi';
 import AiVocabularyButton from '../components/vocab/AiVocabularyButton';
 
+// Transcripts mark each answer as [ANS_3]forty[/ANS_3] so grading feedback can point at
+// it. This page printed those tags verbatim. After submission the answers are the point of
+// the transcript, so each is highlighted and labelled with its question number instead.
+const ANSWER_MARKER = /\[ANS_(\d+)\]([\s\S]*?)\[\/ANS_\1\]/gi;
+const STRAY_MARKER = /\[\/?ANS_\d+\]/gi;
+
+export function renderTranscriptLine(line) {
+  const parts = [];
+  let last = 0;
+  for (const match of line.matchAll(ANSWER_MARKER)) {
+    if (match.index > last) parts.push(line.slice(last, match.index).replace(STRAY_MARKER, ''));
+    parts.push(
+      <mark key={match.index} className="transcript-answer" title={`Answer to question ${match[1]}`}>
+        {match[2]}
+      </mark>
+    );
+    last = match.index + match[0].length;
+  }
+  if (last < line.length) parts.push(line.slice(last).replace(STRAY_MARKER, ''));
+  return parts;
+}
+
 export default function ListeningResultPage() {
   const { testId } = useParams();
   const location = useLocation();
@@ -273,7 +295,7 @@ export default function ListeningResultPage() {
                 <h3>Part {part.partNumber}: {part.title}</h3>
                 <div className="transcript-text">
                   {part.transcriptText?.split('\n').map((line, i) => (
-                    <p key={i}>{line}</p>
+                    <p key={i}>{renderTranscriptLine(line)}</p>
                   ))}
                 </div>
               </div>

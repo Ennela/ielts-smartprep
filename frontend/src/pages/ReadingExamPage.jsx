@@ -15,6 +15,9 @@ const SESSION_KEY_PREFIX = 'reading_single_attemptId_';
 
 
 
+// The time ReadingConfigPage advertises for each difficulty, in seconds.
+const PASSAGE_SECONDS = { PASSAGE_1: 10 * 60, PASSAGE_2: 15 * 60, PASSAGE_3: 20 * 60 };
+
 export default function ReadingExamPage() {
   const { quizId } = useParams();
   const navigate = useNavigate();
@@ -126,6 +129,10 @@ export default function ReadingExamPage() {
             const attemptRes = await attemptApi.startAttempt({
               skillType: 'READING',
               examReferenceIds: JSON.stringify([Number(quizId)]),
+              // One passage, not a whole paper. Without this the server granted the full
+              // 60 minutes, while ReadingConfigPage told the candidate 10, 15 or 20.
+              // The server only ever lets an override shorten an exam.
+              ...(PASSAGE_SECONDS[quizData.difficulty] ? { durationOverride: PASSAGE_SECONDS[quizData.difficulty] } : {}),
             });
             attempt = attemptRes.data.data;
           }
@@ -264,7 +271,7 @@ export default function ReadingExamPage() {
       {/* ── Split Screen ── */}
       <div className="exam-split">
         <div className="exam-left">
-          <PassageViewer passage={quiz.passageText} />
+          <PassageViewer passage={quiz.passageText} moduleType={quiz.moduleType} />
         </div>
         <div className="exam-right">
           <QuestionPanel questions={quiz.questions} showCorrectAnswers={isPreview} />

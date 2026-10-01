@@ -347,7 +347,11 @@ export default function MockTestSessionPage() {
                   <span className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>headphones</span>
                   Part {currentListeningPart.partNumber}: {currentListeningPart.title}
                 </h3>
-                <AudioPlayer src={`${audioBaseUrl}${currentListeningPart.audioUrl}`} mode="mock-test" />
+                <AudioPlayer
+                  src={`${audioBaseUrl}${currentListeningPart.audioUrl}`}
+                  mode="mock-test"
+                  playedStorageKey={activeSession?.sessionId ? `mock_played_${activeSession.sessionId}` : undefined}
+                />
               </div>
 
               {/* Questions List */}
@@ -384,7 +388,7 @@ export default function MockTestSessionPage() {
           <div className="exam-split" style={{ display: 'flex', flex: 1, width: '100%', overflow: 'hidden' }}>
             <div className="exam-left" style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
               <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '16px' }}>Passage {activeReadingQuiz + 1}</h2>
-              <PassageViewer passage={currentReadingQuiz.passageText} />
+              <PassageViewer passage={currentReadingQuiz.passageText} moduleType={currentReadingQuiz.moduleType} />
             </div>
             <div className="exam-right" style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
               <MockTestQuestionPanel questions={currentReadingQuiz.questions} />

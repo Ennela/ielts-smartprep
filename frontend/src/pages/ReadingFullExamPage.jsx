@@ -236,7 +236,7 @@ export default function ReadingFullExamPage() {
       {/* ── Split Screen passage content ── */}
       <div className="exam-split" style={{ flex: 1, overflow: 'hidden' }}>
         <div className="exam-left" style={{ height: '100%', overflowY: 'auto' }}>
-          <PassageViewer passage={activeQuiz.passageText} />
+          <PassageViewer passage={activeQuiz.passageText} moduleType={activeQuiz.moduleType} />
         </div>
         <div className="exam-right" style={{ height: '100%', overflowY: 'auto' }}>
           <ReadingContext.Provider value={{ answers, setAnswer: handleSetAnswer, isSubmitted: false }}>

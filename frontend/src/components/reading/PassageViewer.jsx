@@ -1,4 +1,4 @@
-export default function PassageViewer({ passage }) {
+export default function PassageViewer({ passage, moduleType }) {
   if (!passage) return null;
 
   // Split into paragraphs and detect labeled paragraphs (A. xxx, B. xxx)
@@ -8,7 +8,10 @@ export default function PassageViewer({ passage }) {
     <div className="passage-viewer" id="passage-viewer">
       <div className="passage-header">
         <h3>Reading Passage</h3>
-        <span className="passage-badge">IELTS Academic</span>
+        {/* Stored as GENERAL or GENERAL_TRAINING; it used to say Academic for both. */}
+        <span className="passage-badge">
+          {moduleType && moduleType.startsWith('GENERAL') ? 'IELTS General Training' : 'IELTS Academic'}
+        </span>
       </div>
       <div className="passage-body">
         {paragraphs.map((para, idx) => {

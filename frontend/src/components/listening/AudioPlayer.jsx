@@ -1,12 +1,38 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
-export default function AudioPlayer({ src, mode = 'practice' }) {
+// Which recordings have been played in this sitting. Kept in sessionStorage so the
+// mock-test rule "each recording plays once" is not undone by pressing F5, which is
+// what happened while it lived in component state. Storage can be unavailable (private
+// mode, blocked site data); then the rule simply lasts as long as the page, as before.
+const readPlayed = (key) => {
+  if (!key) return new Set();
+  try {
+    return new Set(JSON.parse(sessionStorage.getItem(key) || '[]'));
+  } catch {
+    return new Set();
+  }
+};
+
+const writePlayed = (key, sources) => {
+  if (!key) return;
+  try {
+    sessionStorage.setItem(key, JSON.stringify([...sources]));
+  } catch {
+    /* storage unavailable: keep the in-memory set */
+  }
+};
+
+export default function AudioPlayer({ src, mode = 'practice', playedStorageKey }) {
   const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.8);
-  const [playedSources, setPlayedSources] = useState(new Set());
+  const [playedSources, setPlayedSources] = useState(() => readPlayed(playedStorageKey));
+
+  useEffect(() => {
+    writePlayed(playedStorageKey, playedSources);
+  }, [playedStorageKey, playedSources]);
   // The audio element reported it could not load or play the source (404, CSP,
   // storage down). Without surfacing this the player sits at 0:00 forever.
   const [loadError, setLoadError] = useState(false);
