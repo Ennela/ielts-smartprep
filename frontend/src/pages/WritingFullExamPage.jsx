@@ -80,7 +80,7 @@ export default function WritingFullExamPage() {
       navigate(`/writing/full-result/${res.data.data.id}`, { state: { result: res.data.data }, replace: true });
     }).catch(err => {
       console.error(err);
-      showErrorToast('Auto-submit failed. Please try submitting manually.');
+      showErrorToast(err.response?.data?.message || 'Auto-submit failed. Please try submitting manually.');
       setSubmitting(false);
       submittingRef.current = false;
     });

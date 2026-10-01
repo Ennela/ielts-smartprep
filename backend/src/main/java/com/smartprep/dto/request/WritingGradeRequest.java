@@ -25,8 +25,14 @@ public class WritingGradeRequest {
      */
     private Boolean autoSubmitted;
 
+    /**
+     * The attempt timing this essay, when the page managed to start one. Its deadline
+     * decides whether the essay arrived in time.
+     */
+    private Long attemptId;
+
     /** A submission the candidate made themselves, which is every one but the timer's. */
     public WritingGradeRequest(Long promptId, String essayText) {
-        this(promptId, essayText, null);
+        this(promptId, essayText, null, null);
     }
 }

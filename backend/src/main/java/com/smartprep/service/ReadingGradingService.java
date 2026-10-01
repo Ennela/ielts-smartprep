@@ -44,6 +44,7 @@ public class ReadingGradingService {
     public ReadingResultResponse submitQuiz(Long quizId, Long userId, ReadingSubmitRequest request) {
         ReadingQuiz quiz = quizRepository.findByQuizIdAndUserUserId(quizId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Quiz not found"));
+        examAttemptService.assertWithinDeadline(request.getAttemptId(), userId, SkillType.READING);
         if (quiz.getSubmittedAt() != null) {
             throw new IllegalArgumentException("Quiz has already been submitted");
         }
@@ -130,6 +131,7 @@ public class ReadingGradingService {
                 throw new IllegalArgumentException("This reading test has already been submitted");
             }
         }
+        examAttemptService.assertWithinDeadline(request.getAttemptId(), userId, SkillType.READING);
         if (quizRepository.claimForSubmission(quizIds, userId, LocalDateTime.now()) != quizIds.size()) {
             throw new IllegalArgumentException("This reading test has already been submitted");
         }

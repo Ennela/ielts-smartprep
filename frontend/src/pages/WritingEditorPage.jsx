@@ -210,14 +210,14 @@ export default function WritingEditorPage() {
     // This used to require the minimum here too, and otherwise discard the draft -- so a
     // candidate who ran out of time lost everything they had written.
     if (currentWordCount > 0) {
-      writingApi.gradeEssay(Number(promptId), currentEssay, true)
+      writingApi.gradeEssay(Number(promptId), currentEssay, true, storedAttemptId ? Number(storedAttemptId) : null)
         .then(res => {
           sessionStorage.removeItem(sessionKey);
       try { localStorage.removeItem(DRAFT_KEY_PREFIX + promptId); } catch { /* ignore */ }
           navigate(`/writing/result/${res.data.data.submissionId}`, { replace: true });
         })
-        .catch(() => {
-          setError('Auto-submit failed. Please try submitting manually.');
+        .catch((err) => {
+          setError(err.response?.data?.message || 'Auto-submit failed. Please try submitting manually.');
           setGrading(false);
           submittingRef.current = false;
         });
@@ -275,11 +275,11 @@ export default function WritingEditorPage() {
     };
     const beforeId = await latestSubmissionId(writingApi.getHistory, 'submissionId');
 
+    const storedAttemptId = attemptId || sessionStorage.getItem(sessionKey);
     try {
-      const res = await writingApi.gradeEssay(Number(promptId), essayText);
+      const res = await writingApi.gradeEssay(Number(promptId), essayText, false, storedAttemptId ? Number(storedAttemptId) : null);
 
       // Complete the attempt
-      const storedAttemptId = attemptId || sessionStorage.getItem(sessionKey);
       if (storedAttemptId) {
         await attemptApi.completeAttempt(storedAttemptId, { autoSubmitted: false }).catch(() => {});
       }

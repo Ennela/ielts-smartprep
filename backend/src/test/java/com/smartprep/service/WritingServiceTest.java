@@ -6,6 +6,7 @@ import com.smartprep.exception.WordCountTooLowException;
 import com.smartprep.model.entity.User;
 import com.smartprep.model.entity.WritingPrompt;
 import com.smartprep.model.enums.EssayType;
+import com.smartprep.model.enums.SkillType;
 import com.smartprep.model.enums.WritingTaskType;
 import com.smartprep.repository.ScoreHistoryRepository;
 import com.smartprep.repository.UserRepository;
@@ -25,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -39,6 +41,7 @@ class WritingServiceTest {
     @Mock private WritingGradingService writingGradingService;
     @Mock private WritingQueryService writingQueryService;
     @Mock private ObjectMapper objectMapper;
+    @Mock private ExamAttemptService examAttemptService;
 
     @InjectMocks
     private WritingService writingService;
@@ -95,5 +98,48 @@ class WritingServiceTest {
         verify(submissionRepository, never()).save(any());
         verify(scoreHistoryRepository, never()).save(any());
         verify(writingQueryService, never()).buildGradeResponse(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("an essay sent with an attempt past its deadline is refused before AI grading")
+    void gradeEssay_lateAttempt_refusedBeforeAi() {
+        WritingPrompt prompt = WritingPrompt.builder()
+                .promptId(20L)
+                .promptText("Discuss both views.")
+                .essayType(EssayType.DISCUSSION)
+                .taskType(WritingTaskType.TASK_2)
+                .build();
+        WritingGradeRequest request = new WritingGradeRequest(20L, "an essay", true, 9L);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(User.builder().userId(1L).build()));
+        when(promptRepository.findById(20L)).thenReturn(Optional.of(prompt));
+        doThrow(new IllegalArgumentException("Time is up for this test, so it can no longer be submitted."))
+                .when(examAttemptService).assertWithinDeadline(9L, 1L, SkillType.WRITING);
+
+        assertThrows(IllegalArgumentException.class, () -> writingService.gradeEssay(1L, request));
+
+        verify(writingGradingService, never()).evaluateEssay(any(), any(), anyBoolean());
+        verify(submissionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("an essay written without an attempt (untimed) is not checked against a deadline")
+    void gradeEssay_noAttempt_noDeadlineCheck() {
+        WritingPrompt prompt = WritingPrompt.builder()
+                .promptId(20L)
+                .promptText("Discuss both views.")
+                .essayType(EssayType.DISCUSSION)
+                .taskType(WritingTaskType.TASK_2)
+                .build();
+        WritingGradeRequest request = new WritingGradeRequest(20L, "short essay");
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(User.builder().userId(1L).build()));
+        when(promptRepository.findById(20L)).thenReturn(Optional.of(prompt));
+        when(writingGradingService.countWords(request.getEssayText())).thenReturn(2);
+
+        // Stops at the word minimum, which comes after the deadline check would have.
+        assertThrows(WordCountTooLowException.class, () -> writingService.gradeEssay(1L, request));
+
+        verify(examAttemptService, never()).assertWithinDeadline(any(), any(), any());
     }
 }
