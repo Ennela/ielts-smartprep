@@ -29,10 +29,13 @@ export default function QuestionPanel({ questions, answers, setAnswer, disabled 
           groupContext: q.groupContext || null,
           wordLimit: q.wordLimit || null,
           optionsJson: q.optionsJson || null,
+          imageUrl: null,
           questions: [],
         });
       }
-      groupMap.get(gid).questions.push(q);
+      const group = groupMap.get(gid);
+      group.imageUrl = group.imageUrl || q.imageUrl || null;
+      group.questions.push(q);
     });
     return Array.from(groupMap.values());
   }, [questions]);
@@ -75,6 +78,13 @@ function QuestionGroup({ group, answers, setAnswer, disabled, showCorrectAnswers
     <div className="question-group">
       {group.groupLabel && (
         <div className="group-label">{group.groupLabel}</div>
+      )}
+
+      {/* The diagram, map or plan the group labels (V56) */}
+      {group.imageUrl && (
+        <div className="prompt-image-container question-group-image" style={{ margin: '8px 0 12px' }}>
+          <img src={group.imageUrl} alt={group.groupLabel || 'Diagram for these questions'} className="prompt-image" style={{ maxWidth: '100%' }} />
+        </div>
       )}
 
       {/* Word limit badge */}

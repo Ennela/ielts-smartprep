@@ -197,9 +197,16 @@ export default function ListeningResultPage() {
                   {part.questions?.sort((a,b) => a.orderIndex - b.orderIndex).map((q, i, sorted) => (
                     <Fragment key={q.questionId}>
                     {/* A grouped part (V54) states its instructions once, above the group. */}
-                    {q.groupLabel && (i === 0 || sorted[i - 1].groupId !== q.groupId) && (
-                      <div className="group-label" style={{ gridColumn: '1 / -1' }}>{q.groupLabel}</div>
-                    )}
+                    {q.groupId != null && (i === 0 || sorted[i - 1].groupId !== q.groupId) && (() => {
+                      const image = sorted.find(x => x.groupId === q.groupId && x.imageUrl)?.imageUrl;
+                      if (!q.groupLabel && !image) return null;
+                      return (
+                        <div style={{ gridColumn: '1 / -1' }}>
+                          {q.groupLabel && <div className="group-label">{q.groupLabel}</div>}
+                          {image && <img src={image} alt={q.groupLabel || 'Diagram for these questions'} className="prompt-image" style={{ maxWidth: '100%', marginTop: 8 }} />}
+                        </div>
+                      );
+                    })()}
                     <div className={`answer-card ${q.isCorrect ? 'correct' : 'wrong'}`}>
                       <div className="answer-card-header">
                         <span className={`answer-status ${q.isCorrect ? 'status-correct' : 'status-wrong'}`}>

@@ -232,6 +232,7 @@ public class ReadingGenerationService {
                     .orderIndex(q.getOrderIndex())
                     .groupLabel(q.getGroupLabel())
                     .selectCount(q.getSelectCount())
+                    .imageUrl(q.getImageUrl())
                     .groupId(q.getGroupId())
                     .groupContext(q.getGroupContext())
                     .wordLimit(q.getWordLimit())

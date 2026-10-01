@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import adminApi from '../api/adminApi';
+import ImageUploadField from '../components/admin/ImageUploadField';
 import { nextRowKey, withRowKeys } from '../utils/rowKey';
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
@@ -734,6 +735,17 @@ export default function AdminReadingQuizzesPage() {
                             value={q.selectCount || 1}
                             onChange={e => updateQuestionField(idx, 'selectCount', parseInt(e.target.value) || 1)}
                             style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
+                          />
+                        </div>
+                      )}
+
+                      {q.groupId && (
+                        <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                          <ImageUploadField
+                            id={`reading-question-image-${idx}`}
+                            label="Diagram for the group (first question of the group)"
+                            value={q.imageUrl || ''}
+                            onChange={url => updateQuestionField(idx, 'imageUrl', url)}
                           />
                         </div>
                       )}

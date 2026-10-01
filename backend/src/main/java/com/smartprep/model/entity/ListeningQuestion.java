@@ -69,6 +69,10 @@ public class ListeningQuestion {
     @Column(nullable = false)
     private Integer selectCount = 1;
 
+    /** The diagram, map or plan the group labels (V56); a path on this site. */
+    @Column(length = 512)
+    private String imageUrl;
+
     @Column(columnDefinition = "TEXT")
     private String explanation;
 

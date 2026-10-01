@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import ImageUploadField from '../components/admin/ImageUploadField';
 import { useNavigate, useParams } from 'react-router-dom';
 import adminApi from '../api/adminApi';
 import { nextRowKey, withRowKeys } from '../utils/rowKey';
@@ -21,7 +22,7 @@ const QUESTION_TYPES = [
 
 // Group fields (V54). Questions with the same group number are shown together; the label,
 // shared text and options are read from the first question of the group.
-const EMPTY_GROUP = { groupId: '', groupLabel: '', groupContext: '', optionsJson: '', wordLimit: '', explanation: '' };
+const EMPTY_GROUP = { groupId: '', groupLabel: '', groupContext: '', optionsJson: '', wordLimit: '', explanation: '', imageUrl: '' };
 
 const toIntOrNull = (v) => (v === '' || v === null || v === undefined ? null : Number(v));
 
@@ -70,6 +71,7 @@ export default function AdminPartEditorPage() {
                   optionsJson: q.optionsJson || '',
                   wordLimit: q.wordLimit ?? '',
                   explanation: q.explanation || '',
+                  imageUrl: q.imageUrl || '',
                   optionA: '',
                   optionB: '',
                   optionC: '',
@@ -442,6 +444,14 @@ export default function AdminPartEditorPage() {
                       onChange={e => updateQuestionField(idx, 'optionsJson', e.target.value)}
                       placeholder='["A. car park", "B. cafe", "C. lake"]'
                       style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }} />
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <ImageUploadField
+                        id={`question-image-${idx}`}
+                        label="Map, plan or diagram for the group (first question of the group)"
+                        value={q.imageUrl}
+                        onChange={url => updateQuestionField(idx, 'imageUrl', url)}
+                      />
+                    </div>
                     <label className="admin-form-label" style={{ fontSize: '0.8rem', marginTop: '0.75rem', display: 'block' }}>Explanation (shown in review)</label>
                     <input type="text" className="completion-input" value={q.explanation}
                       onChange={e => updateQuestionField(idx, 'explanation', e.target.value)}

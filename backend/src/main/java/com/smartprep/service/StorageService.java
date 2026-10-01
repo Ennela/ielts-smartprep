@@ -64,6 +64,18 @@ public class StorageService {
     }
 
     /**
+     * Upload an image used by exam content -- a question's diagram or a Task 1 chart.
+     *
+     * @return the URL it is served at, on this site
+     */
+    public String uploadContentImage(String key, byte[] imgData, String contentType) {
+        s3Client.putObject(PutObjectRequest.builder().bucket(bucket).key(key).contentType(contentType).build(),
+                RequestBody.fromBytes(imgData));
+        log.info("Uploaded content image to MinIO: bucket={}, key={}, size={}KB", bucket, key, imgData.length / 1024);
+        return "/api/v1/images/" + key;
+    }
+
+    /**
      * Download audio bytes from MinIO.
      *
      * @param key the object key

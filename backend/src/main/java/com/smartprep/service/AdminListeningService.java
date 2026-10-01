@@ -1,5 +1,6 @@
 package com.smartprep.service;
 
+import com.smartprep.service.util.ImageUrls;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -99,6 +100,7 @@ public class AdminListeningService {
                             .groupId(q.getGroupId())
                             .groupLabel(blankToNull(q.getGroupLabel()))
                             .selectCount(q.getSelectCount() != null ? q.getSelectCount() : 1)
+                            .imageUrl(ImageUrls.sameOriginOrNull(q.getImageUrl()))
                             .groupContext(blankToNull(q.getGroupContext()))
                             .optionsJson(optionsJsonOrNull(q.getOptionsJson()))
                             .wordLimit(q.getWordLimit())
@@ -167,6 +169,7 @@ public class AdminListeningService {
                             .groupId(q.getGroupId())
                             .groupLabel(blankToNull(q.getGroupLabel()))
                             .selectCount(q.getSelectCount() != null ? q.getSelectCount() : 1)
+                            .imageUrl(ImageUrls.sameOriginOrNull(q.getImageUrl()))
                             .groupContext(blankToNull(q.getGroupContext()))
                             .optionsJson(optionsJsonOrNull(q.getOptionsJson()))
                             .wordLimit(q.getWordLimit())
@@ -294,6 +297,7 @@ public class AdminListeningService {
                         .groupId(q.getGroupId())
                         .groupLabel(q.getGroupLabel())
                         .selectCount(q.getSelectCount())
+                        .imageUrl(q.getImageUrl())
                         .groupContext(q.getGroupContext())
                         .optionsJson(q.getOptionsJson())
                         .wordLimit(q.getWordLimit())

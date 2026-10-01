@@ -62,6 +62,10 @@ public class ReadingQuestion {
     @Column(nullable = false)
     private Integer selectCount = 1;
 
+    /** The diagram, map or plan the group labels (V56); a path on this site. */
+    @Column(length = 512)
+    private String imageUrl;
+
     /** Group label, e.g. "Questions 1-5: Matching Headings" */
     @Column(length = 255)
     private String groupLabel;

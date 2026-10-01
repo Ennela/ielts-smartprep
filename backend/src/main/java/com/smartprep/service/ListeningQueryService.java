@@ -134,6 +134,7 @@ public class ListeningQueryService {
                         .groupId(q.getGroupId())
                         .groupLabel(q.getGroupLabel())
                         .selectCount(q.getSelectCount())
+                        .imageUrl(q.getImageUrl())
                         .groupContext(q.getGroupContext())
                         .optionsJson(q.getOptionsJson())
                         .wordLimit(q.getWordLimit())
@@ -191,7 +192,7 @@ public class ListeningQueryService {
                         .options(QuestionOptionMapper.mapForReview(q.getOptions()))
                         .correctAnswer(q.getCorrectAnswer()).userAnswer(userAnswer)
                         .isCorrect(isCorrect).orderIndex(q.getOrderIndex())
-                        .groupId(q.getGroupId()).groupLabel(q.getGroupLabel()).selectCount(q.getSelectCount())
+                        .groupId(q.getGroupId()).groupLabel(q.getGroupLabel()).selectCount(q.getSelectCount()).imageUrl(q.getImageUrl())
                         .groupContext(q.getGroupContext()).optionsJson(q.getOptionsJson())
                         .wordLimit(q.getWordLimit()).explanation(q.getExplanation()).build());
             }

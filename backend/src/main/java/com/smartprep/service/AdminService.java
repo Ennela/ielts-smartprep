@@ -1,5 +1,6 @@
 package com.smartprep.service;
 
+import com.smartprep.service.util.ImageUrls;
 import com.smartprep.dto.request.AdminMockTestRequest;
 import com.smartprep.dto.request.AdminReadingQuizRequest;
 import com.smartprep.dto.request.AdminWritingPromptRequest;
@@ -141,7 +142,7 @@ public class AdminService {
                 .promptText(request.getPromptText())
                 .essayType(EssayType.valueOf(request.getEssayType().toUpperCase()))
                 .taskType(WritingTaskType.valueOf(request.getTaskType().toUpperCase()))
-                .imageUrl(request.getImageUrl())
+                .imageUrl(ImageUrls.sameOriginOrNull(request.getImageUrl()))
                 .build();
         return writingPromptRepository.save(prompt);
     }
@@ -152,7 +153,7 @@ public class AdminService {
         prompt.setPromptText(request.getPromptText());
         prompt.setEssayType(EssayType.valueOf(request.getEssayType().toUpperCase()));
         prompt.setTaskType(WritingTaskType.valueOf(request.getTaskType().toUpperCase()));
-        prompt.setImageUrl(request.getImageUrl());
+        prompt.setImageUrl(ImageUrls.sameOriginOrNull(request.getImageUrl()));
         return writingPromptRepository.save(prompt);
     }
 
@@ -250,6 +251,7 @@ public class AdminService {
                             .wordLimit(q.getWordLimit())
                             .groupLabel(q.getGroupLabel())
                             .selectCount(q.getSelectCount() != null ? q.getSelectCount() : 1)
+                            .imageUrl(ImageUrls.sameOriginOrNull(q.getImageUrl()))
                             .groupId(q.getGroupId())
                             .groupContext(q.getGroupContext())
                             .build();
@@ -310,6 +312,7 @@ public class AdminService {
                             .wordLimit(q.getWordLimit())
                             .groupLabel(q.getGroupLabel())
                             .selectCount(q.getSelectCount() != null ? q.getSelectCount() : 1)
+                            .imageUrl(ImageUrls.sameOriginOrNull(q.getImageUrl()))
                             .groupId(q.getGroupId())
                             .groupContext(q.getGroupContext())
                             .build();
@@ -376,6 +379,7 @@ public class AdminService {
                         .wordLimit(q.getWordLimit())
                         .groupLabel(q.getGroupLabel())
                         .selectCount(q.getSelectCount())
+                        .imageUrl(q.getImageUrl())
                         .groupId(q.getGroupId())
                         .groupContext(q.getGroupContext())
                         .evidenceText(q.getEvidenceText())
