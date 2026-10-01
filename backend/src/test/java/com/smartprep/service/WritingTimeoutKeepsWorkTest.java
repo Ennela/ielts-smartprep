@@ -69,7 +69,7 @@ class WritingTimeoutKeepsWorkTest {
     @Test
     @DisplayName("a short essay the timer submitted is marked")
     void timerSubmissionIsMarked() {
-        writingService.gradeEssay(1L, new WritingGradeRequest(20L, SHORT_ESSAY, true));
+        writingService.gradeEssay(1L, new WritingGradeRequest(20L, SHORT_ESSAY, true, null));
 
         verify(writingGradingService).evaluateEssay(anyString(), eq(SHORT_ESSAY), eq(false));
     }

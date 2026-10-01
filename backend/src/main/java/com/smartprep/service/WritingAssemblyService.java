@@ -10,6 +10,7 @@ import com.smartprep.exception.WordCountTooLowException;
 import com.smartprep.model.entity.User;
 import com.smartprep.model.entity.WritingFullSubmission;
 import com.smartprep.model.entity.WritingPrompt;
+import com.smartprep.model.enums.SkillType;
 import com.smartprep.repository.UserRepository;
 import com.smartprep.repository.WritingFullSubmissionRepository;
 import com.smartprep.repository.WritingPromptRepository;
@@ -37,6 +38,7 @@ public class WritingAssemblyService {
     private final WritingGradingPersistence gradingPersistence;
     private final WritingQueryService writingQueryService;
     private final WritingFullSubmissionRepository writingFullSubmissionRepository;
+    private final ExamAttemptService examAttemptService;
 
     private static final int MIN_WORD_COUNT_TASK1 = 150;
     private static final int MIN_WORD_COUNT_TASK2 = 250;
@@ -93,6 +95,8 @@ public class WritingAssemblyService {
     public WritingFullResultResponse submitFullWriting(Long userId, WritingSubmitFullRequest request) {
         userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        // Before the four Gemini calls, not after: a late sitting is refused without being graded.
+        examAttemptService.assertWithinDeadline(request.getAttemptId(), userId, SkillType.WRITING);
 
         int w1 = countWords(request.getTask1EssayText());
         int w2 = countWords(request.getTask2EssayText());

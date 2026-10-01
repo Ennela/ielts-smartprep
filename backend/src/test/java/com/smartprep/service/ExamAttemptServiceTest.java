@@ -411,6 +411,93 @@ class ExamAttemptServiceTest {
         assertThrows(ResourceNotFoundException.class, () -> examAttemptService.getAttempt(999L, 1L));
     }
 
+    // ── Submission deadline ──
+
+    private ExamAttempt attemptWithDeadline(long id, SkillType skill, LocalDateTime deadline) {
+        return ExamAttempt.builder()
+                .attemptId(id)
+                .user(user)
+                .skillType(skill)
+                .durationSeconds(3600)
+                .startedAt(deadline.minusSeconds(3600))
+                .deadline(deadline)
+                .status(SessionStatus.IN_PROGRESS)
+                .autoSubmitted(false)
+                .build();
+    }
+
+    @Test
+    @DisplayName("a submission inside the grace period after the deadline is accepted")
+    void assertWithinDeadline_insideGrace_accepted() {
+        // The page submits when its clock reaches zero; that request can land a little late.
+        when(attemptRepository.findByAttemptIdAndUserUserId(200L, 1L)).thenReturn(Optional.of(
+                attemptWithDeadline(200L, SkillType.READING, LocalDateTime.now().minusSeconds(30))));
+
+        assertDoesNotThrow(() -> examAttemptService.assertWithinDeadline(200L, 1L, SkillType.READING));
+    }
+
+    @Test
+    @DisplayName("a submission after the grace period is refused")
+    void assertWithinDeadline_afterGrace_refused() {
+        when(attemptRepository.findByAttemptIdAndUserUserId(201L, 1L)).thenReturn(Optional.of(
+                attemptWithDeadline(201L, SkillType.READING, LocalDateTime.now()
+                        .minusSeconds(ExamDurationConfig.SUBMIT_GRACE_SECONDS + 5))));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> examAttemptService.assertWithinDeadline(201L, 1L, SkillType.READING));
+        assertTrue(ex.getMessage().contains("Time is up"));
+    }
+
+    @Test
+    @DisplayName("an attempt for another skill is not found, so it cannot lend its deadline")
+    void assertWithinDeadline_otherSkill_notFound() {
+        when(attemptRepository.findByAttemptIdAndUserUserId(202L, 1L)).thenReturn(Optional.of(
+                attemptWithDeadline(202L, SkillType.LISTENING, LocalDateTime.now().plusMinutes(10))));
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> examAttemptService.assertWithinDeadline(202L, 1L, SkillType.WRITING));
+    }
+
+    @Test
+    @DisplayName("assertSubmittable refuses a late submission as well as a repeated one")
+    void assertSubmittable_afterGrace_refused() {
+        when(attemptRepository.findByAttemptIdAndUserUserId(203L, 1L)).thenReturn(Optional.of(
+                attemptWithDeadline(203L, SkillType.LISTENING, LocalDateTime.now().minusMinutes(5))));
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> examAttemptService.assertSubmittable(203L, 1L, SkillType.LISTENING));
+        assertTrue(ex.getMessage().contains("Time is up"));
+    }
+
+    @Test
+    @DisplayName("getAttempt expires an attempt whose submission window has closed")
+    void getAttempt_pastWindow_expired() {
+        // Reported as IN_PROGRESS, the page would resume it, submit at once, be refused,
+        // and do the same again every time the test was reopened.
+        LocalDateTime deadline = LocalDateTime.now().minusMinutes(5);
+        ExamAttempt attempt = attemptWithDeadline(204L, SkillType.READING, deadline);
+        when(attemptRepository.findByAttemptIdAndUserUserId(204L, 1L)).thenReturn(Optional.of(attempt));
+        when(attemptRepository.save(any(ExamAttempt.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        AttemptResponse response = examAttemptService.getAttempt(204L, 1L);
+
+        assertEquals("EXPIRED", response.getStatus());
+        assertEquals(deadline, attempt.getSubmittedAt());
+        assertEquals(3600, attempt.getTimeSpentSeconds());
+    }
+
+    @Test
+    @DisplayName("getAttempt leaves an attempt inside the grace period running")
+    void getAttempt_insideGrace_stillInProgress() {
+        when(attemptRepository.findByAttemptIdAndUserUserId(205L, 1L)).thenReturn(Optional.of(
+                attemptWithDeadline(205L, SkillType.READING, LocalDateTime.now().minusSeconds(20))));
+
+        AttemptResponse response = examAttemptService.getAttempt(205L, 1L);
+
+        assertEquals("IN_PROGRESS", response.getStatus());
+        verify(attemptRepository, never()).save(any());
+    }
+
     // ── ExamDurationConfig tests ──
 
     @Test

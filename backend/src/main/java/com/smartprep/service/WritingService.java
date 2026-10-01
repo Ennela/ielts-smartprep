@@ -7,6 +7,7 @@ import com.smartprep.dto.response.WritingGradeResponse;
 import com.smartprep.exception.ResourceNotFoundException;
 import com.smartprep.exception.WordCountTooLowException;
 import com.smartprep.model.entity.WritingPrompt;
+import com.smartprep.model.enums.SkillType;
 import com.smartprep.repository.UserRepository;
 import com.smartprep.repository.WritingPromptRepository;
 import com.smartprep.service.ai.WritingGradingService;
@@ -38,6 +39,7 @@ public class WritingService {
     private final WritingGradingService writingGradingService;
     private final WritingGradingPersistence gradingPersistence;
     private final ObjectMapper objectMapper;
+    private final ExamAttemptService examAttemptService;
 
     private static final int MIN_WORD_COUNT_TASK1 = 150;
     private static final int MIN_WORD_COUNT_TASK2 = 250;
@@ -61,6 +63,13 @@ public class WritingService {
 
         WritingPrompt prompt = promptRepository.findById(request.getPromptId())
                 .orElseThrow(() -> new ResourceNotFoundException("Writing prompt not found"));
+
+        // Optional here, unlike every other practice submission: when the page cannot start
+        // an attempt it still lets the candidate write, untimed, and that essay has no
+        // deadline to miss.
+        if (request.getAttemptId() != null) {
+            examAttemptService.assertWithinDeadline(request.getAttemptId(), userId, SkillType.WRITING);
+        }
 
         boolean isTask1 = prompt.getEssayType().isTask1();
         int minWordCount = isTask1 ? MIN_WORD_COUNT_TASK1 : MIN_WORD_COUNT_TASK2;

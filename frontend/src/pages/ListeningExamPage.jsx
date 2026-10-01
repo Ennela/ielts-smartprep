@@ -78,7 +78,7 @@ export default function ListeningExamPage() {
       navigate(`/listening/result/${res.data?.data?.testId}`, { state: res.data?.data });
     }).catch(err => {
       console.error(err);
-      showErrorToast('Auto-submit failed. Please try submitting manually.');
+      showErrorToast(err.response?.data?.message || 'Auto-submit failed. Please try submitting manually.');
       setSubmitting(false);
       submittingRef.current = false;
     });

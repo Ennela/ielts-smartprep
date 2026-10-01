@@ -112,11 +112,25 @@ public class ExamAttemptService {
 
     /**
      * Get an attempt by ID (for FE to resume countdown after reload).
+     *
+     * <p>An attempt still IN_PROGRESS after its submission window has closed is expired
+     * here. The pages resume any IN_PROGRESS attempt they find, and one past its deadline
+     * submits at once and is refused; reported as IN_PROGRESS, reopening the test would
+     * repeat that every time. Reported as EXPIRED, the page starts a new attempt instead.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public AttemptResponse getAttempt(Long attemptId, Long userId) {
         ExamAttempt attempt = attemptRepository.findByAttemptIdAndUserUserId(attemptId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Attempt not found"));
+        if (attempt.getStatus() == SessionStatus.IN_PROGRESS && isPastSubmitWindow(attempt)) {
+            attempt.setStatus(SessionStatus.EXPIRED);
+            attempt.setAutoSubmitted(true);
+            attempt.setSubmittedAt(attempt.getDeadline());
+            attempt.setTimeSpentSeconds(attempt.getDurationSeconds());
+            attempt = attemptRepository.save(attempt);
+            log.info("Expired attempt {} for user {}: its submission window closed at {}",
+                    attemptId, userId, attempt.getDeadline().plusSeconds(ExamDurationConfig.SUBMIT_GRACE_SECONDS));
+        }
         return toResponse(attempt);
     }
 
@@ -130,17 +144,52 @@ public class ExamAttemptService {
      *
      * <p>An attempt that is not the caller's, does not exist, or belongs to another skill is
      * reported as not found, the same answer an ownership failure gets everywhere else.
+     * A submission that arrives after the deadline is refused, as in
+     * {@link #assertWithinDeadline}.
      */
     @Transactional(readOnly = true)
     public void assertSubmittable(Long attemptId, Long userId, SkillType skillType) {
-        // The skill check matters: without it an unused Reading attempt could be spent on
-        // a Listening submission, giving a second sitting the first one never had.
-        ExamAttempt attempt = attemptRepository.findByAttemptIdAndUserUserId(attemptId, userId)
-                .filter(a -> a.getSkillType() == skillType)
-                .orElseThrow(() -> new ResourceNotFoundException("Exam attempt not found"));
+        ExamAttempt attempt = findForSubmission(attemptId, userId, skillType);
         if (attempt.getStatus() == SessionStatus.SUBMITTED) {
             throw new IllegalArgumentException("This test has already been submitted");
         }
+        refuseIfPastSubmitWindow(attempt);
+    }
+
+    /**
+     * Refuse a submission that arrives after the attempt's deadline, plus
+     * {@link ExamDurationConfig#SUBMIT_GRACE_SECONDS}.
+     *
+     * <p>The timer was server-authoritative in name only: the deadline was stored and sent
+     * to the page, and the page submitted when it ran out, but nothing on the server read
+     * it, so answers were accepted any time after.
+     *
+     * <p>Unlike {@link #assertSubmittable} this does not look at whether the attempt was
+     * already completed. It is for callers that guard resubmission on their own records,
+     * and whose page may complete the attempt before it submits the answers.
+     */
+    @Transactional(readOnly = true)
+    public void assertWithinDeadline(Long attemptId, Long userId, SkillType skillType) {
+        refuseIfPastSubmitWindow(findForSubmission(attemptId, userId, skillType));
+    }
+
+    private ExamAttempt findForSubmission(Long attemptId, Long userId, SkillType skillType) {
+        // The skill check matters: without it an unused Reading attempt could be spent on
+        // a Listening submission, giving a second sitting the first one never had.
+        return attemptRepository.findByAttemptIdAndUserUserId(attemptId, userId)
+                .filter(a -> a.getSkillType() == skillType)
+                .orElseThrow(() -> new ResourceNotFoundException("Exam attempt not found"));
+    }
+
+    private static void refuseIfPastSubmitWindow(ExamAttempt attempt) {
+        if (isPastSubmitWindow(attempt)) {
+            throw new IllegalArgumentException("Time is up for this test, so it can no longer be submitted.");
+        }
+    }
+
+    private static boolean isPastSubmitWindow(ExamAttempt attempt) {
+        return LocalDateTime.now().isAfter(
+                attempt.getDeadline().plusSeconds(ExamDurationConfig.SUBMIT_GRACE_SECONDS));
     }
 
     /**

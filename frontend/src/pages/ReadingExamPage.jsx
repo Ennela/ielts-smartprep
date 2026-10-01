@@ -64,8 +64,8 @@ export default function ReadingExamPage() {
         setResult(res.data.data);
         navigate(`/reading/result/${quizId}`, { replace: true });
       })
-      .catch(() => {
-        setError('Auto-submit failed. Please try submitting manually.');
+      .catch((err) => {
+        setError(err.response?.data?.message || 'Auto-submit failed. Please try submitting manually.');
         submittingRef.current = false;
       });
   }, [attemptId, quizId, isSubmitted, submitStart, setResult, setError, navigate, isPreview]);

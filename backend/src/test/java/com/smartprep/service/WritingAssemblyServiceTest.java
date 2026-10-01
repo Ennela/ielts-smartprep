@@ -3,6 +3,7 @@ package com.smartprep.service;
 import com.smartprep.dto.request.WritingSubmitFullRequest;
 import com.smartprep.exception.WordCountTooLowException;
 import com.smartprep.model.entity.User;
+import com.smartprep.model.enums.SkillType;
 import com.smartprep.repository.UserRepository;
 import com.smartprep.repository.WritingFullSubmissionRepository;
 import com.smartprep.repository.WritingPromptRepository;
@@ -20,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -33,6 +35,7 @@ class WritingAssemblyServiceTest {
     @Mock private WritingGradingPersistence gradingPersistence;
     @Mock private WritingQueryService writingQueryService;
     @Mock private WritingFullSubmissionRepository writingFullSubmissionRepository;
+    @Mock private ExamAttemptService examAttemptService;
 
     @InjectMocks
     private WritingAssemblyService writingAssemblyService;
@@ -79,6 +82,28 @@ class WritingAssemblyServiceTest {
         verify(gradingPersistence, never())
                 .saveFullWriting(any(), any(), anyInt(), anyInt(), any(), any(), any(), any());
         verify(writingFullSubmissionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Full Writing past its deadline is refused before either task is graded")
+    void submitFullWriting_late_refusedBeforeGrading() {
+        WritingSubmitFullRequest request = new WritingSubmitFullRequest();
+        request.setTask1PromptId(10L);
+        request.setTask1EssayText(words(150));
+        request.setTask2PromptId(20L);
+        request.setTask2EssayText(words(250));
+        request.setAttemptId(7L);
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(User.builder().userId(1L).build()));
+        doThrow(new IllegalArgumentException("Time is up for this test, so it can no longer be submitted."))
+                .when(examAttemptService).assertWithinDeadline(7L, 1L, SkillType.WRITING);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> writingAssemblyService.submitFullWriting(1L, request));
+
+        verify(writingService, never()).gradeOnly(any(), any(), anyBoolean());
+        verify(gradingPersistence, never())
+                .saveFullWriting(any(), any(), anyInt(), anyInt(), any(), any(), any(), any());
     }
 
     private String words(int count) {

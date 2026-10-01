@@ -1,9 +1,13 @@
 package com.smartprep.controller;
 
+import com.smartprep.model.entity.ExamAttempt;
 import com.smartprep.model.entity.User;
 import com.smartprep.model.entity.WritingPrompt;
 import com.smartprep.model.enums.Role;
+import com.smartprep.model.enums.SessionStatus;
+import com.smartprep.model.enums.SkillType;
 import com.smartprep.repository.AbstractMySQLContainerTest;
+import com.smartprep.repository.ExamAttemptRepository;
 import com.smartprep.repository.UserRepository;
 import com.smartprep.repository.WritingPromptRepository;
 import com.smartprep.service.LoginLockoutService;
@@ -32,6 +36,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import javax.sql.DataSource;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -75,6 +80,7 @@ class AiCallConnectionHoldingIntegrationTest extends AbstractMySQLContainerTest 
     @Autowired private DataSource dataSource;
     @Autowired private UserRepository userRepository;
     @Autowired private WritingPromptRepository writingPromptRepository;
+    @Autowired private ExamAttemptRepository attemptRepository;
     @Autowired private PlatformTransactionManager transactionManager;
 
     @MockBean private GeminiClient geminiClient;
@@ -83,16 +89,24 @@ class AiCallConnectionHoldingIntegrationTest extends AbstractMySQLContainerTest 
     @MockBean private LoginLockoutService loginLockoutService;
 
     private User user;
+    private ExamAttempt attempt;
 
     @BeforeEach
     void seed() {
         user = userRepository.save(User.builder()
                 .username("pool_watcher").passwordHash("x").email("pool_watcher@example.test")
                 .displayName("Pool").role(Role.STUDENT).build());
+        // A full Writing submission names the attempt whose deadline it is held to.
+        LocalDateTime now = LocalDateTime.now();
+        attempt = attemptRepository.save(ExamAttempt.builder()
+                .user(user).skillType(SkillType.WRITING).durationSeconds(3600)
+                .startedAt(now).deadline(now.plusHours(1))
+                .status(SessionStatus.IN_PROGRESS).autoSubmitted(false).build());
     }
 
     @AfterEach
     void cleanUp() {
+        attemptRepository.deleteById(attempt.getAttemptId());
         userRepository.deleteById(user.getUserId());
     }
 
@@ -121,9 +135,9 @@ class AiCallConnectionHoldingIntegrationTest extends AbstractMySQLContainerTest 
 
         String body = """
                 {"task1PromptId": %d, "task2PromptId": %d,
-                 "task1EssayText": "%s", "task2EssayText": "%s"}
+                 "task1EssayText": "%s", "task2EssayText": "%s", "attemptId": %d}
                 """.formatted(prompts.get(0).getPromptId(), prompts.get(1).getPromptId(),
-                "word ".repeat(160).trim(), "word ".repeat(260).trim());
+                "word ".repeat(160).trim(), "word ".repeat(260).trim(), attempt.getAttemptId());
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
         try {

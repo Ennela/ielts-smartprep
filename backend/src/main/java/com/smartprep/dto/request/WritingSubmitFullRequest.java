@@ -22,7 +22,12 @@ public class WritingSubmitFullRequest {
     @NotNull(message = "Task 2 essay text is required")
     private String task2EssayText;
 
-    /** Optional: links to ExamAttempt for timer tracking */
+    /**
+     * The sitting being submitted. Required, because its deadline is what decides
+     * whether the answers arrived in time; left optional, a caller could skip that
+     * check by not sending it.
+     */
+    @NotNull(message = "attemptId is required")
     private Long attemptId;
 
     /** True if auto-submitted when time expired */

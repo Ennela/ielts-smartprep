@@ -24,6 +24,14 @@ public class ExamDurationConfig {
     public static final int DEADLINE_BUFFER_SECONDS   = 10;
 
     /**
+     * How long after the deadline a submission is still accepted. Past it the server
+     * refuses the answers. A minute, the same as a mock test section, because the page
+     * submits on its own when the clock reaches zero and a browser can hold back the
+     * timers of a tab in the background for about that long.
+     */
+    public static final int SUBMIT_GRACE_SECONDS      = 60;
+
+    /**
      * Returns the effective duration for an exam attempt.
      * Allows per-exam override (e.g. shorter practice tests).
      *
