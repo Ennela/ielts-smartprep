@@ -69,7 +69,7 @@ public class WritingService {
 
         // No transaction is open across this call, which is the point.
         GradingResult gradingResult = writingGradingService.evaluateEssay(
-                prompt.getPromptText(), request.getEssayText(), isTask1);
+                WritingGradingService.promptForGrading(prompt), request.getEssayText(), isTask1);
 
         return gradingPersistence.saveGradedEssay(
                 userId, prompt.getPromptId(), request.getEssayText(), wordCount,

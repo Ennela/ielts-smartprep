@@ -1,5 +1,6 @@
 package com.smartprep.service.ai;
 
+import com.smartprep.model.entity.WritingPrompt;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartprep.exception.InvalidAiResponseException;
@@ -43,6 +44,34 @@ public class WritingGradingService {
     public int countWords(String text) {
         if (text == null || text.isBlank()) return 0;
         return text.trim().split("\\s+").length;
+    }
+
+    /**
+     * The prompt as the grader should see it.
+     *
+     * <p>Task 1 is marked partly on whether the essay reports the chart accurately, and the
+     * chart is not in the prompt text: it is in {@code visual_data} for a generated prompt,
+     * or an image for an imported one. Every caller passed the text alone, so the grader
+     * was asked to judge figures it had never seen, and an essay that invented its numbers
+     * could score as well as one that read them correctly.
+     *
+     * <p>When the data exists it goes in. When only an image exists, the grader is told so
+     * and asked not to mark figures it cannot check, rather than guessing at them.
+     */
+    public static String promptForGrading(WritingPrompt prompt) {
+        String text = prompt.getPromptText();
+        if (prompt.getEssayType() == null || !prompt.getEssayType().isTask1()) {
+            return text;
+        }
+        if (prompt.getVisualData() != null && !prompt.getVisualData().isBlank()) {
+            return text + "\n\nThe chart shown to the candidate, as data:\n" + prompt.getVisualData();
+        }
+        if (prompt.getImageUrl() != null && !prompt.getImageUrl().isBlank()) {
+            return text + "\n\nThe candidate was shown this chart as an image, which is not available to you. "
+                    + "Do not mark the figures the essay reports as wrong, because you cannot check them. "
+                    + "Assess whether it selects, summarises and compares the main features appropriately.";
+        }
+        return text;
     }
 
     public GradingResult evaluateEssay(String promptText, String essayText, boolean isTask1) {
@@ -169,6 +198,14 @@ public class WritingGradingService {
     }
 
     private void validateGradingJson(JsonNode json) {
+        // Presence alone is not enough: a score must be a number, or a string holding one.
+        // Checked for every field present, so an unusable response is retried rather than
+        // graded with a default.
+        for (String field : new String[] {"taskResponse", "taskAchievement", "coherence", "lexical", "grammar"}) {
+            if (json != null && json.has(field) && !isBandScore(json.get(field))) {
+                throw new InvalidAiResponseException("Grading response has a non-numeric " + field + " score");
+            }
+        }
         if (json == null) {
             throw new InvalidAiResponseException("Grading JSON is null");
         }
@@ -215,11 +252,20 @@ public class WritingGradingService {
         }
     }
 
+    private static boolean isBandScore(JsonNode node) {
+        if (node == null || node.isNull()) return false;
+        if (node.isNumber()) return true;
+        return node.isTextual() && node.asText().trim().matches("\\d+(\\.\\d+)?");
+    }
+
     private BigDecimal extractScore(JsonNode json, String field) {
         if ("taskResponse".equals(field) && !json.has("taskResponse") && json.has("taskAchievement")) {
             field = "taskAchievement";
         }
-        double score = json.path(field).asDouble(5.0);
+        // No default. This used to read asDouble(5.0), so a score Gemini returned as a word
+        // or a null became a silent 5.0 in the learner's result. validateGradingJson now
+        // rejects that response, which makes the client retry it.
+        double score = json.path(field).asDouble();
         score = Math.max(0, Math.min(9, score));
         score = Math.round(score * 2) / 2.0;
         return BigDecimal.valueOf(score).setScale(1, RoundingMode.HALF_UP);

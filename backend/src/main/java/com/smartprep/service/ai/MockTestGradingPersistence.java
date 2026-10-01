@@ -100,8 +100,8 @@ public class MockTestGradingPersistence {
                 .userId(submission.getUser().getUserId())
                 .task1PromptId(task1Prompt.getPromptId())
                 .task2PromptId(task2Prompt.getPromptId())
-                .task1PromptText(task1Prompt.getPromptText())
-                .task2PromptText(task2Prompt.getPromptText())
+                .task1PromptText(WritingGradingService.promptForGrading(task1Prompt))
+                .task2PromptText(WritingGradingService.promptForGrading(task2Prompt))
                 .build();
     }
 

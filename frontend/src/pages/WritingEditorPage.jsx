@@ -10,6 +10,7 @@ import useElapsedSeconds, { formatElapsed } from '../hooks/useElapsedSeconds';
 import { useToast } from '../context/ToastContext';
 import { mayHaveGradedAnyway, latestSubmissionId, findNewSubmission } from '../utils/gradingRecovery';
 import { isTask1Type, formatEssayType } from '../constants/examTypes';
+import VisualDataRenderer from '../components/writing/VisualDataRenderer';
 
 const SESSION_KEY_PREFIX = 'writing_single_attemptId_';
 // Mirrors the draft mechanism ReadingContext already uses for quiz answers.
@@ -446,10 +447,16 @@ export default function WritingEditorPage() {
             </p>
           </div>
 
-          {/* Task 1 image */}
+          {/* Task 1 chart. A prompt carries it as an image, as data, or both, and this page
+              used to draw only the image while the full exam drew only the data. */}
           {prompt?.imageUrl && (
             <div className="prompt-image-container">
               <img src={prompt.imageUrl} alt="Prompt Chart" className="prompt-image" loading="lazy" />
+            </div>
+          )}
+          {prompt?.visualData && (
+            <div className="prompt-image-container">
+              <VisualDataRenderer visualDataJson={prompt.visualData} essayType={prompt.essayType} />
             </div>
           )}
 
