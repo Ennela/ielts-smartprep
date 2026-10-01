@@ -65,7 +65,15 @@ public class WritingService {
         boolean isTask1 = prompt.getEssayType().isTask1();
         int minWordCount = isTask1 ? MIN_WORD_COUNT_TASK1 : MIN_WORD_COUNT_TASK2;
         int wordCount = writingGradingService.countWords(request.getEssayText());
-        validateMinimumWordCount(wordCount, minWordCount, isTask1 ? "Task 1" : "Task 2");
+        // The minimum is a gate for a candidate who is still writing: it stops them submitting
+        // too early. It is not a reason to throw away an essay when time runs out. That path
+        // used to refuse the essay, and the page then discarded the draft, so a candidate lost
+        // everything they had written. In the exam an under-length essay is still marked, and
+        // loses marks for its length; evaluateEssay already does that, and answers anything
+        // under ten words itself without calling the model.
+        if (!Boolean.TRUE.equals(request.getAutoSubmitted())) {
+            validateMinimumWordCount(wordCount, minWordCount, isTask1 ? "Task 1" : "Task 2");
+        }
 
         // No transaction is open across this call, which is the point.
         GradingResult gradingResult = writingGradingService.evaluateEssay(

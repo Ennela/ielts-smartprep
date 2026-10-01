@@ -206,9 +206,11 @@ export default function WritingEditorPage() {
       attemptApi.completeAttempt(storedAttemptId, { autoSubmitted: true }).catch(() => {});
     }
 
-    // If essay meets minimum, grade it; otherwise show time-expired message
-    if (currentWordCount >= (isTask1 ? 150 : 250)) {
-      writingApi.gradeEssay(Number(promptId), currentEssay)
+    // Time is up: whatever was written is marked, short or not, as it would be in the exam.
+    // This used to require the minimum here too, and otherwise discard the draft -- so a
+    // candidate who ran out of time lost everything they had written.
+    if (currentWordCount > 0) {
+      writingApi.gradeEssay(Number(promptId), currentEssay, true)
         .then(res => {
           sessionStorage.removeItem(sessionKey);
       try { localStorage.removeItem(DRAFT_KEY_PREFIX + promptId); } catch { /* ignore */ }
@@ -220,13 +222,12 @@ export default function WritingEditorPage() {
           submittingRef.current = false;
         });
     } else {
-      // Not enough words to grade. The draft has just been discarded above, so this
-      // is the only place the word count is ever reported — held for 12s rather than
-      // the 4s default so it stays readable after the redirect below. ToastProvider
-      // sits outside <Routes>, so the toast survives navigating away.
+      // Nothing was written, so there is nothing to keep and nothing to grade. Held for
+      // 12s rather than the 4s default so it stays readable after the redirect below;
+      // ToastProvider sits outside <Routes>, so the toast survives navigating away.
       sessionStorage.removeItem(sessionKey);
       try { localStorage.removeItem(DRAFT_KEY_PREFIX + promptId); } catch { /* ignore */ }
-      triggerWarningToast(`Time is up! Your essay has ${currentWordCount} words (minimum: ${isTask1 ? 150 : 250}). The essay was not graded because it did not meet the minimum word count.`, 12000);
+      triggerWarningToast('Time is up. Nothing was written, so there was nothing to grade.', 12000);
       setGrading(false);
       submittingRef.current = false;
       navigate('/writing', { replace: true });
