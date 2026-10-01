@@ -1,5 +1,7 @@
 package com.smartprep.service;
 
+import org.springframework.jdbc.core.JdbcTemplate;
+import com.smartprep.repository.SeededContentFixture;
 import com.smartprep.dto.request.MockTestSubmitRequest;
 import com.smartprep.model.entity.MockTest;
 import com.smartprep.model.entity.MockTestSession;
@@ -52,6 +54,7 @@ class MockTestScoreHistoryIntegrationTest extends AbstractMySQLContainerTest {
     @Autowired private MockTestService mockTestService;
     @Autowired private MockTestGradingPersistence persistence;
     @Autowired private MockTestRepository mockTestRepository;
+    @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private MockTestSessionRepository sessionRepository;
     @Autowired private MockTestSubmissionRepository submissionRepository;
     @Autowired private ScoreHistoryRepository scoreHistoryRepository;
@@ -74,8 +77,11 @@ class MockTestScoreHistoryIntegrationTest extends AbstractMySQLContainerTest {
         User user = userRepository.save(User.builder()
                 .username("history_user").passwordHash("x").email("history_user@example.test")
                 .displayName("History").role(Role.STUDENT).build());
+        // Used for its shape; V52 hides it because its reading passages are placeholders.
+        SeededContentFixture.restorePaper(jdbcTemplate);
+        SeededContentFixture.restoreReadingTemplates(jdbcTemplate);
         MockTest paper = mockTestRepository.findAll().stream()
-                .filter(m -> "Cambridge IELTS 19 Test 1".equals(m.getTitle()))
+                .filter(m -> SeededContentFixture.PAPER_TITLE.equals(m.getTitle()))
                 .findFirst().orElseThrow();
         int listeningQuestions = paper.getListeningParts().stream().mapToInt(p -> p.getQuestions().size()).sum();
         int readingQuestions = paper.getReadingQuizzes().stream().mapToInt(q -> q.getQuestions().size()).sum();
