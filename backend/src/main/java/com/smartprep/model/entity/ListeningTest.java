@@ -36,6 +36,13 @@ public class ListeningTest {
     @Column(nullable = false, updatable = false)
     private LocalDateTime submittedAt;
 
+    /**
+     * The sitting this result grades. Unique in the database (V51), so one sitting can
+     * produce one result and no more. Null only on rows written before that migration.
+     */
+    @Column(name = "attempt_id", updatable = false)
+    private Long attemptId;
+
     @OneToMany(mappedBy = "test", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<ListeningTestPart> testParts = new ArrayList<>();

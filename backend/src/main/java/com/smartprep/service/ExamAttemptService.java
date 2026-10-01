@@ -121,19 +121,26 @@ public class ExamAttemptService {
     }
 
     /**
-     * True when the attempt exists, belongs to this user, and has already been submitted.
-     * <p>
-     * Grading services use this as an idempotency key before creating result records.
-     * {@link #completeAttemptInternal} is idempotent on the attempt itself, but it runs
-     * after grading, so it cannot stop a resubmission from writing a second set of
-     * results. Returns false for an unknown or non-owned attempt so the caller falls
-     * through to its normal not-found handling.
+     * Refuse a submission for a sitting that has already been graded.
+     *
+     * <p>This gives the ordinary case a clear 400. It is not what makes the rule hold under
+     * concurrency: two requests can both pass it before either commits. The unique
+     * constraint on {@code listening_tests.attempt_id} (V51) is what lets exactly one of
+     * them through; the other fails with a 409.
+     *
+     * <p>An attempt that is not the caller's, does not exist, or belongs to another skill is
+     * reported as not found, the same answer an ownership failure gets everywhere else.
      */
     @Transactional(readOnly = true)
-    public boolean isAlreadySubmitted(Long attemptId, Long userId) {
-        return attemptRepository.findByAttemptIdAndUserUserId(attemptId, userId)
-                .map(attempt -> attempt.getStatus() == SessionStatus.SUBMITTED)
-                .orElse(false);
+    public void assertSubmittable(Long attemptId, Long userId, SkillType skillType) {
+        // The skill check matters: without it an unused Reading attempt could be spent on
+        // a Listening submission, giving a second sitting the first one never had.
+        ExamAttempt attempt = attemptRepository.findByAttemptIdAndUserUserId(attemptId, userId)
+                .filter(a -> a.getSkillType() == skillType)
+                .orElseThrow(() -> new ResourceNotFoundException("Exam attempt not found"));
+        if (attempt.getStatus() == SessionStatus.SUBMITTED) {
+            throw new IllegalArgumentException("This test has already been submitted");
+        }
     }
 
     /**

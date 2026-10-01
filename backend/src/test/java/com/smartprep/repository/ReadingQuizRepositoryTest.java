@@ -16,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -113,6 +114,64 @@ class ReadingQuizRepositoryTest extends AbstractMySQLContainerTest {
     // ===================================================================
     //  Helpers
     // ===================================================================
+
+    // ===================================================================
+    //  claimForSubmission — the reading half of the resubmission fix
+    // ===================================================================
+
+    @Test
+    @DisplayName("claimForSubmission — claims every unsubmitted quiz the caller owns")
+    void claim_claimsUnsubmittedQuizzes() {
+        ReadingQuiz a = entityManager.persistAndFlush(createQuiz(testUser, Topic.TECHNOLOGY, Difficulty.PASSAGE_1, false, null));
+        ReadingQuiz b = entityManager.persistAndFlush(createQuiz(testUser, Topic.TECHNOLOGY, Difficulty.PASSAGE_2, false, null));
+
+        int claimed = readingQuizRepository.claimForSubmission(
+                List.of(a.getQuizId(), b.getQuizId()), testUser.getUserId(), LocalDateTime.now());
+
+        assertThat(claimed).isEqualTo(2);
+        entityManager.clear();
+        assertThat(readingQuizRepository.findById(a.getQuizId()).orElseThrow().getSubmittedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("claimForSubmission — a second claim finds nothing left, which is what stops a resubmit")
+    void claim_isOnlyOnce() {
+        ReadingQuiz quiz = entityManager.persistAndFlush(createQuiz(testUser, Topic.TECHNOLOGY, Difficulty.PASSAGE_1, false, null));
+        List<Long> ids = List.of(quiz.getQuizId());
+
+        assertThat(readingQuizRepository.claimForSubmission(ids, testUser.getUserId(), LocalDateTime.now())).isEqualTo(1);
+        assertThat(readingQuizRepository.claimForSubmission(ids, testUser.getUserId(), LocalDateTime.now())).isZero();
+    }
+
+    @Test
+    @DisplayName("claimForSubmission — a partly submitted set claims less than was asked for")
+    void claim_partialSetIsDetectable() {
+        ReadingQuiz done = createQuiz(testUser, Topic.TECHNOLOGY, Difficulty.PASSAGE_1, false, null);
+        done.setSubmittedAt(LocalDateTime.now().minusDays(1));
+        done = entityManager.persistAndFlush(done);
+        ReadingQuiz fresh = entityManager.persistAndFlush(createQuiz(testUser, Topic.TECHNOLOGY, Difficulty.PASSAGE_2, false, null));
+
+        int claimed = readingQuizRepository.claimForSubmission(
+                List.of(done.getQuizId(), fresh.getQuizId()), testUser.getUserId(), LocalDateTime.now());
+
+        // The service compares this with the number of ids and refuses the whole submit.
+        assertThat(claimed).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("claimForSubmission — cannot claim another user's quiz")
+    void claim_isScopedToTheOwner() {
+        User other = entityManager.persistAndFlush(User.builder()
+                .username("reading_other_user")
+                .email("other@test.com")
+                .passwordHash("hash")
+                .role(Role.STUDENT)
+                .build());
+        ReadingQuiz theirs = entityManager.persistAndFlush(createQuiz(other, Topic.TECHNOLOGY, Difficulty.PASSAGE_1, false, null));
+
+        assertThat(readingQuizRepository.claimForSubmission(
+                List.of(theirs.getQuizId()), testUser.getUserId(), LocalDateTime.now())).isZero();
+    }
 
     private ReadingQuiz createQuiz(User user, Topic topic, Difficulty difficulty,
                                    boolean isTemplate, Long parentTemplateId) {

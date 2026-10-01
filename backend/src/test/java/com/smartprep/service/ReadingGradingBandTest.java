@@ -92,6 +92,9 @@ class ReadingGradingBandTest {
     void practiceBand_matchesSharedScale(int correct) {
         ReadingQuiz quiz = quizWith(correct);
         when(quizRepository.findByQuizIdAndUserUserId(QUIZ_ID, USER_ID)).thenReturn(Optional.of(quiz));
+        // The submit claims the quiz before grading it; an unstubbed mock returns 0, which
+        // reads as "someone else already submitted this" and stops the test before grading.
+        when(quizRepository.claimForSubmission(any(), any(), any())).thenReturn(1);
         when(quizRepository.save(any(ReadingQuiz.class))).thenAnswer(i -> i.getArgument(0));
         when(userRepository.findById(USER_ID)).thenReturn(Optional.of(User.builder().userId(USER_ID).build()));
         when(scoreHistoryRepository.save(any())).thenAnswer(i -> i.getArgument(0));

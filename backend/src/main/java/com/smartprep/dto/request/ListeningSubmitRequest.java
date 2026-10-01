@@ -22,7 +22,12 @@ public class ListeningSubmitRequest {
     @NotEmpty
     private Map<Long, String> answers;
 
-    /** Optional: links to ExamAttempt for timer tracking */
+    /**
+     * The sitting being submitted. Required: it is what limits a sitting to one graded
+     * result. While it was optional, leaving it out skipped the only resubmission check,
+     * and the response to every submit lists the correct answers.
+     */
+    @NotNull(message = "attemptId is required")
     private Long attemptId;
 
     /** True if auto-submitted when time expired */
