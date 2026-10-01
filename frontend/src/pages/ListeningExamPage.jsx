@@ -7,6 +7,8 @@ import adminApi from '../api/adminApi';
 import AudioPlayer from '../components/listening/AudioPlayer';
 import McqQuestion from '../components/listening/McqQuestion';
 import FillBlankQuestion from '../components/listening/FillBlankQuestion';
+import QuestionPanel from '../components/questions/QuestionPanel';
+import { usesGroupedLayout, questionOffset } from '../components/listening/groupedLayout';
 import useExamTimer from '../hooks/useExamTimer';
 import useExamWarnings from '../hooks/useExamWarnings';
 import { useToast } from '../context/ToastContext';
@@ -490,6 +492,15 @@ export default function ListeningExamPage() {
             )}
 
             {/* Questions */}
+            {usesGroupedLayout(currentPart.questions) ? (
+              <QuestionPanel
+                questions={[...(currentPart.questions || [])].sort((a, b) => a.orderIndex - b.orderIndex)}
+                answers={answers}
+                setAnswer={handleAnswer}
+                showCorrectAnswers={isPreview}
+                numberOffset={questionOffset(parts, currentPartIndex)}
+              />
+            ) : (
             <div className="listening-questions">
               {(currentPart.questions || [])
                 .sort((a, b) => a.orderIndex - b.orderIndex)
@@ -528,6 +539,7 @@ export default function ListeningExamPage() {
                   );
                 })}
             </div>
+            )}
           </>
         )}
       </main>

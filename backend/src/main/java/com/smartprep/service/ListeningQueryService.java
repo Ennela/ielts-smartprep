@@ -131,6 +131,11 @@ public class ListeningQueryService {
                         .questionText(q.getQuestionText())
                         .options(QuestionOptionMapper.mapForExam(q.getOptions()))
                         .orderIndex(q.getOrderIndex())
+                        .groupId(q.getGroupId())
+                        .groupLabel(q.getGroupLabel())
+                        .groupContext(q.getGroupContext())
+                        .optionsJson(q.getOptionsJson())
+                        .wordLimit(q.getWordLimit())
                         .build())
                 .collect(Collectors.toList());
 
@@ -176,7 +181,7 @@ public class ListeningQueryService {
                 // The same rule the grader applied. This page kept a private copy of an older one,
                 // so it could show a graded-correct answer as wrong.
                 boolean isCorrect = IeltsScoringUtils.isListeningCorrect(
-                        q.getCorrectAnswer(), userAnswer, q.getQuestionType().name());
+                        q.getCorrectAnswer(), userAnswer, q.getQuestionType().name(), q.getWordLimit());
                 if (isCorrect) correctCount++;
 
                 questionResults.add(ListeningTestResponse.QuestionResult.builder()
@@ -184,7 +189,10 @@ public class ListeningQueryService {
                         .questionText(q.getQuestionText())
                         .options(QuestionOptionMapper.mapForReview(q.getOptions()))
                         .correctAnswer(q.getCorrectAnswer()).userAnswer(userAnswer)
-                        .isCorrect(isCorrect).orderIndex(q.getOrderIndex()).build());
+                        .isCorrect(isCorrect).orderIndex(q.getOrderIndex())
+                        .groupId(q.getGroupId()).groupLabel(q.getGroupLabel())
+                        .groupContext(q.getGroupContext()).optionsJson(q.getOptionsJson())
+                        .wordLimit(q.getWordLimit()).explanation(q.getExplanation()).build());
             }
 
             partResults.add(ListeningTestResponse.PartResult.builder()

@@ -41,6 +41,29 @@ public class ListeningQuestion {
     @Column(nullable = false)
     private Integer orderIndex;
 
+    // --- Grouping, as on ReadingQuestion (V54) ---
+
+    /** Questions sharing the same group share this ID */
+    private Integer groupId;
+
+    /** Group label, e.g. "Questions 16-20: Choose FIVE answers from the box" */
+    @Column(length = 255)
+    private String groupLabel;
+
+    /** Shared context for the group: the form or notes, with gaps written ___N___ */
+    @Column(columnDefinition = "TEXT")
+    private String groupContext;
+
+    /** JSON array of options the group chooses from, e.g. ["A. car park", "B. cafe", ...] */
+    @Column(columnDefinition = "TEXT")
+    private String optionsJson;
+
+    /** Word limit for completion types, e.g. 2 = "NO MORE THAN TWO WORDS" */
+    private Integer wordLimit;
+
+    @Column(columnDefinition = "TEXT")
+    private String explanation;
+
     @Builder.Default
     @Column(nullable = false)
     private Boolean verified = false;

@@ -43,5 +43,11 @@ public class ListeningTestResponse {
         private String userAnswer;
         private Boolean isCorrect;
         private Integer orderIndex;
+        private Integer groupId;
+        private String groupLabel;
+        private String groupContext;
+        private String optionsJson;
+        private Integer wordLimit;
+        private String explanation;
     }
 }

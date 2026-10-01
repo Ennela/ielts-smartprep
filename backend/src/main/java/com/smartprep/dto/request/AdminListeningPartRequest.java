@@ -55,6 +55,14 @@ public class AdminListeningPartRequest {
 
         private List<OptionRequest> options;
 
+        // Optional grouping, as on Reading questions
+        private Integer groupId;
+        private String groupLabel;
+        private String groupContext;
+        private String optionsJson;
+        private Integer wordLimit;
+        private String explanation;
+
         @Data
         @Builder
         @NoArgsConstructor

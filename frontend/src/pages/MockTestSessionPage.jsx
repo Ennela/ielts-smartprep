@@ -4,6 +4,8 @@ import { useMockTest } from '../context/MockTestContext';
 import AudioPlayer from '../components/listening/AudioPlayer';
 import McqQuestion from '../components/listening/McqQuestion';
 import FillBlankQuestion from '../components/listening/FillBlankQuestion';
+import QuestionPanel from '../components/questions/QuestionPanel';
+import { usesGroupedLayout, questionOffset } from '../components/listening/groupedLayout';
 import PassageViewer from '../components/reading/PassageViewer';
 import MockTestQuestionPanel from '../components/mocktest/MockTestQuestionPanel';
 import { useToast } from '../context/ToastContext';
@@ -355,6 +357,14 @@ export default function MockTestSessionPage() {
               </div>
 
               {/* Questions List */}
+              {usesGroupedLayout(currentListeningPart.questions) ? (
+                <QuestionPanel
+                  questions={[...(currentListeningPart.questions || [])].sort((a, b) => a.orderIndex - b.orderIndex)}
+                  answers={answers}
+                  setAnswer={setAnswer}
+                  numberOffset={questionOffset(listeningParts, activeListeningPart)}
+                />
+              ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 {(currentListeningPart.questions || [])
                   .sort((a, b) => a.orderIndex - b.orderIndex)
@@ -379,6 +389,7 @@ export default function MockTestSessionPage() {
                     );
                   })}
               </div>
+              )}
             </div>
           </div>
         )}

@@ -211,12 +211,20 @@ public class IeltsScoringUtils {
      * and goes through {@link #writtenAnswerMatches}, the same comparison Reading uses.
      */
     public static boolean isListeningCorrect(String correct, String userAnswer, String questionType) {
-        if (userAnswer == null || userAnswer.isBlank()) return false;
+        return isListeningCorrect(correct, userAnswer, questionType, null);
+    }
 
-        if ("MCQ".equals(questionType)) {
-            return correct.trim().equalsIgnoreCase(userAnswer.trim());
-        }
-        return writtenAnswerMatches(correct, userAnswer);
+    /**
+     * Check a Listening answer against the question's word limit as well.
+     *
+     * <p>Listening uses Reading's question types -- a matching group answers with a letter, a
+     * form or notes group with words -- and they are marked the same way, so this is the
+     * Reading rule. Before V54 a Listening question could only be MCQ or a gap, and a letter
+     * answer to a matching question would have been compared as words.
+     */
+    public static boolean isListeningCorrect(String correct, String userAnswer, String questionType,
+                                             Integer wordLimit) {
+        return isReadingCorrect(QuestionType.valueOf(questionType), correct, userAnswer, wordLimit);
     }
 
     /**

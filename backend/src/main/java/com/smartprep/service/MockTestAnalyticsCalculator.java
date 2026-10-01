@@ -143,7 +143,7 @@ public class MockTestAnalyticsCalculator {
             for (ListeningQuestion q : part.getQuestions()) {
                 String userAnswer = answers.get(q.getQuestionId().toString());
                 boolean correct = IeltsScoringUtils.isListeningCorrect(
-                        q.getCorrectAnswer(), userAnswer, q.getQuestionType().name());
+                        q.getCorrectAnswer(), userAnswer, q.getQuestionType().name(), q.getWordLimit());
                 graded.add(new AnsweredQuestion(q.getQuestionId(), q.getOrderIndex(), section,
                         q.getQuestionType().name(), q.getQuestionText(),
                         userAnswer, q.getCorrectAnswer(), correct));

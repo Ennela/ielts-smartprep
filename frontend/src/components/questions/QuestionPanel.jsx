@@ -9,8 +9,11 @@ import { memo, useCallback, useMemo, useState } from 'react';
  * context so either exam can pass its own answers and handler:
  *   - src/components/reading/QuestionPanel.jsx binds it to ReadingContext
  *   - src/components/mocktest/MockTestQuestionPanel.jsx binds it to MockTestContext
+ * Listening uses it too, for parts whose questions are grouped. A Listening paper numbers
+ * its questions 1-40 across four parts while orderIndex restarts in each part, so
+ * numberOffset is added to every number shown.
  */
-export default function QuestionPanel({ questions, answers, setAnswer, disabled = false, showCorrectAnswers = false }) {
+export default function QuestionPanel({ questions, answers, setAnswer, disabled = false, showCorrectAnswers = false, numberOffset = 0 }) {
   // Grouped before the empty check: an early return above a hook is a conditional
   // hook call, which React only tolerates while the component never flips between
   // the two paths.
@@ -47,6 +50,7 @@ export default function QuestionPanel({ questions, answers, setAnswer, disabled 
           setAnswer={setAnswer}
           disabled={disabled}
           showCorrectAnswers={showCorrectAnswers}
+          numberOffset={numberOffset}
         />
       ))}
     </div>
@@ -56,7 +60,7 @@ export default function QuestionPanel({ questions, answers, setAnswer, disabled 
 // ============================================================
 // QuestionGroup — renders a group label + context + questions
 // ============================================================
-function QuestionGroup({ group, answers, setAnswer, disabled, showCorrectAnswers }) {
+function QuestionGroup({ group, answers, setAnswer, disabled, showCorrectAnswers, numberOffset }) {
   // Parse group-level options once
   const groupOptions = useMemo(() => {
     if (!group.optionsJson) return null;
@@ -106,7 +110,7 @@ function QuestionGroup({ group, answers, setAnswer, disabled, showCorrectAnswers
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px' }}>
                 {group.questions.map((q) => (
                   <div key={q.questionId} style={{ fontSize: '0.8rem', color: '#006c4a', display: 'flex', gap: '4px' }}>
-                    <strong>Q{q.orderIndex}:</strong>
+                    <strong>Q{numberOffset + q.orderIndex}:</strong>
                     <span>{q.correctAnswer}</span>
                   </div>
                 ))}
@@ -127,7 +131,7 @@ function QuestionGroup({ group, answers, setAnswer, disabled, showCorrectAnswers
           <QuestionItem
             key={q.questionId}
             question={q}
-            number={q.orderIndex || idx + 1}
+            number={numberOffset + (q.orderIndex || idx + 1)}
             value={answers[q.questionId]}
             setAnswer={setAnswer}
             disabled={disabled}

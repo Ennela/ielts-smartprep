@@ -1,5 +1,8 @@
 package com.smartprep.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartprep.dto.request.AdminListeningPartRequest;
 import com.smartprep.dto.response.AdminListeningPartResponse;
 import com.smartprep.dto.response.AdminListeningStatsResponse;
@@ -93,6 +96,12 @@ public class AdminListeningService {
                             .questionText(q.getQuestionText())
                             .correctAnswer(q.getCorrectAnswer().trim())
                             .orderIndex(q.getOrderIndex())
+                            .groupId(q.getGroupId())
+                            .groupLabel(blankToNull(q.getGroupLabel()))
+                            .groupContext(blankToNull(q.getGroupContext()))
+                            .optionsJson(optionsJsonOrNull(q.getOptionsJson()))
+                            .wordLimit(q.getWordLimit())
+                            .explanation(blankToNull(q.getExplanation()))
                             .build();
 
                     List<QuestionOption> options = new ArrayList<>();
@@ -154,6 +163,12 @@ public class AdminListeningService {
                             .questionText(q.getQuestionText())
                             .correctAnswer(q.getCorrectAnswer().trim())
                             .orderIndex(q.getOrderIndex())
+                            .groupId(q.getGroupId())
+                            .groupLabel(blankToNull(q.getGroupLabel()))
+                            .groupContext(blankToNull(q.getGroupContext()))
+                            .optionsJson(optionsJsonOrNull(q.getOptionsJson()))
+                            .wordLimit(q.getWordLimit())
+                            .explanation(blankToNull(q.getExplanation()))
                             .build();
 
                     List<QuestionOption> options = new ArrayList<>();
@@ -274,6 +289,12 @@ public class AdminListeningService {
                         .correctAnswer(q.getCorrectAnswer())
                         .orderIndex(q.getOrderIndex())
                         .options(QuestionOptionMapper.mapForReview(q.getOptions()))
+                        .groupId(q.getGroupId())
+                        .groupLabel(q.getGroupLabel())
+                        .groupContext(q.getGroupContext())
+                        .optionsJson(q.getOptionsJson())
+                        .wordLimit(q.getWordLimit())
+                        .explanation(q.getExplanation())
                         .build())
                 .collect(Collectors.toList());
 
@@ -309,4 +330,31 @@ public class AdminListeningService {
         }
         return Sort.by(direction, field);
     }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    /**
+     * The group's options, checked to be what the exam page parses: a JSON array of strings.
+     * Anything else would save, then render as a group with nothing to choose from.
+     */
+    private static String optionsJsonOrNull(String value) {
+        String json = blankToNull(value);
+        if (json == null) return null;
+        try {
+            JsonNode node = OPTIONS_READER.readTree(json);
+            if (node.isArray() && node.size() > 0) {
+                boolean allText = true;
+                for (JsonNode item : node) allText &= item.isTextual();
+                if (allText) return json;
+            }
+        } catch (JsonProcessingException e) {
+            // reported below
+        }
+        throw new IllegalArgumentException(
+                "Group options must be a JSON array of strings, e.g. [\"A. car park\", \"B. cafe\"]");
+    }
+
+    private static final ObjectMapper OPTIONS_READER = new ObjectMapper();
 }

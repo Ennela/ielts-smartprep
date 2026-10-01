@@ -26,5 +26,10 @@ public class ListeningPartResponse {
         private String questionText;
         private List<QuestionOptionResponse> options;
         private Integer orderIndex;
+        private Integer groupId;
+        private String groupLabel;
+        private String groupContext;
+        private String optionsJson;
+        private Integer wordLimit;
     }
 }

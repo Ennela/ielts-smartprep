@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import listeningApi from '../api/listeningApi';
 import AiVocabularyButton from '../components/vocab/AiVocabularyButton';
@@ -194,8 +194,13 @@ export default function ListeningResultPage() {
               <div key={part.partId} className="result-part-section">
                 <h3>Part {part.partNumber}: {part.title}</h3>
                 <div className="answer-grid">
-                  {part.questions?.sort((a,b) => a.orderIndex - b.orderIndex).map(q => (
-                    <div key={q.questionId} className={`answer-card ${q.isCorrect ? 'correct' : 'wrong'}`}>
+                  {part.questions?.sort((a,b) => a.orderIndex - b.orderIndex).map((q, i, sorted) => (
+                    <Fragment key={q.questionId}>
+                    {/* A grouped part (V54) states its instructions once, above the group. */}
+                    {q.groupLabel && (i === 0 || sorted[i - 1].groupId !== q.groupId) && (
+                      <div className="group-label" style={{ gridColumn: '1 / -1' }}>{q.groupLabel}</div>
+                    )}
+                    <div className={`answer-card ${q.isCorrect ? 'correct' : 'wrong'}`}>
                       <div className="answer-card-header">
                         <span className={`answer-status ${q.isCorrect ? 'status-correct' : 'status-wrong'}`}>
                           {q.isCorrect ? '✓' : '✗'}
@@ -279,7 +284,11 @@ export default function ListeningResultPage() {
                           </div>
                         </div>
                       )}
+                      {q.explanation && (
+                        <p className="answer-explanation" style={{ marginTop: 8, fontSize: '0.85rem' }}>{q.explanation}</p>
+                      )}
                     </div>
+                    </Fragment>
                   ))}
                 </div>
               </div>
