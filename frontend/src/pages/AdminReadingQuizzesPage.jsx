@@ -122,6 +122,7 @@ export default function AdminReadingQuizzesPage() {
           const optB = q.options.find(o => o.label === 'B')?.content || '';
           const optC = q.options.find(o => o.label === 'C')?.content || '';
           const optD = q.options.find(o => o.label === 'D')?.content || '';
+          mappedQ.optionE = q.options.find(o => o.label === 'E')?.content || '';
           mappedQ.optionA = optA;
           mappedQ.optionB = optB;
           mappedQ.optionC = optC;
@@ -162,8 +163,10 @@ export default function AdminReadingQuizzesPage() {
           optionB: '',
           optionC: '',
           optionD: '',
+          optionE: '',
           correctAnswer: 'A',
           explanation: '',
+          selectCount: 1,
           orderIndex: f.questions.length + 1
         }
       ]
@@ -225,6 +228,7 @@ export default function AdminReadingQuizzesPage() {
         if (q.optionB && q.optionB.trim()) opts.push({ label: 'B', content: q.optionB.trim() });
         if (q.optionC && q.optionC.trim()) opts.push({ label: 'C', content: q.optionC.trim() });
         if (q.optionD && q.optionD.trim()) opts.push({ label: 'D', content: q.optionD.trim() });
+        if (q.optionE && q.optionE.trim()) opts.push({ label: 'E', content: q.optionE.trim() });
         copy.options = opts;
       } else {
         copy.options = null;
@@ -580,6 +584,7 @@ export default function AdminReadingQuizzesPage() {
                               <option value="B">B</option>
                               <option value="C">C</option>
                               <option value="D">D</option>
+                              <option value="E">E</option>
                             </select>
                           ) : q.questionType === 'TFNG' ? (
                             <select
@@ -670,6 +675,16 @@ export default function AdminReadingQuizzesPage() {
                               style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
                             />
                           </div>
+                          <div>
+                            <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Option E</label>
+                            <input
+                              type="text"
+                              className="completion-input"
+                              value={q.optionE || ''}
+                              onChange={e => updateQuestionField(idx, 'optionE', e.target.value)}
+                              style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
+                            />
+                          </div>
                         </div>
                       )}
 
@@ -707,6 +722,21 @@ export default function AdminReadingQuizzesPage() {
                           />
                         </div>
                       </div>
+
+                      {q.questionType === 'MCQ' && (
+                        <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                          <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Letters to choose (MCQ) — 2 for "Choose TWO letters": give every question of the task the same group number and count, and each its own correct letter</label>
+                          <input
+                            type="number"
+                            min="1"
+                            max="3"
+                            className="completion-input"
+                            value={q.selectCount || 1}
+                            onChange={e => updateQuestionField(idx, 'selectCount', parseInt(e.target.value) || 1)}
+                            style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
+                          />
+                        </div>
+                      )}
 
                       {q.groupId && (
                         <div className="admin-form-group" style={{ marginBottom: '1rem' }}>

@@ -249,6 +249,7 @@ public class AdminService {
                             .optionsJson(q.getOptionsJson())
                             .wordLimit(q.getWordLimit())
                             .groupLabel(q.getGroupLabel())
+                            .selectCount(q.getSelectCount() != null ? q.getSelectCount() : 1)
                             .groupId(q.getGroupId())
                             .groupContext(q.getGroupContext())
                             .build();
@@ -308,6 +309,7 @@ public class AdminService {
                             .optionsJson(q.getOptionsJson())
                             .wordLimit(q.getWordLimit())
                             .groupLabel(q.getGroupLabel())
+                            .selectCount(q.getSelectCount() != null ? q.getSelectCount() : 1)
                             .groupId(q.getGroupId())
                             .groupContext(q.getGroupContext())
                             .build();
@@ -373,6 +375,7 @@ public class AdminService {
                         .optionsJson(q.getOptionsJson())
                         .wordLimit(q.getWordLimit())
                         .groupLabel(q.getGroupLabel())
+                        .selectCount(q.getSelectCount())
                         .groupId(q.getGroupId())
                         .groupContext(q.getGroupContext())
                         .evidenceText(q.getEvidenceText())

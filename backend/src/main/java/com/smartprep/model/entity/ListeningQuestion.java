@@ -61,6 +61,14 @@ public class ListeningQuestion {
     /** Word limit for completion types, e.g. 2 = "NO MORE THAN TWO WORDS" */
     private Integer wordLimit;
 
+    /**
+     * How many letters a multiple-choice task takes: 1, or 2 for "Choose TWO letters" (V55).
+     * Every row of such a task carries the same count and its own correct letter.
+     */
+    @Builder.Default
+    @Column(nullable = false)
+    private Integer selectCount = 1;
+
     @Column(columnDefinition = "TEXT")
     private String explanation;
 

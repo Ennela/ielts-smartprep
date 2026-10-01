@@ -74,12 +74,15 @@ export default function AdminPartEditorPage() {
                   optionB: '',
                   optionC: '',
                   optionD: '',
+                  optionE: '',
+                  selectCount: q.selectCount || 1,
                 };
                 if (q.options && q.options.length > 0) {
                   mappedQ.optionA = q.options.find(o => o.label === 'A')?.content || '';
                   mappedQ.optionB = q.options.find(o => o.label === 'B')?.content || '';
                   mappedQ.optionC = q.options.find(o => o.label === 'C')?.content || '';
                   mappedQ.optionD = q.options.find(o => o.label === 'D')?.content || '';
+                  mappedQ.optionE = q.options.find(o => o.label === 'E')?.content || '';
                 }
                 return mappedQ;
               }) : [],
@@ -104,8 +107,10 @@ export default function AdminPartEditorPage() {
           optionB: '',
           optionC: '',
           optionD: '',
+          optionE: '',
           correctAnswer: 'A',
           orderIndex: f.questions.length + 1,
+          selectCount: 1,
           ...EMPTY_GROUP,
         }
       ]
@@ -160,13 +165,15 @@ export default function AdminPartEditorPage() {
 
     // Format payload
     const formattedQuestions = form.questions.map(({ rowKey: _rowKey, ...q }) => {
-      const copy = { ...q, groupId: toIntOrNull(q.groupId), wordLimit: toIntOrNull(q.wordLimit) };
+      const copy = { ...q, groupId: toIntOrNull(q.groupId), wordLimit: toIntOrNull(q.wordLimit),
+        selectCount: toIntOrNull(q.selectCount) || 1 };
       if (q.questionType === 'MCQ') {
         const opts = [];
         if (q.optionA.trim()) opts.push({ label: 'A', content: q.optionA.trim() });
         if (q.optionB.trim()) opts.push({ label: 'B', content: q.optionB.trim() });
         if (q.optionC.trim()) opts.push({ label: 'C', content: q.optionC.trim() });
         if (q.optionD.trim()) opts.push({ label: 'D', content: q.optionD.trim() });
+        if (q.optionE.trim()) opts.push({ label: 'E', content: q.optionE.trim() });
         copy.options = opts;
       } else {
         copy.options = null;
@@ -364,6 +371,7 @@ export default function AdminPartEditorPage() {
                           <option value="B">B</option>
                           <option value="C">C</option>
                           <option value="D">D</option>
+                          <option value="E">E</option>
                         </select>
                       ) : (
                         <input
@@ -411,6 +419,14 @@ export default function AdminPartEditorPage() {
                           style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }} />
                       </div>
                     </div>
+                    {q.questionType === 'MCQ' && (
+                      <>
+                        <label className="admin-form-label" style={{ fontSize: '0.8rem', marginTop: '0.75rem', display: 'block' }}>Letters to choose (MCQ) — 2 for "Choose TWO letters": give every question of the task the same group number and count, and each its own correct letter</label>
+                        <input type="number" min="1" max="3" className="completion-input" value={q.selectCount}
+                          onChange={e => updateQuestionField(idx, 'selectCount', e.target.value)}
+                          style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }} />
+                      </>
+                    )}
                     <label className="admin-form-label" style={{ fontSize: '0.8rem', marginTop: '0.75rem', display: 'block' }}>Group instructions (first question of the group)</label>
                     <input type="text" className="completion-input" value={q.groupLabel}
                       onChange={e => updateQuestionField(idx, 'groupLabel', e.target.value)}
@@ -473,6 +489,16 @@ export default function AdminPartEditorPage() {
                           className="completion-input"
                           value={q.optionD}
                           onChange={e => updateQuestionField(idx, 'optionD', e.target.value)}
+                          style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
+                        />
+                      </div>
+                      <div>
+                        <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Option E</label>
+                        <input
+                          type="text"
+                          className="completion-input"
+                          value={q.optionE}
+                          onChange={e => updateQuestionField(idx, 'optionE', e.target.value)}
                           style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
                         />
                       </div>

@@ -120,8 +120,19 @@ function QuestionGroup({ group, answers, setAnswer, disabled, showCorrectAnswers
         </>
       )}
 
+      {isMultiSelectGroup(group) && (
+        <MultiSelectTask
+          questions={group.questions}
+          answers={answers}
+          setAnswer={setAnswer}
+          disabled={disabled}
+          numberOffset={numberOffset}
+          showCorrectAnswers={showCorrectAnswers}
+        />
+      )}
+
       {/* Render individual questions */}
-      {group.questions.map((q, idx) => {
+      {!isMultiSelectGroup(group) && group.questions.map((q, idx) => {
         // For SUMMARY_COMPLETION with context, blanks are in the SummaryBlock
         if (group.groupContext && group.groupType === 'SUMMARY_COMPLETION') {
           return null; // Already rendered inline
@@ -140,6 +151,77 @@ function QuestionGroup({ group, answers, setAnswer, disabled, showCorrectAnswers
           />
         );
       })}
+    </div>
+  );
+}
+
+// ============================================================
+// MultiSelectTask — "Choose TWO letters, A-E" (V55)
+//
+// One task, one set of checkboxes, but two (or three) question numbers: each row of the
+// group is one number with one correct letter. The whole choice, e.g. "B,D", is written to
+// every row, and the server gives a row its mark when its letter is in the choice.
+// ============================================================
+function isMultiSelectGroup(group) {
+  const first = group.questions[0];
+  return !!first && first.questionType === 'MCQ' && (first.selectCount || 1) > 1;
+}
+
+function MultiSelectTask({ questions, answers, setAnswer, disabled, numberOffset, showCorrectAnswers }) {
+  const first = questions[0];
+  const limit = first.selectCount;
+  const options = (first.options && first.options.length > 0)
+    ? first.options.map(opt => ({ key: opt.label, text: opt.content }))
+    : ['A', 'B', 'C', 'D', 'E'].map(k => ({ key: k, text: first[`option${k}`] })).filter(o => o.text);
+
+  const chosen = (answers[first.questionId] || '').split(',').filter(Boolean);
+
+  const toggle = (letter) => {
+    let next;
+    if (chosen.includes(letter)) {
+      next = chosen.filter(l => l !== letter);
+    } else {
+      if (chosen.length >= limit) return; // the task takes no more letters than this
+      next = [...chosen, letter];
+    }
+    const value = next.sort().join(',');
+    questions.forEach(q => setAnswer(q.questionId, value));
+  };
+
+  const firstNumber = numberOffset + (first.orderIndex || 1);
+  const lastNumber = firstNumber + questions.length - 1;
+
+  return (
+    <div className="question-item">
+      <div className="question-number">Questions {firstNumber}–{lastNumber}</div>
+      <p className="question-text">{first.questionText}</p>
+      <p className="text-muted" style={{ fontSize: '0.85rem', margin: '4px 0 8px' }}>
+        Choose {limit} letters ({chosen.length}/{limit} chosen)
+      </p>
+      <div className="mcq-options">
+        {options.map(opt => {
+          const checked = chosen.includes(opt.key);
+          return (
+            <label key={opt.key} className={`mcq-option ${checked ? 'selected' : ''}`}>
+              <input
+                type="checkbox"
+                name={`q-${first.questionId}-${opt.key}`}
+                checked={checked}
+                onChange={() => toggle(opt.key)}
+                disabled={disabled || (!checked && chosen.length >= limit)}
+              />
+              <span className="mcq-radio-mark"></span>
+              <span className="mcq-key">{opt.key}.</span>
+              <span className="mcq-label">{opt.text}</span>
+            </label>
+          );
+        })}
+      </div>
+      {showCorrectAnswers && (
+        <div style={ANSWER_KEY_STYLE}>
+          Đáp án đúng: {questions.map(q => q.correctAnswer).filter(Boolean).join(', ')}
+        </div>
+      )}
     </div>
   );
 }

@@ -42,6 +42,7 @@ public class ReadingQuizResponse {
         // New fields for advanced question types
         private String optionsJson;   // JSON array for matching dropdowns
         private Integer wordLimit;    // word limit for completion types
+        private Integer selectCount;  // > 1: "Choose N letters", see V55
         private String groupLabel;    // group header text
         private Integer groupId;      // group identifier
         private String groupContext;  // shared context (summary text with blanks)

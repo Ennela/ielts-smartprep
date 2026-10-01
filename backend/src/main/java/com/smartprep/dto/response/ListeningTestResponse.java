@@ -48,6 +48,7 @@ public class ListeningTestResponse {
         private String groupContext;
         private String optionsJson;
         private Integer wordLimit;
+        private Integer selectCount;  // > 1: "Choose N letters", see V55
         private String explanation;
     }
 }

@@ -8,6 +8,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 @Slf4j
@@ -224,7 +226,13 @@ public class IeltsScoringUtils {
      */
     public static boolean isListeningCorrect(String correct, String userAnswer, String questionType,
                                              Integer wordLimit) {
-        return isReadingCorrect(QuestionType.valueOf(questionType), correct, userAnswer, wordLimit);
+        return isListeningCorrect(correct, userAnswer, questionType, wordLimit, 1);
+    }
+
+    /** As above, for a question that may belong to a "Choose N letters" task (V55). */
+    public static boolean isListeningCorrect(String correct, String userAnswer, String questionType,
+                                             Integer wordLimit, Integer selectCount) {
+        return isReadingCorrect(QuestionType.valueOf(questionType), correct, userAnswer, wordLimit, selectCount);
     }
 
     /**
@@ -243,7 +251,26 @@ public class IeltsScoringUtils {
      */
     public static boolean isReadingCorrect(QuestionType questionType, String correctAnswer, String userAnswer,
                                            Integer wordLimit) {
+        return isReadingCorrect(questionType, correctAnswer, userAnswer, wordLimit, 1);
+    }
+
+    /**
+     * Check an answer to a question that may belong to a "Choose N letters" task (V55).
+     *
+     * @param selectCount how many letters the task takes. Above 1, the answer is the
+     *                    candidate's whole choice, e.g. "B,D", recorded on every row of the
+     *                    task; this row scores when its own letter is in the choice. A choice
+     *                    of more letters than the task allows scores nothing, so choosing
+     *                    every letter cannot collect every mark, and a letter chosen twice
+     *                    still counts once.
+     */
+    public static boolean isReadingCorrect(QuestionType questionType, String correctAnswer, String userAnswer,
+                                           Integer wordLimit, Integer selectCount) {
         if (userAnswer == null || userAnswer.isBlank()) return false;
+        if (questionType == QuestionType.MCQ && selectCount != null && selectCount > 1) {
+            Set<String> chosen = chosenLetters(userAnswer);
+            return chosen.size() <= selectCount && chosen.contains(correctAnswer.trim().toUpperCase(Locale.ROOT));
+        }
         String correct = correctAnswer.trim();
         String answer = userAnswer.trim();
 
@@ -260,6 +287,15 @@ public class IeltsScoringUtils {
             case SENTENCE_COMPLETION, SUMMARY_COMPLETION, FILL_BLANK, DIAGRAM_LABEL_COMPLETION, SHORT_ANSWER ->
                 !exceedsWordLimit(answer, wordLimit) && writtenAnswerMatches(correct, answer);
         };
+    }
+
+    /** "b, D" -> {B, D}. Letters may be separated by commas, spaces or nothing at all. */
+    static Set<String> chosenLetters(String answer) {
+        Set<String> letters = new TreeSet<>();
+        for (char c : answer.toUpperCase(Locale.ROOT).toCharArray()) {
+            if (c >= 'A' && c <= 'Z') letters.add(String.valueOf(c));
+        }
+        return letters;
     }
 
     // ── Written answers ──────────────────────────────────────────────────────
