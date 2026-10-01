@@ -6,9 +6,12 @@ import com.smartprep.model.enums.AudioStatus;
 import com.smartprep.repository.ListeningPartRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -43,6 +46,30 @@ public class ListeningAudioService {
 
     public void generateAudioAsync(Long partId) {
         audioGenerationService.generateAudioAsync(partId);
+    }
+
+    /**
+     * Voice every part that is waiting for audio when the application starts.
+     *
+     * <p>Nothing else picks up a PENDING part: generation is started by whoever created the
+     * part, and the learner's page only polls. So a part left PENDING -- the V6 seed after
+     * V53, or a part whose generation a restart cut short -- stayed silent until an admin
+     * regenerated it by hand. A part without a transcript is left alone; there is nothing
+     * to voice.
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void generatePendingAudio() {
+        if (!ttsService.isAvailable()) {
+            return;
+        }
+        List<Long> pending = partRepository.findByAudioStatus(AudioStatus.PENDING).stream()
+                .filter(p -> p.getTranscriptText() != null && !p.getTranscriptText().isBlank())
+                .map(ListeningPart::getPartId)
+                .toList();
+        if (!pending.isEmpty()) {
+            log.info("Generating audio for {} listening part(s) left pending: {}", pending.size(), pending);
+            pending.forEach(audioGenerationService::generateAudioAsync);
+        }
     }
 
     /**
