@@ -93,4 +93,28 @@ public interface ReadingQuizRepository extends JpaRepository<ReadingQuiz, Long> 
     int claimForSubmission(@Param("quizIds") Collection<Long> quizIds,
                            @Param("userId") Long userId,
                            @Param("now") LocalDateTime now);
+
+    // ── Learner-facing ──────────────────────────────────────────────────────
+    //
+    // Everything a learner is offered from a shared pool comes through the methods below,
+    // and they return reviewed (PUBLISHED) content only. The queries above do not filter on
+    // content_status, and until now every learner list used them: a DRAFT written by an
+    // admin, or an unreviewed AI item another learner had generated, was handed to anyone.
+    // Admin screens keep using the unfiltered queries, because drafts are their job.
+    // Fetching one item by id is left alone, so a learner can still open the item they
+    // have just generated.
+
+    /** {@link #findQuizzesForAdmin} restricted to reviewed content. */
+    @Query("SELECT q FROM ReadingQuiz q WHERE " +
+           "((:source = 'ADMIN' AND q.isTemplate = true) OR " +
+           " (:source = 'AI' AND q.isTemplate = false AND q.parentTemplateId IS NULL) OR " +
+           " (:source IS NULL AND (q.isTemplate = true OR (q.isTemplate = false AND q.parentTemplateId IS NULL)))) " +
+           "AND (:topic IS NULL OR q.topic = :topic) " +
+           "AND (:difficulty IS NULL OR q.difficulty = :difficulty) " +
+           "AND q.deletedAt IS NULL AND q.contentStatus = com.smartprep.model.enums.ContentStatus.PUBLISHED")
+    Page<ReadingQuiz> findPublishedQuizzes(
+            @Param("topic") Topic topic,
+            @Param("difficulty") Difficulty difficulty,
+            @Param("source") String source,
+            Pageable pageable);
 }

@@ -67,7 +67,7 @@ class ReadingTemplateListTest {
         String longPassage = "x".repeat(ReadingQueryService.TEMPLATE_PREVIEW_CHARS + 50);
         Page<ReadingQuiz> page = new PageImpl<>(List.of(quiz(1L, longPassage), quiz(2L, "short")),
                 PageRequest.of(0, 20), 2);
-        when(quizRepository.findQuizzesForAdmin(eq(Topic.SCIENCE), eq(null), eq("ADMIN"), any())).thenReturn(page);
+        when(quizRepository.findPublishedQuizzes(eq(Topic.SCIENCE), eq(null), eq("ADMIN"), any())).thenReturn(page);
         when(questionRepository.countByQuizIds(List.of(1L, 2L)))
                 .thenReturn(List.<Object[]>of(new Object[]{1L, 13L}));
 
@@ -88,7 +88,7 @@ class ReadingTemplateListTest {
     @Test
     @DisplayName("an empty page asks for no question counts at all")
     void emptyPageSkipsCountQuery() {
-        when(quizRepository.findQuizzesForAdmin(any(), any(), eq("ADMIN"), any()))
+        when(quizRepository.findPublishedQuizzes(any(), any(), eq("ADMIN"), any()))
                 .thenReturn(new PageImpl<>(List.of(), PageRequest.of(3, 20), 0));
 
         Page<ReadingQuizResponse> result = service.getTemplateList(null, null, 3, 20);

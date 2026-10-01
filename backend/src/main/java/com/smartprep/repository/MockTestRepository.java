@@ -39,4 +39,17 @@ public interface MockTestRepository extends JpaRepository<MockTest, Long> {
     Page<MockTest> findByContentStatus(
             @Param("contentStatus") ContentStatus contentStatus,
             Pageable pageable);
+
+    // ── Learner-facing ──────────────────────────────────────────────────────
+    //
+    // Everything a learner is offered from a shared pool comes through the methods below,
+    // and they return reviewed (PUBLISHED) content only. The queries above do not filter on
+    // content_status, and until now every learner list used them: a DRAFT written by an
+    // admin, or an unreviewed AI item another learner had generated, was handed to anyone.
+    // Admin screens keep using the unfiltered queries, because drafts are their job.
+    // Fetching one item by id is left alone, so a learner can still open the item they
+    // have just generated.
+
+    @Query("SELECT m FROM MockTest m WHERE m.deletedAt IS NULL AND m.contentStatus = com.smartprep.model.enums.ContentStatus.PUBLISHED")
+    List<MockTest> findAllPublished();
 }

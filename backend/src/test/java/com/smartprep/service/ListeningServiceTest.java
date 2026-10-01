@@ -325,7 +325,7 @@ class ListeningServiceTest {
         when(promptBuilder.buildGeneratePrompt(anyInt(), anyString(), any())).thenReturn("mock prompt");
         when(geminiClient.generate(anyString(), anyString())).thenThrow(new com.smartprep.exception.AiServiceException("Service unavailable"));
         
-        when(partRepository.findByPartNumberOrderByPartIdAsc(1))
+        when(partRepository.findPublishedByPartNumber(1))
                 .thenReturn(List.of(templatePart));
         when(listeningQueryService.toPartResponse(any(ListeningPart.class))).thenAnswer(inv -> {
             ListeningPart part = inv.getArgument(0);

@@ -172,9 +172,9 @@ public class ListeningGenerationService {
     }
 
     private ListeningPart getFallbackEntity(int partNumber, String topic) {
-        List<ListeningPart> existingParts = partRepository.findByPartNumberOrderByPartIdAsc(partNumber);
+        List<ListeningPart> existingParts = partRepository.findPublishedByPartNumber(partNumber);
         if (existingParts.isEmpty()) {
-            existingParts = partRepository.findAllByOrderByPartNumberAscPartIdAsc();
+            existingParts = partRepository.findPublishedOrderByPartNumber();
         }
         if (existingParts.isEmpty()) {
             throw new RuntimeException("No fallback parts found in database");
@@ -333,10 +333,10 @@ public class ListeningGenerationService {
     private ListeningPartResponse handleFallback(int partNumber, String topic, Exception originalException) {
         log.warn("Gemini generation failed or quota exceeded. Falling back to pre-generated ListeningPart for partNumber: {} and topic: {}", partNumber, topic);
 
-        List<ListeningPart> existingParts = partRepository.findByPartNumberOrderByPartIdAsc(partNumber);
+        List<ListeningPart> existingParts = partRepository.findPublishedByPartNumber(partNumber);
 
         if (existingParts.isEmpty()) {
-            existingParts = partRepository.findAllByOrderByPartNumberAscPartIdAsc();
+            existingParts = partRepository.findPublishedOrderByPartNumber();
         }
 
         if (existingParts.isEmpty()) {

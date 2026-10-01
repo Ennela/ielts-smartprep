@@ -74,7 +74,7 @@ public class ReadingQueryService {
         PageRequest pageRequest = UserPageRequests.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Topic topic = (topicStr != null && !topicStr.isBlank()) ? parseEnum(Topic.class, topicStr, "Invalid topic") : null;
         Difficulty difficulty = (difficultyStr != null && !difficultyStr.isBlank()) ? parseEnum(Difficulty.class, difficultyStr, "Invalid difficulty") : null;
-        Page<ReadingQuiz> quizzes = quizRepository.findQuizzesForAdmin(topic, difficulty, "ADMIN", pageRequest);
+        Page<ReadingQuiz> quizzes = quizRepository.findPublishedQuizzes(topic, difficulty, "ADMIN", pageRequest);
 
         List<Long> ids = quizzes.getContent().stream().map(ReadingQuiz::getQuizId).collect(Collectors.toList());
         Map<Long, Integer> questionCounts = new HashMap<>();
