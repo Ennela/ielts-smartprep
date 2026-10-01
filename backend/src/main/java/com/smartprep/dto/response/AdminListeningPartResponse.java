@@ -39,5 +39,11 @@ public class AdminListeningPartResponse {
         private String correctAnswer;
         private Integer orderIndex;
         private List<QuestionOptionResponse> options;
+        private Integer groupId;
+        private String groupLabel;
+        private String groupContext;
+        private String optionsJson;
+        private Integer wordLimit;
+        private String explanation;
     }
 }

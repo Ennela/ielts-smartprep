@@ -391,7 +391,7 @@ public class MockTestService {
             for (ListeningQuestion q : part.getQuestions()) {
                 totalListeningQuestions++;
                 String userAnswer = answersMap.get(q.getQuestionId().toString());
-                boolean isCorrect = IeltsScoringUtils.isListeningCorrect(q.getCorrectAnswer(), userAnswer, q.getQuestionType().name());
+                boolean isCorrect = IeltsScoringUtils.isListeningCorrect(q.getCorrectAnswer(), userAnswer, q.getQuestionType().name(), q.getWordLimit());
                 if (isCorrect) {
                     listeningCorrect++;
                 }
@@ -912,6 +912,11 @@ public class MockTestService {
                                 .questionText(q.getQuestionText())
                                 .options(QuestionOptionMapper.mapForExam(q.getOptions()))
                                 .orderIndex(q.getOrderIndex())
+                                .groupId(q.getGroupId())
+                                .groupLabel(q.getGroupLabel())
+                                .groupContext(q.getGroupContext())
+                                .optionsJson(q.getOptionsJson())
+                                .wordLimit(q.getWordLimit())
                                 .build())
                         .collect(Collectors.toList()))
                 .build();

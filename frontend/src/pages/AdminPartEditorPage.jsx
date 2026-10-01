@@ -14,7 +14,16 @@ const TOPICS = [
 const QUESTION_TYPES = [
   { value: 'MCQ', label: 'Multiple Choice (MCQ)' },
   { value: 'FILL_BLANK', label: 'Fill in the Blank' },
+  { value: 'SHORT_ANSWER', label: 'Short Answer' },
+  { value: 'SUMMARY_COMPLETION', label: 'Note / Form Completion (gaps in the group text)' },
+  { value: 'MATCHING_FEATURES', label: 'Matching (choose from the group options)' },
 ];
+
+// Group fields (V54). Questions with the same group number are shown together; the label,
+// shared text and options are read from the first question of the group.
+const EMPTY_GROUP = { groupId: '', groupLabel: '', groupContext: '', optionsJson: '', wordLimit: '', explanation: '' };
+
+const toIntOrNull = (v) => (v === '' || v === null || v === undefined ? null : Number(v));
 
 export default function AdminPartEditorPage() {
   const navigate = useNavigate();
@@ -54,6 +63,13 @@ export default function AdminPartEditorPage() {
                   questionText: q.questionText || '',
                   correctAnswer: q.correctAnswer || '',
                   orderIndex: q.orderIndex || 1,
+                  // Loaded so that saving does not wipe a group the form did not show.
+                  groupId: q.groupId ?? '',
+                  groupLabel: q.groupLabel || '',
+                  groupContext: q.groupContext || '',
+                  optionsJson: q.optionsJson || '',
+                  wordLimit: q.wordLimit ?? '',
+                  explanation: q.explanation || '',
                   optionA: '',
                   optionB: '',
                   optionC: '',
@@ -90,6 +106,7 @@ export default function AdminPartEditorPage() {
           optionD: '',
           correctAnswer: 'A',
           orderIndex: f.questions.length + 1,
+          ...EMPTY_GROUP,
         }
       ]
     }));
@@ -143,7 +160,7 @@ export default function AdminPartEditorPage() {
 
     // Format payload
     const formattedQuestions = form.questions.map(({ rowKey: _rowKey, ...q }) => {
-      const copy = { ...q };
+      const copy = { ...q, groupId: toIntOrNull(q.groupId), wordLimit: toIntOrNull(q.wordLimit) };
       if (q.questionType === 'MCQ') {
         const opts = [];
         if (q.optionA.trim()) opts.push({ label: 'A', content: q.optionA.trim() });
@@ -374,6 +391,46 @@ export default function AdminPartEditorPage() {
                       required
                     />
                   </div>
+
+                  <details style={{ marginBottom: '1rem' }} open={q.groupId !== '' && q.groupId !== null}>
+                    <summary className="admin-form-label" style={{ fontSize: '0.85rem', cursor: 'pointer' }}>
+                      Group (optional) — questions with the same group number are shown together
+                    </summary>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.75rem' }}>
+                      <div>
+                        <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Group number</label>
+                        <input type="number" min="1" className="completion-input" value={q.groupId}
+                          onChange={e => updateQuestionField(idx, 'groupId', e.target.value)}
+                          style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }} />
+                      </div>
+                      <div>
+                        <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Word limit</label>
+                        <input type="number" min="1" className="completion-input" value={q.wordLimit}
+                          onChange={e => updateQuestionField(idx, 'wordLimit', e.target.value)}
+                          placeholder="e.g. 2 = NO MORE THAN TWO WORDS"
+                          style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }} />
+                      </div>
+                    </div>
+                    <label className="admin-form-label" style={{ fontSize: '0.8rem', marginTop: '0.75rem', display: 'block' }}>Group instructions (first question of the group)</label>
+                    <input type="text" className="completion-input" value={q.groupLabel}
+                      onChange={e => updateQuestionField(idx, 'groupLabel', e.target.value)}
+                      placeholder="e.g. Questions 1-10: Complete the form. Write ONE WORD AND/OR A NUMBER."
+                      style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }} />
+                    <label className="admin-form-label" style={{ fontSize: '0.8rem', marginTop: '0.75rem', display: 'block' }}>Shared text — notes or form, gaps written ___1___ (Note / Form Completion)</label>
+                    <textarea className="completion-input" rows={4} value={q.groupContext}
+                      onChange={e => updateQuestionField(idx, 'groupContext', e.target.value)}
+                      placeholder="Name: Sarah ___1___&#10;Address: ___2___ Street"
+                      style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }} />
+                    <label className="admin-form-label" style={{ fontSize: '0.8rem', marginTop: '0.75rem', display: 'block' }}>Options the group chooses from (Matching), a JSON list</label>
+                    <textarea className="completion-input" rows={2} value={q.optionsJson}
+                      onChange={e => updateQuestionField(idx, 'optionsJson', e.target.value)}
+                      placeholder='["A. car park", "B. cafe", "C. lake"]'
+                      style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }} />
+                    <label className="admin-form-label" style={{ fontSize: '0.8rem', marginTop: '0.75rem', display: 'block' }}>Explanation (shown in review)</label>
+                    <input type="text" className="completion-input" value={q.explanation}
+                      onChange={e => updateQuestionField(idx, 'explanation', e.target.value)}
+                      style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }} />
+                  </details>
 
                   {q.questionType === 'MCQ' && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>

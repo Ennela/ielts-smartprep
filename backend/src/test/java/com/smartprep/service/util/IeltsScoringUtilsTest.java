@@ -169,6 +169,21 @@ class IeltsScoringUtilsTest {
             assertThat(IeltsScoringUtils.isListeningCorrect("A", null, "MCQ")).isFalse();
             assertThat(IeltsScoringUtils.isListeningCorrect("A", "  ", "MCQ")).isFalse();
         }
+
+        @Test
+        @DisplayName("a matching group answers with a letter, compared as a letter")
+        void matching_letter() {
+            // Compared as words, "A" would be dropped as an article and could never match.
+            assertThat(IeltsScoringUtils.isListeningCorrect("A", "a", "MATCHING_FEATURES", null)).isTrue();
+            assertThat(IeltsScoringUtils.isListeningCorrect("G", "C", "MATCHING_FEATURES", null)).isFalse();
+        }
+
+        @Test
+        @DisplayName("an answer over the group's word limit is wrong even with the right words")
+        void wordLimit_enforced() {
+            assertThat(IeltsScoringUtils.isListeningCorrect("stone walls", "stone walls", "FILL_BLANK", 2)).isTrue();
+            assertThat(IeltsScoringUtils.isListeningCorrect("walls", "the old stone walls", "FILL_BLANK", 2)).isFalse();
+        }
     }
 
     // ===================================================================
