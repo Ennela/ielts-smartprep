@@ -47,6 +47,12 @@ public class ReadingGradingService {
         if (quiz.getSubmittedAt() != null) {
             throw new IllegalArgumentException("Quiz has already been submitted");
         }
+        // The check above answers the ordinary resubmit with a clear message. This is what
+        // enforces it: two concurrent submits both pass the check, and only one of them can
+        // claim the row.
+        if (quizRepository.claimForSubmission(List.of(quizId), userId, LocalDateTime.now()) != 1) {
+            throw new IllegalArgumentException("Quiz has already been submitted");
+        }
 
         Map<Long, String> answers = request.getAnswers();
         int correctCount = 0;
@@ -55,7 +61,7 @@ public class ReadingGradingService {
         for (ReadingQuestion question : quiz.getQuestions()) {
             String userAnswer = answers.getOrDefault(question.getQuestionId(), "");
             question.setUserAnswer(userAnswer);
-            boolean correct = IeltsScoringUtils.isReadingCorrect(question.getQuestionType(), question.getCorrectAnswer(), userAnswer);
+            boolean correct = IeltsScoringUtils.isReadingCorrect(question.getQuestionType(), question.getCorrectAnswer(), userAnswer, question.getWordLimit());
             log.debug("Q#{} ({}): correctAnswer='{}', userAnswer='{}', match={}",
                     question.getQuestionId(), question.getQuestionType(),
                     question.getCorrectAnswer(), userAnswer, correct);
@@ -94,7 +100,7 @@ public class ReadingGradingService {
         List<UserAnswer> userAnswerList = new ArrayList<>();
         for (ReadingQuestion question : quiz.getQuestions()) {
             String ua = answers.getOrDefault(question.getQuestionId(), "");
-            boolean correct = IeltsScoringUtils.isReadingCorrect(question.getQuestionType(), question.getCorrectAnswer(), ua);
+            boolean correct = IeltsScoringUtils.isReadingCorrect(question.getQuestionType(), question.getCorrectAnswer(), ua, question.getWordLimit());
             userAnswerList.add(UserAnswerSnapshots.forReading(history, question.getOrderIndex(), question, ua, correct, objectMapper));
         }
         history.setUserAnswers(userAnswerList);
@@ -108,12 +114,32 @@ public class ReadingGradingService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        // A full test had no resubmission guard at all. Every call re-graded the same quizzes
+        // and overwrote their scores, and the response lists every correct answer, so a
+        // blank submission followed by a second one scored 9.0 and erased the first. The
+        // quizzes are the candidate's own copies, so once graded they stay graded: a retake
+        // starts new copies from the template.
+        //
+        // Distinct, because a quiz named twice would be graded twice and would make the
+        // claim count below disagree with the number of quizzes.
+        List<Long> quizIds = request.getQuizIds().stream().distinct().toList();
+        for (Long quizId : quizIds) {
+            ReadingQuiz quiz = quizRepository.findByQuizIdAndUserUserId(quizId, userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Quiz not found with ID: " + quizId));
+            if (quiz.getSubmittedAt() != null) {
+                throw new IllegalArgumentException("This reading test has already been submitted");
+            }
+        }
+        if (quizRepository.claimForSubmission(quizIds, userId, LocalDateTime.now()) != quizIds.size()) {
+            throw new IllegalArgumentException("This reading test has already been submitted");
+        }
+
         List<ReadingResultResponse> quizResults = new ArrayList<>();
         int totalCorrect = 0, totalQuestions = 0;
         List<UserAnswer> allUserAnswers = new ArrayList<>();
         int questionCounter = 0;
 
-        for (Long quizId : request.getQuizIds()) {
+        for (Long quizId : quizIds) {
             ReadingQuiz quiz = quizRepository.findByQuizIdAndUserUserId(quizId, userId)
                     .orElseThrow(() -> new ResourceNotFoundException("Quiz not found with ID: " + quizId));
             Map<Long, String> answers = request.getAnswers();
@@ -124,7 +150,7 @@ public class ReadingGradingService {
                 questionCounter++;
                 String userAnswer = answers.getOrDefault(question.getQuestionId(), "");
                 question.setUserAnswer(userAnswer);
-                boolean correct = IeltsScoringUtils.isReadingCorrect(question.getQuestionType(), question.getCorrectAnswer(), userAnswer);
+                boolean correct = IeltsScoringUtils.isReadingCorrect(question.getQuestionType(), question.getCorrectAnswer(), userAnswer, question.getWordLimit());
                 if (correct) { quizCorrect++; totalCorrect++; }
                 allUserAnswers.add(UserAnswerSnapshots.forReading(null, questionCounter, question, userAnswer, correct, objectMapper));
             }

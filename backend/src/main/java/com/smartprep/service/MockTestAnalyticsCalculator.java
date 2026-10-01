@@ -174,8 +174,7 @@ public class MockTestAnalyticsCalculator {
             String section = "Passage " + passageNo;
             for (ReadingQuestion q : quiz.getQuestions()) {
                 String userAnswer = answers.get(q.getQuestionId().toString());
-                boolean correct = IeltsScoringUtils.isReadingCorrect(
-                        q.getQuestionType(), q.getCorrectAnswer(), userAnswer);
+                boolean correct = IeltsScoringUtils.isReadingCorrect(q.getQuestionType(), q.getCorrectAnswer(), userAnswer, q.getWordLimit());
                 graded.add(new AnsweredQuestion(q.getQuestionId(), q.getOrderIndex(), section,
                         q.getQuestionType().name(), q.getQuestionText(),
                         userAnswer, q.getCorrectAnswer(), correct));

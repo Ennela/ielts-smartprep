@@ -1,5 +1,6 @@
 package com.smartprep.service;
 
+import com.smartprep.service.util.IeltsScoringUtils;
 import com.smartprep.dto.response.ListeningHistoryResponse;
 import com.smartprep.dto.response.ListeningPartResponse;
 import com.smartprep.dto.response.ListeningTestResponse;
@@ -172,7 +173,10 @@ public class ListeningQueryService {
                 if (userAnswer == null) {
                     userAnswer = answersMap.getOrDefault(q.getQuestionId(), "");
                 }
-                boolean isCorrect = checkAnswer(q.getCorrectAnswer(), userAnswer, q.getQuestionType().name());
+                // The same rule the grader applied. This page kept a private copy of an older one,
+                // so it could show a graded-correct answer as wrong.
+                boolean isCorrect = IeltsScoringUtils.isListeningCorrect(
+                        q.getCorrectAnswer(), userAnswer, q.getQuestionType().name());
                 if (isCorrect) correctCount++;
 
                 questionResults.add(ListeningTestResponse.QuestionResult.builder()
@@ -202,22 +206,5 @@ public class ListeningQueryService {
                 .submittedAt(test.getSubmittedAt())
                 .parts(partResults)
                 .build();
-    }
-
-    private boolean checkAnswer(String correct, String userAnswer, String questionType) {
-        if (userAnswer == null || userAnswer.isBlank()) return false;
-        String cleanCorrect = correct.trim().toLowerCase();
-        String cleanUser = userAnswer.trim().toLowerCase();
-        if ("MCQ".equals(questionType)) return cleanCorrect.equals(cleanUser);
-        if (cleanCorrect.equals(cleanUser)) return true;
-        return normalizeSpelling(cleanCorrect).equals(normalizeSpelling(cleanUser));
-    }
-
-    private String normalizeSpelling(String s) {
-        return s.replace("organisation", "organization").replace("centre", "center")
-                .replace("colour", "color").replace("favour", "favor")
-                .replace("behaviour", "behavior").replace("travelling", "traveling")
-                .replace("cancelled", "canceled")
-                .replaceAll("[^a-z0-9\\s]", "").replaceAll("\\s+", " ").trim();
     }
 }
