@@ -391,7 +391,7 @@ public class MockTestService {
             for (ListeningQuestion q : part.getQuestions()) {
                 totalListeningQuestions++;
                 String userAnswer = answersMap.get(q.getQuestionId().toString());
-                boolean isCorrect = IeltsScoringUtils.isListeningCorrect(q.getCorrectAnswer(), userAnswer, q.getQuestionType().name(), q.getWordLimit());
+                boolean isCorrect = IeltsScoringUtils.isListeningCorrect(q.getCorrectAnswer(), userAnswer, q.getQuestionType().name(), q.getWordLimit(), q.getSelectCount());
                 if (isCorrect) {
                     listeningCorrect++;
                 }
@@ -433,7 +433,7 @@ public class MockTestService {
             for (ReadingQuestion q : quiz.getQuestions()) {
                 totalReadingQuestions++;
                 String userAnswer = answersMap.get(q.getQuestionId().toString());
-                boolean isCorrect = IeltsScoringUtils.isReadingCorrect(q.getQuestionType(), q.getCorrectAnswer(), userAnswer, q.getWordLimit());
+                boolean isCorrect = IeltsScoringUtils.isReadingCorrect(q.getQuestionType(), q.getCorrectAnswer(), userAnswer, q.getWordLimit(), q.getSelectCount());
                 if (isCorrect) {
                     readingCorrect++;
                 }
@@ -598,7 +598,7 @@ public class MockTestService {
                     List<ReadingResultResponse.QuestionResultDto> questionResults = quiz.getQuestions().stream()
                             .map(q -> {
                                 String userAnswer = finalAnswersMap.get(q.getQuestionId().toString());
-                                boolean isCorrect = IeltsScoringUtils.isReadingCorrect(q.getQuestionType(), q.getCorrectAnswer(), userAnswer, q.getWordLimit());
+                                boolean isCorrect = IeltsScoringUtils.isReadingCorrect(q.getQuestionType(), q.getCorrectAnswer(), userAnswer, q.getWordLimit(), q.getSelectCount());
                                 return ReadingResultResponse.QuestionResultDto.builder()
                                         .questionId(q.getQuestionId())
                                         .questionType(q.getQuestionType().name())
@@ -612,6 +612,7 @@ public class MockTestService {
                                         .optionsJson(q.getOptionsJson())
                                         .wordLimit(q.getWordLimit())
                                         .groupLabel(q.getGroupLabel())
+                                        .selectCount(q.getSelectCount())
                                         .groupId(q.getGroupId())
                                         .groupContext(q.getGroupContext())
                                         .evidenceText(q.getEvidenceText())
@@ -914,6 +915,7 @@ public class MockTestService {
                                 .orderIndex(q.getOrderIndex())
                                 .groupId(q.getGroupId())
                                 .groupLabel(q.getGroupLabel())
+                                .selectCount(q.getSelectCount())
                                 .groupContext(q.getGroupContext())
                                 .optionsJson(q.getOptionsJson())
                                 .wordLimit(q.getWordLimit())
@@ -941,6 +943,7 @@ public class MockTestService {
                                 .optionsJson(q.getOptionsJson())
                                 .wordLimit(q.getWordLimit())
                                 .groupLabel(q.getGroupLabel())
+                                .selectCount(q.getSelectCount())
                                 .groupId(q.getGroupId())
                                 .groupContext(q.getGroupContext())
                                 .build())

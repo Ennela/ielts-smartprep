@@ -68,7 +68,7 @@ public class ListeningGradingService {
             for (ListeningQuestion q : part.getQuestions()) {
                 totalQuestions++;
                 String userAnswer = request.getAnswers().getOrDefault(q.getQuestionId(), "");
-                boolean isCorrect = IeltsScoringUtils.isListeningCorrect(q.getCorrectAnswer(), userAnswer, q.getQuestionType().name(), q.getWordLimit());
+                boolean isCorrect = IeltsScoringUtils.isListeningCorrect(q.getCorrectAnswer(), userAnswer, q.getQuestionType().name(), q.getWordLimit(), q.getSelectCount());
                 if (isCorrect) correctCount++;
 
                 questionResults.add(ListeningTestResponse.QuestionResult.builder()
@@ -136,7 +136,7 @@ public class ListeningGradingService {
             for (ListeningQuestion q : part.getQuestions()) {
                 questionNo++;
                 String userAns = request.getAnswers().getOrDefault(q.getQuestionId(), "");
-                boolean correct = IeltsScoringUtils.isListeningCorrect(q.getCorrectAnswer(), userAns, q.getQuestionType().name(), q.getWordLimit());
+                boolean correct = IeltsScoringUtils.isListeningCorrect(q.getCorrectAnswer(), userAns, q.getQuestionType().name(), q.getWordLimit(), q.getSelectCount());
                 userAnswerList.add(UserAnswerSnapshots.forListening(history, questionNo, q, userAns, correct, objectMapper));
             }
         }

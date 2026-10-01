@@ -67,6 +67,7 @@ public class AdminReadingQuizRequest {
 
         private String optionsJson;
         private Integer wordLimit;
+        private Integer selectCount;  // > 1: "Choose N letters", see V55
         private String groupLabel;
         private Integer groupId;
         private String groupContext;

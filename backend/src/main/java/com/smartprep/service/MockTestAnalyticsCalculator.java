@@ -143,7 +143,7 @@ public class MockTestAnalyticsCalculator {
             for (ListeningQuestion q : part.getQuestions()) {
                 String userAnswer = answers.get(q.getQuestionId().toString());
                 boolean correct = IeltsScoringUtils.isListeningCorrect(
-                        q.getCorrectAnswer(), userAnswer, q.getQuestionType().name(), q.getWordLimit());
+                        q.getCorrectAnswer(), userAnswer, q.getQuestionType().name(), q.getWordLimit(), q.getSelectCount());
                 graded.add(new AnsweredQuestion(q.getQuestionId(), q.getOrderIndex(), section,
                         q.getQuestionType().name(), q.getQuestionText(),
                         userAnswer, q.getCorrectAnswer(), correct));
@@ -174,7 +174,7 @@ public class MockTestAnalyticsCalculator {
             String section = "Passage " + passageNo;
             for (ReadingQuestion q : quiz.getQuestions()) {
                 String userAnswer = answers.get(q.getQuestionId().toString());
-                boolean correct = IeltsScoringUtils.isReadingCorrect(q.getQuestionType(), q.getCorrectAnswer(), userAnswer, q.getWordLimit());
+                boolean correct = IeltsScoringUtils.isReadingCorrect(q.getQuestionType(), q.getCorrectAnswer(), userAnswer, q.getWordLimit(), q.getSelectCount());
                 graded.add(new AnsweredQuestion(q.getQuestionId(), q.getOrderIndex(), section,
                         q.getQuestionType().name(), q.getQuestionText(),
                         userAnswer, q.getCorrectAnswer(), correct));
