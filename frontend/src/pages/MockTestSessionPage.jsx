@@ -396,12 +396,12 @@ export default function MockTestSessionPage() {
 
         {/* ── READING SECTION ── */}
         {currentSection === 'READING' && currentReadingQuiz && (
-          <div className="exam-split" style={{ display: 'flex', flex: 1, width: '100%', overflow: 'hidden' }}>
-            <div className="exam-left" style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
+          <div className="exam-split">
+            <div className="exam-left">
               <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '16px' }}>Passage {activeReadingQuiz + 1}</h2>
               <PassageViewer passage={currentReadingQuiz.passageText} moduleType={currentReadingQuiz.moduleType} />
             </div>
-            <div className="exam-right" style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
+            <div className="exam-right">
               <MockTestQuestionPanel questions={currentReadingQuiz.questions} />
             </div>
           </div>
@@ -409,9 +409,9 @@ export default function MockTestSessionPage() {
 
         {/* ── WRITING SECTION ── */}
         {currentSection === 'WRITING' && currentWritingPrompt && (
-          <div className="exam-split" style={{ display: 'flex', flex: 1, width: '100%', overflow: 'hidden' }}>
+          <div className="exam-split">
             {/* Left Prompt Description */}
-            <div className="exam-left" style={{ width: '40%', minWidth: '320px', overflowY: 'auto', padding: '32px' }}>
+            <div className="exam-left exam-left-prompt">
               <p style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--primary)', marginBottom: 8 }}>
                 Task {activeWritingTask + 1} Prompt
               </p>

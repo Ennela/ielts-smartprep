@@ -342,12 +342,7 @@ export default function WritingEditorPage() {
       )}
 
       {/* ── Header ── */}
-      <header style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 24px', height: 64, flexShrink: 0,
-        background: 'var(--surface-container-lowest)',
-        borderBottom: '1px solid var(--outline-variant)',
-      }}>
+      <header className="writing-editor-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <button
             className="btn-back"
@@ -421,14 +416,10 @@ export default function WritingEditorPage() {
       )}
 
       {/* ── 3-Pane Body ── */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div className="writing-editor-body">
 
         {/* Left Pane: Prompt */}
-        <div style={{
-          width: '35%', minWidth: 280, overflowY: 'auto', padding: '32px 24px',
-          background: 'var(--surface-container-low)',
-          borderRight: '1px solid var(--outline-variant)',
-        }}>
+        <div className="writing-editor-prompt">
           <p style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--primary)', marginBottom: 8 }}>
             Prompt
           </p>
@@ -469,7 +460,7 @@ export default function WritingEditorPage() {
         </div>
 
         {/* Center Pane: Editor */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className="writing-editor-main">
           <textarea
             className="editor-textarea"
             value={essayText}
@@ -508,12 +499,7 @@ export default function WritingEditorPage() {
         </div>
 
         {/* Right Pane: Grading Criteria (hidden on small screens) */}
-        <div style={{
-          width: 260, flexShrink: 0, overflowY: 'auto',
-          padding: '32px 20px', background: 'var(--surface-container-low)',
-          borderLeft: '1px solid var(--outline-variant)',
-          display: 'flex', flexDirection: 'column', gap: 16,
-        }}>
+        <div className="writing-editor-criteria">
           <p style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--on-surface-variant)', marginBottom: 4 }}>
             Grading Criteria
           </p>

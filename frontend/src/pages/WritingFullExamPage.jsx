@@ -353,7 +353,7 @@ export default function WritingFullExamPage() {
       </div>
 
       {/* ── Main Content ── */}
-      <div className="writing-exam-split" style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', overflow: 'hidden' }}>
+      <div className="writing-exam-split">
 
         {/* Left: Prompt */}
         <div className="writing-prompt-panel" style={{

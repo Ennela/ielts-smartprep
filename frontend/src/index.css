@@ -183,6 +183,41 @@ body::after {
   scrollbar-width: thin;
 }
 .exam-divider { display: none; }
+/* Mock test Writing: the prompt pane keeps a fixed share beside the editor. */
+.exam-left-prompt { flex: 0 0 40%; min-width: 320px; }
+.writing-exam-split { flex: 1; display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; }
+
+/* Single-essay editor: prompt | editor | grading criteria */
+.writing-editor-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 0 24px; min-height: 64px; flex-shrink: 0;
+  background: var(--surface-container-lowest); border-bottom: 1px solid var(--outline-variant);
+}
+.writing-editor-body { display: flex; flex: 1; min-height: 0; overflow: hidden; }
+.writing-editor-prompt {
+  width: 35%; min-width: 280px; overflow-y: auto; padding: 32px 24px;
+  background: var(--surface-container-low); border-right: 1px solid var(--outline-variant);
+}
+.writing-editor-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+/* .editor-textarea's 400px floor pushed the word count off short screens; here it fills the pane. */
+.writing-editor-main .editor-textarea { min-height: 0; }
+.writing-editor-criteria {
+  width: 260px; flex-shrink: 0; overflow-y: auto; padding: 32px 20px;
+  background: var(--surface-container-low); border-left: 1px solid var(--outline-variant);
+  display: flex; flex-direction: column; gap: 16px;
+}
+/* The criteria are reference text; below this width they took the editor's room. */
+@media (max-width: 1100px) {
+  .writing-editor-criteria { display: none; }
+}
+@media (max-width: 700px) {
+  .writing-editor-header { flex-wrap: wrap; padding: 8px 16px; row-gap: 8px; }
+  .writing-editor-body { flex-direction: column; }
+  .writing-editor-prompt {
+    width: auto; min-width: 0; max-height: 40vh; flex-shrink: 0; padding: 16px;
+    border-right: none; border-bottom: 1px solid var(--outline-variant);
+  }
+}
 /* Bottom action bar */
 .exam-action-bar {
   display: flex; align-items: center; justify-content: space-between;
@@ -542,8 +577,8 @@ body::after {
 .feedback-card { margin-bottom: 24px; }
 .feedback-card h3 { font-family: var(--font-heading); font-size: 1.05rem; font-weight: 700; margin-bottom: 12px; color: var(--color-primary); }
 .feedback-card p { font-size: 0.92rem; line-height: 1.7; color: var(--color-text-secondary); }
-.writing-tabs { display: flex; gap: 0; margin-bottom: 0; border-bottom: 1px solid var(--color-border); }
-.tab-btn { padding: 12px 24px; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--color-text-muted); font-family: var(--font-heading); font-weight: 600; font-size: 0.88rem; cursor: pointer; transition: all var(--transition); }
+.writing-tabs { display: flex; gap: 0; margin-bottom: 0; border-bottom: 1px solid var(--color-border); overflow-x: auto; }
+.tab-btn { white-space: nowrap; padding: 12px 24px; background: transparent; border: none; border-bottom: 2px solid transparent; color: var(--color-text-muted); font-family: var(--font-heading); font-weight: 600; font-size: 0.88rem; cursor: pointer; transition: all var(--transition); }
 .tab-btn:hover { color: var(--color-text); }
 .tab-btn.active { color: var(--color-primary); border-bottom-color: var(--color-primary); }
 .tab-content { padding: 24px 0; }
@@ -587,7 +622,7 @@ body::after {
 .listening-header h1 { margin-bottom: 4px; }
 .listening-section { margin-bottom: 40px; }
 .listening-section-title { font-size: 1.05rem; font-family: var(--font-heading); color: var(--color-text-muted); margin-bottom: 16px; padding-bottom: 8px; border-bottom: 1px solid var(--color-border); }
-.listening-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+.listening-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 20px; }
 .listening-part-card { display: flex; flex-direction: column; gap: 12px; }
 .listening-part-card h3 { font-size: 1.05rem; margin: 0; }
 .listening-part-meta { display: flex; justify-content: space-between; align-items: center; }
@@ -680,7 +715,7 @@ body::after {
   background: var(--color-surface-solid); border-radius: var(--radius-lg); border: 1px solid var(--color-border); box-shadow: var(--shadow-sm);
 }
 .stat-item { display: flex; flex-direction: column; gap: 6px; }
-.result-tabs { display: flex; gap: 2px; margin-bottom: 24px; background: var(--color-bg-secondary); border-radius: var(--radius-sm); padding: 3px; }
+.result-tabs { display: flex; gap: 2px; margin-bottom: 24px; overflow-x: auto; background: var(--color-bg-secondary); border-radius: var(--radius-sm); padding: 3px; }
 .result-part-section { margin-bottom: 32px; }
 .result-part-section h3 { margin-bottom: 16px; color: var(--color-text); font-family: var(--font-heading); }
 .answer-grid { display: flex; flex-direction: column; gap: 12px; }
@@ -705,7 +740,7 @@ body::after {
 .ai-analysis-item p { font-size: 0.85rem; margin-top: 4px; line-height: 1.5; }
 .transcript-section { margin-bottom: 32px; padding: 24px; background: var(--color-surface-solid); border-radius: var(--radius-md); border: 1px solid var(--color-border); }
 .transcript-text p { font-size: 0.9rem; line-height: 1.8; margin-bottom: 8px; color: var(--color-text-muted); }
-.vocab-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.vocab-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: 16px; }
 .vocab-card { padding: 16px; background: var(--color-surface-solid); border: 1px solid var(--color-border); border-radius: var(--radius-md); display: flex; flex-direction: column; gap: 6px; }
 .vocab-header { display: flex; justify-content: space-between; align-items: center; }
 .vocab-word { font-weight: 700; font-size: 1.05rem; color: var(--color-primary); }
@@ -773,7 +808,7 @@ select.profile-input { cursor: pointer; }
   letter-spacing: -0.02em;
 }
 .admin-stat-grid {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 20px;
   margin-bottom: 40px;
 }
 .admin-stat-card {
@@ -796,7 +831,7 @@ select.profile-input { cursor: pointer; }
 .admin-stat-label {
   font-size: 0.78rem; font-weight: 600; color: var(--color-text-muted);
   text-transform: uppercase; letter-spacing: 0.04em;
-  font-family: var(--font-heading); white-space: nowrap;
+  font-family: var(--font-heading);
 }
 .admin-stat-value {
   font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800;
@@ -1036,7 +1071,6 @@ select.profile-input { cursor: pointer; }
   .dash-target-card { grid-column: 1; min-height: 160px; }
   .dash-welcome-card h1 { font-size: 1.75rem; }
   .skill-cards, .skill-progress-row { grid-template-columns: 1fr; }
-  .admin-stat-grid { grid-template-columns: repeat(2, 1fr); }
   .admin-quick-grid { grid-template-columns: 1fr; }
   .admin-dashboard-content { padding: 24px 16px; }
   .admin-dash-header { flex-direction: column; }
@@ -1055,10 +1089,20 @@ select.profile-input { cursor: pointer; }
   .question-card { flex-direction: column; gap: 10px; }
 }
 @media (max-width: 900px) {
-  .exam-split { grid-template-columns: 1fr; }
+  /* .exam-split is a flex row: stack it, and let each half scroll inside the 100vh page. */
+  .exam-split { flex-direction: column; }
   .exam-divider { display: none; }
-  .exam-left, .exam-right { max-height: 50vh; }
-  .exam-topbar { flex-wrap: wrap; }
+  .exam-left, .exam-right { flex: 1 1 0; min-height: 0; padding: 16px; }
+  .exam-left { border-right: none; border-bottom: 1px solid var(--outline-variant); }
+  .exam-left-prompt { flex-basis: 0; min-width: 0; }
+  /* The header used to wrap inside a fixed 64px and draw rows over each other. */
+  .exam-topbar { flex-wrap: wrap; height: auto; min-height: 64px; padding: 8px 16px; row-gap: 8px; }
+  .exam-topbar-center { order: 3; flex-basis: 100%; }
+  .exam-topbar-right { flex-wrap: wrap; justify-content: flex-end; }
+  .exam-action-bar { flex-wrap: wrap; gap: 8px; padding: 8px 16px; }
+  .exam-action-bar-right { flex: 1 1 100%; }
+  .exam-action-bar-right .btn { flex: 1 1 0; padding: 10px 12px; }
+  .writing-exam-split { grid-template-columns: 1fr; overflow: visible; }
   .result-score-card { flex-direction: column; text-align: center; }
   .writing-score-section { flex-direction: column; gap: 24px; }
   .criteria-label { min-width: 100px; font-size: 0.8rem; }
