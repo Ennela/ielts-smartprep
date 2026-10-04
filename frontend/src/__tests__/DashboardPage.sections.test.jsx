@@ -53,7 +53,7 @@ describe('DashboardPage sections', () => {
 
     expect(await screen.findByText('Trend service down')).toBeInTheDocument();
     // The rest of the dashboard is still there.
-    expect(screen.getByText('MATCHING')).toBeInTheDocument();
+    expect(screen.getByText('Matching')).toBeInTheDocument();
     expect(screen.queryByText('Something went wrong')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));

@@ -224,7 +224,7 @@ export default function AdminWritingPromptsPage() {
                                 className="btn btn-sm btn-outline"
                                 onClick={() => navigate(`/writing/editor/${p.promptId}?preview=true&adminView=true`)}
                                 id={`preview-prompt-${p.promptId}`}
-                              >👁 Xem thử</button>
+                              >Preview</button>
                               <button
                                 className="btn btn-sm btn-outline"
                                 onClick={() => openEdit(p)}

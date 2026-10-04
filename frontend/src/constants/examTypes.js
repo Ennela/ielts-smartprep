@@ -68,6 +68,19 @@ export const QUESTION_TYPES = {
   SHORT_ANSWER: 'SHORT_ANSWER',
 };
 
+/** Any enum value the API sends, for display: "MATCHING_INFORMATION" → "Matching Information". */
+export const formatEnumLabel = (value) =>
+  value ? value.split('_').map((w) => w.charAt(0) + w.slice(1).toLowerCase()).join(' ') : '';
+
+const QUESTION_TYPE_LABELS = {
+  MCQ: 'Multiple choice',
+  TFNG: 'True / False / Not Given',
+  YNNG: 'Yes / No / Not Given',
+};
+
+/** "MATCHING_INFORMATION" → "Matching Information", "TFNG" → "True / False / Not Given". */
+export const formatQuestionType = (type) => QUESTION_TYPE_LABELS[type] || formatEnumLabel(type);
+
 /** Types answered by picking one of a shared set of options. */
 export const MATCHING_TYPES = [
   QUESTION_TYPES.MATCHING_HEADINGS,

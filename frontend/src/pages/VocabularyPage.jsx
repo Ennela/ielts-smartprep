@@ -435,15 +435,15 @@ export default function VocabularyPage() {
       <div className="metric-cards-grid">
         <div className="metric-item-card" style={{ borderLeft: '4px solid var(--error)' }}>
           <div className="metric-item-num" style={{ color: 'var(--error)' }}>{stats.dueTodayCount}</div>
-          <div className="metric-item-lbl">Due Today (Đến hạn)</div>
+          <div className="metric-item-lbl">Due Today</div>
         </div>
         <div className="metric-item-card" style={{ borderLeft: '4px solid var(--secondary)' }}>
           <div className="metric-item-num" style={{ color: 'var(--secondary)' }}>{stats.learningCount}</div>
-          <div className="metric-item-lbl">Learning (Đang học)</div>
+          <div className="metric-item-lbl">Learning</div>
         </div>
         <div className="metric-item-card" style={{ borderLeft: '4px solid var(--color-success, #006c4a)' }}>
           <div className="metric-item-num" style={{ color: 'var(--color-success, #006c4a)' }}>{stats.masteredCount}</div>
-          <div className="metric-item-lbl">Mastered (Đã thuộc)</div>
+          <div className="metric-item-lbl">Mastered</div>
         </div>
       </div>
 
@@ -591,7 +591,7 @@ export default function VocabularyPage() {
                               <span className="material-symbols-outlined" style={{ fontSize: 16 }} aria-hidden="true">
                                 menu_book
                               </span>
-                              Giải thích chi tiết
+                              Explain this word
                             </button>
                           </div>
 
@@ -784,7 +784,7 @@ export default function VocabularyPage() {
                           <span className="material-symbols-outlined" style={{ fontSize: 16 }} aria-hidden="true">
                             menu_book
                           </span>
-                          {item.hasInsight ? 'Xem giải thích' : 'Giải thích chi tiết'}
+                          {item.hasInsight ? 'View explanation' : 'Explain this word'}
                         </button>
                       </div>
 

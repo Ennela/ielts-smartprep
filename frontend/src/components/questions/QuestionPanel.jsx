@@ -116,7 +116,7 @@ function QuestionGroup({ group, answers, setAnswer, disabled, showCorrectAnswers
               flexDirection: 'column',
               gap: '6px'
             }}>
-              <h5 style={{ margin: '0 0 4px 0', fontSize: '0.85rem', color: 'var(--color-success)' }}>Đáp án đúng:</h5>
+              <h5 style={{ margin: '0 0 4px 0', fontSize: '0.85rem', color: 'var(--color-success)' }}>Correct answer:</h5>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px' }}>
                 {group.questions.map((q) => (
                   <div key={q.questionId} style={{ fontSize: '0.8rem', color: 'var(--color-success)', display: 'flex', gap: '4px' }}>
@@ -230,7 +230,7 @@ function MultiSelectTask({ questions, answers, setAnswer, disabled, numberOffset
       </div>
       {showCorrectAnswers && (
         <div style={ANSWER_KEY_STYLE}>
-          Đáp án đúng: {questions.map(q => q.correctAnswer).filter(Boolean).join(', ')}
+          Correct answer: {questions.map(q => q.correctAnswer).filter(Boolean).join(', ')}
         </div>
       )}
     </div>
@@ -275,7 +275,7 @@ const QuestionItem = memo(function QuestionItem({
 
       {showCorrectAnswers && question.correctAnswer && (
         <div style={ANSWER_KEY_STYLE}>
-          Đáp án đúng: {question.correctAnswer} {question.explanation ? `(${question.explanation})` : ''}
+          Correct answer: {question.correctAnswer} {question.explanation ? `(${question.explanation})` : ''}
         </div>
       )}
     </div>

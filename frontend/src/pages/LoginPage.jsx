@@ -126,19 +126,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Remember Me */}
-          <div className="flex items-center">
-            <input
-              className="h-4 w-4 text-primary focus:ring-primary border-outline-variant rounded text-primary cursor-pointer"
-              id="remember-me"
-              name="remember-me"
-              type="checkbox"
-            />
-            <label className="ml-sm block font-body-md text-body-md text-on-surface-variant cursor-pointer select-none" htmlFor="remember-me">
-              Remember me for 30 days
-            </label>
-          </div>
-
           {/* Submit Button */}
           <button
             className="w-full flex justify-center items-center py-sm px-md border border-transparent rounded-lg shadow-sm font-title-lg text-title-lg text-on-primary bg-primary hover:bg-primary-container focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all duration-200 active:scale-[0.98] mt-xl disabled:opacity-50 disabled:cursor-not-allowed"
@@ -168,10 +155,11 @@ export default function LoginPage() {
         </div>
 
         {/* Social Login */}
+        {/* Not wired to an identity provider yet, so it is shown but not offered. */}
         <button
-          className="w-full flex justify-center items-center py-sm px-md border border-outline-variant rounded-lg font-body-md text-body-md text-on-surface bg-surface-container-lowest hover:bg-surface-container-low transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+          className="w-full flex justify-center items-center py-sm px-md border border-outline-variant rounded-lg font-body-md text-body-md text-on-surface bg-surface-container-lowest disabled:opacity-60 disabled:cursor-not-allowed"
           type="button"
-          onClick={() => warning('Google authentication is not yet enabled for this environment.')}
+          disabled
         >
           <svg className="h-5 w-5 mr-sm" fill="none" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"></path>
@@ -180,6 +168,7 @@ export default function LoginPage() {
             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"></path>
           </svg>
           Continue with Google
+          <span className="ml-sm px-sm rounded-full bg-surface-container-high text-on-surface-variant font-label-md text-label-md">Coming soon</span>
         </button>
 
         {/* Register Link */}

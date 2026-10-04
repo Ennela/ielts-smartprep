@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import statsApi from '../api/statsApi';
 import analyticsApi from '../api/analyticsApi';
+import { formatBand } from '../utils/formatBand';
+import { formatQuestionType } from '../constants/examTypes';
+import Pagination from '../components/Pagination';
 // recharts is the largest chunk in the build (336 kB) and the dashboard is the
 // first page after login; the trend card is one of eight and often has no data to
 // draw, so the library is fetched only when a chart is actually rendered.
@@ -121,8 +124,9 @@ export default function DashboardPage() {
     return <DashboardEmptyState displayName={displayName} navigate={navigate} />;
   }
 
-  const targetBand = overview?.targetBand || '7.5';
-  const currentBand = overview?.currentEstimate || '6.5';
+  // One decimal like every other band on the page (the API sends 8, not "8.0").
+  const targetBand = formatBand(overview?.targetBand || 7.5);
+  const currentBand = formatBand(overview?.currentEstimate || 6.5);
   
   // Default fallback lists if null
   const skillsList = overview?.skills && overview.skills.length > 0 ? overview.skills : [
@@ -354,7 +358,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="flex justify-between items-center bg-surface-bright p-sm rounded-md border border-outline-variant/30">
-              <span className="font-body-md text-body-md text-on-surface font-bold">{weakestType}</span>
+              <span className="font-body-md text-body-md text-on-surface font-bold">{weakestType === 'None' ? weakestType : formatQuestionType(weakestType)}</span>
               <span className="font-label-md text-label-md bg-error-container text-on-error-container px-2.5 py-1 rounded-full font-bold">
                 {weakestAccuracy}% Accuracy
               </span>
@@ -433,28 +437,16 @@ export default function DashboardPage() {
               </tbody>
             </table>
 
-            {/* Pagination Controls */}
-            {history.totalPages > 1 && (
-              <div className="flex justify-between items-center pt-lg border-t border-outline-variant/30 mt-md">
-                <button 
-                  disabled={historyPage === 0}
-                  onClick={() => setHistoryPage(p => Math.max(0, p - 1))}
-                  className="px-4 py-2 rounded-lg font-bold text-sm bg-surface-container-low hover:bg-surface-container-high border border-outline-variant/30 text-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                <span className="font-label-md text-label-md text-outline">
-                  Page {historyPage + 1} of {history.totalPages}
-                </span>
-                <button 
-                  disabled={historyPage >= history.totalPages - 1}
-                  onClick={() => setHistoryPage(p => p + 1)}
-                  className="px-4 py-2 rounded-lg font-bold text-sm bg-surface-container-low hover:bg-surface-container-high border border-outline-variant/30 text-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
-            )}
+            {/* Pagination Controls: the shared pager, as on History */}
+            <div className="pt-lg border-t border-outline-variant/30 mt-md">
+              <Pagination
+                page={historyPage}
+                totalPages={history.totalPages}
+                totalElements={history.totalItems}
+                size={5}
+                onPageChange={setHistoryPage}
+              />
+            </div>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-margin border border-dashed border-outline-variant/50 rounded-xl bg-surface-bright text-center">

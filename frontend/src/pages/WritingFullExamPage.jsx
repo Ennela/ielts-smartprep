@@ -9,6 +9,7 @@ import useExamWarnings from '../hooks/useExamWarnings';
 import useElapsedSeconds, { formatElapsed } from '../hooks/useElapsedSeconds';
 import { useToast } from '../context/ToastContext';
 import { mayHaveGradedAnyway, latestSubmissionId, findNewSubmission } from '../utils/gradingRecovery';
+import { formatEssayType } from '../constants/examTypes';
 
 const SESSION_KEY = 'writing_full_attemptId';
 
@@ -384,7 +385,7 @@ export default function WritingFullExamPage() {
           {activeTask && (
             <>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: 16 }}>
-                {activeTask.essayType || (activeTab === 1 ? 'Task 1' : 'Task 2')}
+                {formatEssayType(activeTask.essayType) || (activeTab === 1 ? 'Task 1' : 'Task 2')}
               </h3>
               <p style={{ lineHeight: 1.8, fontSize: '0.95rem', whiteSpace: 'pre-wrap' }}>
                 {activeTask.promptText}

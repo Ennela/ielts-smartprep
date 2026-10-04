@@ -3,6 +3,7 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import historyApi from '../api/historyApi';
 import { TASK1_TYPES, formatEssayType } from '../constants/examTypes';
+import Pagination from '../components/Pagination';
 
 const PAGE_SIZE = 8;
 const SKILL_PARAM = { 'Reading': 'READING', 'Writing': 'WRITING', 'Listening': 'LISTENING', 'Mock Tests': 'MOCK_TEST' };
@@ -42,16 +43,6 @@ const toRow = (item) => {
 const localIso = (date) => {
   const p = (n) => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}T${p(date.getHours())}:${p(date.getMinutes())}:${p(date.getSeconds())}`;
-};
-
-// Page numbers to show around the current one; a long history is not a row of fifty buttons.
-const pageWindow = (current, total) => {
-  const span = 2;
-  const from = Math.max(1, Math.min(current - span, total - span * 2));
-  const to = Math.min(total, from + span * 2);
-  const pages = [];
-  for (let i = from; i <= to; i++) pages.push(i);
-  return pages;
 };
 
 export default function HistoryPage() {
@@ -108,7 +99,6 @@ export default function HistoryPage() {
   const filtersActive = skillFilter !== 'All Skills' || timeFilter !== 'All Time' || search !== '';
   const totalItems = pageInfo.totalElements;
   const totalPages = pageInfo.totalPages;
-  const startIndex = (currentPage - 1) * PAGE_SIZE;
   const paginatedItems = historyItems;
 
   const handlePageChange = (page) => {
@@ -319,44 +309,15 @@ export default function HistoryPage() {
             </div>
           </div>
 
-          {/* Pagination Footer */}
-          <div className="px-lg py-md border-t border-outline-variant flex items-center justify-between bg-surface-container-lowest">
-            <span className="font-body-md text-body-md text-on-surface-variant">
-              Showing {startIndex + 1} to {startIndex + paginatedItems.length} of {totalItems} entries
-            </span>
-            {totalPages > 1 && (
-              <div className="flex gap-1">
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant text-on-surface-variant hover:bg-surface-container disabled:opacity-30"
-                >
-                  <span aria-hidden="true" className="material-symbols-outlined text-[18px]">chevron_left</span>
-                </button>
-                
-                {pageWindow(currentPage, totalPages).map(page => (
-                  <button
-                    key={page}
-                    onClick={() => handlePageChange(page)}
-                    className={`w-8 h-8 flex items-center justify-center rounded font-label-md text-label-md ${
-                      currentPage === page 
-                        ? 'bg-primary-container text-on-primary-container font-bold' 
-                        : 'border border-outline-variant text-on-surface hover:bg-surface-container'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant text-on-surface-variant hover:bg-surface-container disabled:opacity-30"
-                >
-                  <span aria-hidden="true" className="material-symbols-outlined text-[18px]">chevron_right</span>
-                </button>
-              </div>
-            )}
+          {/* Pagination Footer: the shared pager the admin lists and Mock lobby use */}
+          <div className="px-lg py-md border-t border-outline-variant bg-surface-container-lowest">
+            <Pagination
+              page={currentPage - 1}
+              totalPages={totalPages}
+              totalElements={totalItems}
+              size={PAGE_SIZE}
+              onPageChange={(page) => handlePageChange(page + 1)}
+            />
           </div>
         </div>
       )}

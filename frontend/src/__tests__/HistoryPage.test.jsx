@@ -56,7 +56,7 @@ describe('HistoryPage over the merged feed', () => {
     expect(screen.getByText('1 min')).toBeInTheDocument();
     // Two rows recorded no time: the listening test and the sitting still grading.
     expect(screen.getAllByText('—')).toHaveLength(2);
-    expect(screen.getByText(/Showing 1 to 5 of 5 entries/)).toBeInTheDocument();
+    expect(screen.getByText((_, el) => el?.tagName === 'SPAN' && el.textContent === 'Showing 1–5 of 5 items')).toBeInTheDocument();
     expect(historyApi.getFeed).toHaveBeenCalledWith({ page: 0, size: 8 });
   });
 

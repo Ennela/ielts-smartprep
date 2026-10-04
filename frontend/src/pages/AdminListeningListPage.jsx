@@ -284,7 +284,7 @@ export default function AdminListeningListPage() {
                             className="btn btn-sm btn-outline"
                             onClick={() => navigate(`/listening/exam?parts=${part.partId}&preview=true&adminView=true`)}
                             id={`preview-part-${part.partId}`}
-                          >👁 Xem thử</button>
+                          >Preview</button>
                           {part.audioStatus === 'READY' && (
                             <button
                               className="btn btn-sm btn-outline"

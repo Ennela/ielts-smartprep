@@ -10,6 +10,7 @@ import AdminRoute from './components/common/AdminRoute';
 import UserRoute from './components/common/UserRoute';
 import MainLayout from './components/common/MainLayout';
 import UserLayout from './components/common/UserLayout';
+import FullPageLoader from './components/common/FullPageLoader';
 
 // Lazy loaded page components
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -57,12 +58,7 @@ export default function App() {
       <ThemeProvider>
       <ToastProvider>
         <AuthProvider>
-          <Suspense fallback={
-            <div className="loading-spinner" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-              <div className="spinner" style={{ width: 40, height: 40, border: '4px solid var(--color-border-subtle)', borderTopColor: 'var(--color-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-              <p style={{ marginTop: 16, color: 'var(--color-text-muted)', fontFamily: 'var(--font-heading)' }}>Loading page...</p>
-            </div>
-          }>
+          <Suspense fallback={<FullPageLoader message="Loading page..." />}>
             <Routes>
               {/* Public */}
               <Route path="/login" element={<LoginPage />} />

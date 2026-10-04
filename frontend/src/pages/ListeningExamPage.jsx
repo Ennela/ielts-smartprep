@@ -368,7 +368,7 @@ export default function ListeningExamPage() {
           position: 'relative'
         }}>
           <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18, color: '#f57c00' }}>warning</span>
-          <span>⚠️ PREVIEW MODE — Bạn đang xem với tư cách Admin. Bài làm sẽ không được lưu.</span>
+          <span>Preview mode: you are viewing this as an admin, and answers are not saved.</span>
         </div>
       )}
 
@@ -533,7 +533,7 @@ export default function ListeningExamPage() {
                           border: '1px solid rgba(0,108,74,0.15)',
                           display: 'inline-block'
                         }}>
-                          Đáp án đúng: {q.correctAnswer}
+                          Correct answer: {q.correctAnswer}
                         </div>
                       )}
                     </div>
@@ -555,13 +555,13 @@ export default function ListeningExamPage() {
           className="btn btn-outline"
           onClick={() => navigate(isPreview ? '/admin/listening' : '/listening')}
         >
-          {isPreview ? '← Quay lại Admin' : 'Exit'}
+          {isPreview ? 'Back to Admin' : 'Exit'}
         </button>
         <button
           className="btn btn-primary btn-lg"
           onClick={() => confirmSubmitAnswers(totalQuestions - answeredCount) && handleSubmit()}
           disabled={isPreview || submitting || answeredCount === 0}
-          title={isPreview ? "Không thể nộp ở chế độ preview" : undefined}
+          title={isPreview ? "Submitting is disabled in preview" : undefined}
           id="submit-listening-btn"
         >
           {submitting ? 'Grading...' : `Submit (${answeredCount}/${totalQuestions})`}

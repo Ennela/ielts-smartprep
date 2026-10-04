@@ -136,6 +136,22 @@
   --clr-success: var(--color-success);
   --clr-warning: var(--color-warning);
   --clr-error: var(--color-error);
+
+  /* Names some pages use that were never defined, so their colours and borders silently
+     fell back to nothing (the Reading/Listening practice tabs showed no active tab). */
+  --primary-color: var(--primary);
+  --primary-light: var(--color-primary-08);
+  --text-main: var(--on-surface);
+  --text-primary: var(--on-surface);
+  --text-secondary: var(--on-surface-variant);
+  --border-color: var(--outline-variant);
+  --bg-body: var(--background);
+  --bg-card: var(--surface-container-lowest);
+  --card-bg: var(--surface-container-lowest);
+  --success: var(--color-success);
+  --color-danger: var(--error);
+  --success-container: #cdeedd;
+  --on-success-container: #00513a;
 }
 
 /* ===== DARK THEME OVERRIDES ===== */
@@ -239,4 +255,7 @@
   --color-primary-15: rgba(123,168,247,0.15);
   --color-primary-20: rgba(123,168,247,0.2);
   --color-primary-40: rgba(123,168,247,0.4);
+
+  --success-container: #00513a;
+  --on-success-container: #a6f2cd;
 }

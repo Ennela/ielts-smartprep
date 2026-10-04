@@ -337,7 +337,7 @@ export default function WritingEditorPage() {
           flexShrink: 0
         }}>
           <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18, color: '#f57c00' }}>warning</span>
-          <span>⚠️ PREVIEW MODE — Bạn đang xem với tư cách Admin. Bài làm sẽ không được lưu.</span>
+          <span>Preview mode: you are viewing this as an admin, and answers are not saved.</span>
         </div>
       )}
 
@@ -351,7 +351,7 @@ export default function WritingEditorPage() {
             style={{ margin: 0 }}
           >
             <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 20 }}>arrow_back</span>
-            {isPreview ? '← Quay lại Admin' : 'Prompts'}
+            {isPreview ? 'Back to Admin' : 'Prompts'}
           </button>
           <div style={{ width: 1, height: 24, background: 'var(--outline-variant)' }} />
           <span style={{
@@ -391,7 +391,7 @@ export default function WritingEditorPage() {
             className="btn btn-primary btn-grade"
             onClick={handleGrade}
             disabled={isPreview || !isOk || grading || recovering}
-            title={isPreview ? "Không thể nộp ở chế độ preview" : (grading ? 'Grading usually takes 1-2 minutes' : undefined)}
+            title={isPreview ? "Submitting is disabled in preview" : (grading ? 'Grading usually takes 1-2 minutes' : undefined)}
             id="grade-essay-btn"
           >
             {grading ? <><span className="spinner" />AI is grading... {formatElapsed(gradingSeconds)}</>
