@@ -32,6 +32,9 @@ const UNDERLINE_INPUT = {
 export default function FillBlankQuestion({ question, value, onChange, variant = 'boxed' }) {
   const underline = variant === 'underline';
   const parts = question.questionText.split('___');
+  // A gap-fill written without a ___ (e.g. "First name: Mark") had no input at all, so
+  // the question could not be answered; the answer box then goes after the text.
+  if (parts.length === 1) parts.push('');
   return (
     <div className={underline ? undefined : 'fill-blank-question'}>
       <p className="question-text" style={underline ? UNDERLINE_PARAGRAPH : undefined}>
@@ -41,6 +44,7 @@ export default function FillBlankQuestion({ question, value, onChange, variant =
             {i < parts.length - 1 && (
               <input type="text" className="fill-blank-input" value={value}
                 onChange={e => onChange(e.target.value)}
+                aria-label="Your answer"
                 placeholder={underline ? 'your answer...' : 'your answer'}
                 style={underline ? UNDERLINE_INPUT : undefined} />
             )}
