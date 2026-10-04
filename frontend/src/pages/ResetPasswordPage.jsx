@@ -162,7 +162,7 @@ export default function ResetPasswordPage() {
 
             {/* Footnote Link */}
             <p className="mt-xl text-center font-body-md text-body-md text-on-surface-variant">
-              <Link className="font-title-lg text-[14px] text-primary hover:text-primary-container transition-colors font-semibold" to="/login">Back to Login</Link>
+              <Link className="font-title-lg text-[14px] text-primary hover:text-surface-tint transition-colors font-semibold" to="/login">Back to Login</Link>
             </p>
           </form>
         )}

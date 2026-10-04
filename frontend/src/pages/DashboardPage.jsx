@@ -136,9 +136,9 @@ export default function DashboardPage() {
       case 'READING':
         return { label: 'Reading', border: 'border-t-secondary', text: 'text-secondary', icon: 'menu_book', progressBg: 'bg-secondary' };
       case 'WRITING':
-        return { label: 'Writing', border: 'border-t-tertiary-container', text: 'text-tertiary-container', icon: 'edit_note', progressBg: 'bg-tertiary-container' };
+        return { label: 'Writing', border: 'border-t-tertiary-container', text: 'text-tertiary', icon: 'edit_note', progressBg: 'bg-tertiary-container' };
       case 'LISTENING':
-        return { label: 'Listening', border: 'border-t-primary-container', text: 'text-primary-container', icon: 'headset', progressBg: 'bg-primary-container' };
+        return { label: 'Listening', border: 'border-t-primary-container', text: 'text-primary', icon: 'headset', progressBg: 'bg-primary-container' };
       default:
         return { label: skillName, border: 'border-t-primary', text: 'text-primary', icon: 'school', progressBg: 'bg-primary' };
     }
@@ -166,20 +166,20 @@ export default function DashboardPage() {
       {/* Bento Grid Layout */}
       <div className="grid grid-cols-12 gap-gutter">
         {/* Overall Target Card (Span 12 mobile, 4 desktop) */}
-        <div className="col-span-12 lg:col-span-4 bg-primary-container text-on-primary rounded-xl p-lg shadow-sm border border-outline-variant/20 relative overflow-hidden flex flex-col justify-between min-h-[220px]">
+        <div className="col-span-12 lg:col-span-4 bg-primary-container text-white rounded-xl p-lg shadow-sm border border-outline-variant/20 relative overflow-hidden flex flex-col justify-between min-h-[220px]">
           {/* Background Blobs decoration */}
           <div className="absolute -right-8 -top-8 w-48 h-48 bg-primary rounded-full opacity-50 blur-3xl"></div>
           <div className="absolute -left-8 -bottom-8 w-32 h-32 bg-secondary rounded-full opacity-50 blur-2xl"></div>
           
           <div className="relative z-10">
-            <h2 className="font-title-lg text-title-lg text-primary-fixed-dim mb-xs">Overall Target Band</h2>
-            <div className="font-display-lg text-[64px] leading-none font-extrabold mb-sm text-on-primary tracking-tighter">{targetBand}</div>
+            <h2 className="font-title-lg text-title-lg text-primary-fixed mb-xs">Overall Target Band</h2>
+            <div className="font-display-lg text-[64px] leading-none font-extrabold mb-sm text-white tracking-tighter">{targetBand}</div>
           </div>
           
           <div className="relative z-10 flex justify-between items-end border-t border-primary/30 pt-md mt-auto">
             <div>
-              <span className="font-label-md text-label-md text-primary-fixed-dim block mb-1">Current Estimate</span>
-              <span className="font-headline-md text-headline-md text-on-primary">{currentBand}</span>
+              <span className="font-label-md text-label-md text-primary-fixed block mb-1">Current Estimate</span>
+              <span className="font-headline-md text-headline-md text-white">{currentBand}</span>
             </div>
             <span aria-hidden="true" className="material-symbols-outlined text-[32px] text-tertiary-fixed-dim">trending_up</span>
           </div>
@@ -335,16 +335,16 @@ export default function DashboardPage() {
           <div className="relative w-20 h-20 flex items-center justify-center flex-shrink-0">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
               <path className="text-surface-container-high" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
-              <path className="text-primary-container" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray={`${overallAccuracy}, 100`} stroke-linecap="round" stroke-width="3"></path>
+              <path className="text-primary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray={`${overallAccuracy}, 100`} stroke-linecap="round" stroke-width="3"></path>
             </svg>
-            <span className="absolute font-headline-md text-headline-md text-primary-container font-extrabold">{overallAccuracy}%</span>
+            <span className="absolute font-headline-md text-headline-md text-primary font-extrabold">{overallAccuracy}%</span>
           </div>
         </div>
 
         {/* Weakest Area card */}
         <div className="bg-surface-container-lowest rounded-xl shadow-sm p-md flex flex-col justify-center border border-outline-variant/20 hover:shadow-md transition-shadow">
           <h4 className="font-title-lg text-title-lg text-on-surface mb-sm flex items-center gap-sm">
-            <span aria-hidden="true" className="material-symbols-outlined text-tertiary-container icon-fill">warning</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-tertiary icon-fill">warning</span>
             Focus Area Needed
           </h4>
           {sectionErrors.weakness ? (
@@ -422,7 +422,7 @@ export default function DashboardPage() {
                         }) : '—'}
                       </td>
                       <td className="py-4 px-md text-right">
-                        <button className="text-primary hover:text-primary-container font-bold text-sm flex items-center gap-xs ml-auto group-hover:underline">
+                        <button className="text-primary hover:text-surface-tint font-bold text-sm flex items-center gap-xs ml-auto group-hover:underline">
                           {isMockTest ? 'View Report' : 'Review Answers'}
                           <span aria-hidden="true" className="material-symbols-outlined text-[16px]">arrow_forward</span>
                         </button>

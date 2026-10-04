@@ -95,7 +95,7 @@ export default function LoginPage() {
           <div className="space-y-xs">
             <div className="flex items-center justify-between">
               <label className="block font-label-md text-label-md text-on-surface" htmlFor="password">Password</label>
-              <Link className="py-1 font-label-md text-label-md text-primary hover:text-primary-container transition-colors" to="/forgot-password">Forgot Password?</Link>
+              <Link className="py-1 font-label-md text-label-md text-primary hover:text-surface-tint transition-colors" to="/forgot-password">Forgot Password?</Link>
             </div>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-sm flex items-center pointer-events-none">
@@ -185,7 +185,7 @@ export default function LoginPage() {
         {/* Register Link */}
         <p className="mt-xl text-center font-body-md text-body-md text-on-surface-variant">
           Don't have an account?{' '}
-          <Link className="font-title-lg text-[14px] text-primary hover:text-primary-container transition-colors font-semibold ml-xs" to="/register">Register here</Link>
+          <Link className="font-title-lg text-[14px] text-primary hover:text-surface-tint transition-colors font-semibold ml-xs" to="/register">Register here</Link>
         </p>
       </main>
     </div>

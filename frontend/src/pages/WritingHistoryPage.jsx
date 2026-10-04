@@ -145,7 +145,7 @@ export default function WritingHistoryPage() {
                                 id={`full-history-${item.id}`}
                             >
                                 <div className="history-card-top">
-                                    <span className="essay-type-badge" style={{ background: 'var(--primary-container)', color: 'var(--primary)' }}>
+                                    <span className="essay-type-badge badge-discussion">
                                         Full Mock Test
                                     </span>
                                     <span className="history-date">{formatDate(item.submittedAt)}</span>

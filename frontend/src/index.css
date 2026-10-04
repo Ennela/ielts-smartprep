@@ -13,7 +13,8 @@ body {
   line-height: 1.6;
 }
 a { color: var(--color-primary); text-decoration: none; transition: color var(--transition); }
-a:hover { color: var(--color-emerald-light); }
+/* Was --color-emerald-light (#82f5c1, 1.3:1 on white). --surface-tint is a lighter blue in light mode and equals --primary in dark. */
+a:hover { color: var(--surface-tint); }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 5px; }
@@ -63,7 +64,7 @@ body::after {
   border-radius: var(--radius-md); padding: 24px;
   box-shadow: var(--shadow-sm); transition: all var(--transition);
 }
-.card:hover { border-color: rgba(15,118,110,0.2); box-shadow: var(--shadow); transform: translateY(-1px); }
+.card:hover { border-color: var(--color-primary-20); box-shadow: var(--shadow); transform: translateY(-1px); }
 .card-clickable { cursor: pointer; position: relative; }
 a.card-clickable, a.card-clickable:hover { display: block; color: inherit; }
 .card-clickable:hover { border-color: var(--color-primary); }
@@ -474,14 +475,26 @@ a.card-clickable, a.card-clickable:hover { display: block; color: inherit; }
 .badge-opinion { background: rgba(37,99,235,0.08); color: var(--color-blue); }
 .badge-discussion { background: var(--color-primary-08); color: var(--color-primary); }
 .badge-cause, .badge-cause_and_effect { background: rgba(245,158,11,0.08); color: var(--color-amber); }
-.badge-problem, .badge-problem_and_solution { background: rgba(244,63,94,0.08); color: #f43f5e; }
-.badge-advantages, .badge-advantages_disadvantages { background: rgba(139,92,246,0.08); color: #8b5cf6; }
-.badge-twopart, .badge-two_part_question { background: rgba(100,116,139,0.08); color: #64748b; }
+.badge-problem, .badge-problem_and_solution { background: rgba(190,18,60,0.08); color: #be123c; }
+.badge-advantages, .badge-advantages_disadvantages { background: rgba(109,40,217,0.08); color: #6d28d9; }
+.badge-twopart, .badge-two_part_question { background: rgba(71,85,105,0.08); color: #475569; }
 .badge-line-graph, .badge-line_graph { background: rgba(16,185,129,0.08); color: var(--color-success); }
 .badge-bar-chart, .badge-bar_chart { background: rgba(37,99,235,0.08); color: var(--color-blue); }
 .badge-pie-chart, .badge-pie_chart { background: rgba(245,158,11,0.08); color: var(--color-amber); }
-.badge-table { background: rgba(139,92,246,0.08); color: #8b5cf6; }
-.badge-map { background: rgba(236,72,153,0.08); color: #ec4899; }
+.badge-table { background: rgba(109,40,217,0.08); color: #6d28d9; }
+.badge-map { background: rgba(190,24,93,0.08); color: #be185d; }
+/* The category hues above are the -700 shades so they pass 4.5:1 on their tint;
+   the dark theme needs the light shades instead. */
+[data-theme="dark"] .badge-problem, [data-theme="dark"] .badge-problem_and_solution { color: #fb7185; }
+[data-theme="dark"] .badge-advantages, [data-theme="dark"] .badge-advantages_disadvantages,
+[data-theme="dark"] .badge-table { color: #a78bfa; }
+[data-theme="dark"] .badge-twopart, [data-theme="dark"] .badge-two_part_question { color: #94a3b8; }
+[data-theme="dark"] .badge-map { color: #f472b6; }
+/* Status badges (audio ready, content source…): token colours, which switch with the theme. */
+.badge-status-success { background: rgba(0,108,74,0.08); color: var(--color-success); }
+.badge-status-warning { background: rgba(132,44,0,0.08); color: var(--color-warning); }
+.badge-status-error { background: rgba(186,26,26,0.08); color: var(--color-error); }
+.badge-status-info { background: rgba(0,95,175,0.08); color: var(--color-blue); }
 .badge-diagram { background: rgba(0, 108, 74, 0.08); color: var(--color-emerald); }
 .prompt-text { font-size: 0.95rem; line-height: 1.7; color: var(--color-text); margin-bottom: 12px; }
 .empty-msg { text-align: center; color: var(--color-text-muted); padding: 40px 0; }

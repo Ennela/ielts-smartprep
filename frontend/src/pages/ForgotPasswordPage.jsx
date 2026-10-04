@@ -110,7 +110,7 @@ export default function ForgotPasswordPage() {
             {/* Footnote Link */}
             <p className="mt-xl text-center font-body-md text-body-md text-on-surface-variant">
               Remember your password?{' '}
-              <Link className="font-title-lg text-[14px] text-primary hover:text-primary-container transition-colors font-semibold ml-xs" to="/login">Login here</Link>
+              <Link className="font-title-lg text-[14px] text-primary hover:text-surface-tint transition-colors font-semibold ml-xs" to="/login">Login here</Link>
             </p>
           </form>
         )}

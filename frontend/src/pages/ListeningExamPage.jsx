@@ -525,7 +525,7 @@ export default function ListeningExamPage() {
                           marginTop: '12px',
                           padding: '6px 12px',
                           backgroundColor: 'rgba(0,108,74,0.06)',
-                          color: '#006c4a',
+                          color: 'var(--color-success)',
                           borderRadius: '4px',
                           fontSize: '0.85rem',
                           fontWeight: 600,

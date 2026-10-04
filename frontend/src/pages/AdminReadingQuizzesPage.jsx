@@ -396,9 +396,9 @@ export default function AdminReadingQuizzesPage() {
                       </td>
                       <td>
                         {quiz.isTemplate ? (
-                          <span className="essay-type-badge" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.2)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>Admin</span>
+                          <span className="essay-type-badge badge-status-info">Admin</span>
                         ) : (
-                          <span className="essay-type-badge" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }} title={`Tạo bởi user: ${quiz.createdBy || 'AI'}`}>AI Generate</span>
+                          <span className="essay-type-badge badge-status-success" title={`Created by: ${quiz.createdBy || 'AI'}`}>AI Generated</span>
                         )}
                       </td>
                       <td>{Math.round(quiz.timeLimitSeconds / 60)} mins</td>

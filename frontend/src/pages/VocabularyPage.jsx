@@ -244,7 +244,7 @@ export default function VocabularyPage() {
         }
         .vocab-badge-due {
           background: var(--error);
-          color: white;
+          color: var(--on-error);
           font-size: 0.75rem;
           padding: 2px 8px;
           border-radius: 99px;

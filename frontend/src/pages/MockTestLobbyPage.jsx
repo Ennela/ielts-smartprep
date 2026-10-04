@@ -270,8 +270,8 @@ export default function MockTestLobbyPage() {
 
             <div className={styles['skills-grid']} style={{ marginTop: '12px' }}>
               <div className={styles['skill-card']}>
-                <div className={styles['skill-indicator']} style={{ backgroundColor: '#003178' }}></div>
-                <div className={styles['skill-icon-wrapper']} style={{ backgroundColor: 'rgba(0, 49, 120, 0.1)', color: '#003178' }}>
+                <div className={styles['skill-indicator']} style={{ backgroundColor: 'var(--primary)' }}></div>
+                <div className={styles['skill-icon-wrapper']} style={{ backgroundColor: 'var(--color-primary-10)', color: 'var(--primary)' }}>
                   <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '32px' }}>headset</span>
                 </div>
                 <h3 className={styles['skill-title']}>Listening</h3>
@@ -283,8 +283,8 @@ export default function MockTestLobbyPage() {
               </div>
 
               <div className={styles['skill-card']}>
-                <div className={styles['skill-indicator']} style={{ backgroundColor: '#005faf' }}></div>
-                <div className={styles['skill-icon-wrapper']} style={{ backgroundColor: 'rgba(0, 95, 175, 0.1)', color: '#005faf' }}>
+                <div className={styles['skill-indicator']} style={{ backgroundColor: 'var(--secondary)' }}></div>
+                <div className={styles['skill-icon-wrapper']} style={{ backgroundColor: 'rgba(0, 95, 175, 0.1)', color: 'var(--secondary)' }}>
                   <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '32px' }}>menu_book</span>
                 </div>
                 <h3 className={styles['skill-title']}>Reading</h3>
@@ -296,8 +296,8 @@ export default function MockTestLobbyPage() {
               </div>
 
               <div className={styles['skill-card']}>
-                <div className={styles['skill-indicator']} style={{ backgroundColor: '#853100' }}></div>
-                <div className={styles['skill-icon-wrapper']} style={{ backgroundColor: 'rgba(133, 49, 0, 0.1)', color: '#853100' }}>
+                <div className={styles['skill-indicator']} style={{ backgroundColor: 'var(--tertiary-container)' }}></div>
+                <div className={styles['skill-icon-wrapper']} style={{ backgroundColor: 'rgba(133, 49, 0, 0.1)', color: 'var(--color-amber)' }}>
                   <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '32px' }}>edit_note</span>
                 </div>
                 <h3 className={styles['skill-title']}>Writing</h3>
@@ -385,14 +385,14 @@ export default function MockTestLobbyPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', borderBottom: '1px solid var(--outline-variant)', pb: '8px', paddingBottom: '8px' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--on-surface-variant)' }}>
-                      <span aria-hidden="true" className="material-symbols-outlined" style={{ color: '#00875a', fontSize: '18px' }}>check_circle</span>
+                      <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--color-success)', fontSize: '18px' }}>check_circle</span>
                       Browser check
                     </span>
                     <span style={{ fontWeight: 600 }}>Google Chrome / Edge Compatible</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', borderBottom: '1px solid var(--outline-variant)', pb: '8px', paddingBottom: '8px' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--on-surface-variant)' }}>
-                      <span aria-hidden="true" className="material-symbols-outlined" style={{ color: '#00875a', fontSize: '18px' }}>check_circle</span>
+                      <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--color-success)', fontSize: '18px' }}>check_circle</span>
                       Network check
                     </span>
                     <span style={{ fontWeight: 600 }}>Excellent (Latency &lt; 50ms)</span>
@@ -528,7 +528,7 @@ export default function MockTestLobbyPage() {
           }}
         >
           <div>
-            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--tertiary-container)', margin: 0, fontWeight: 700 }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-amber)', margin: 0, fontWeight: 700 }}>
               <span aria-hidden="true" className="material-symbols-outlined">hourglass_empty</span>
               Test in Progress
             </h3>
@@ -551,8 +551,8 @@ export default function MockTestLobbyPage() {
       <div className={styles['skills-grid']}>
         {/* Reading Section */}
         <div className={styles['skill-card']}>
-          <div className={styles['skill-indicator']} style={{ backgroundColor: '#005faf' }}></div>
-          <div className={styles['skill-icon-wrapper']} style={{ backgroundColor: 'rgba(0, 95, 175, 0.1)', color: '#005faf' }}>
+          <div className={styles['skill-indicator']} style={{ backgroundColor: 'var(--secondary)' }}></div>
+          <div className={styles['skill-icon-wrapper']} style={{ backgroundColor: 'rgba(0, 95, 175, 0.1)', color: 'var(--secondary)' }}>
             <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '32px' }}>menu_book</span>
           </div>
           <h3 className={styles['skill-title']}>Reading</h3>
@@ -565,8 +565,8 @@ export default function MockTestLobbyPage() {
 
         {/* Listening Section */}
         <div className={styles['skill-card']}>
-          <div className={styles['skill-indicator']} style={{ backgroundColor: '#003178' }}></div>
-          <div className={styles['skill-icon-wrapper']} style={{ backgroundColor: 'rgba(0, 49, 120, 0.1)', color: '#003178' }}>
+          <div className={styles['skill-indicator']} style={{ backgroundColor: 'var(--primary)' }}></div>
+          <div className={styles['skill-icon-wrapper']} style={{ backgroundColor: 'var(--color-primary-10)', color: 'var(--primary)' }}>
             <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '32px' }}>headset</span>
           </div>
           <h3 className={styles['skill-title']}>Listening</h3>
@@ -579,8 +579,8 @@ export default function MockTestLobbyPage() {
 
         {/* Writing Section */}
         <div className={styles['skill-card']}>
-          <div className={styles['skill-indicator']} style={{ backgroundColor: '#853100' }}></div>
-          <div className={styles['skill-icon-wrapper']} style={{ backgroundColor: 'rgba(133, 49, 0, 0.1)', color: '#853100' }}>
+          <div className={styles['skill-indicator']} style={{ backgroundColor: 'var(--tertiary-container)' }}></div>
+          <div className={styles['skill-icon-wrapper']} style={{ backgroundColor: 'rgba(133, 49, 0, 0.1)', color: 'var(--color-amber)' }}>
             <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '32px' }}>edit_note</span>
           </div>
           <h3 className={styles['skill-title']}>Writing</h3>

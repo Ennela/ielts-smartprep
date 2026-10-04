@@ -211,7 +211,7 @@ export default function UserLayout() {
           <button 
             onClick={handleResendVerification}
             disabled={resending || cooldown > 0}
-            className="text-primary hover:text-primary-container hover:underline font-bold focus:outline-none disabled:opacity-50"
+            className="text-primary hover:text-surface-tint hover:underline font-bold focus:outline-none disabled:opacity-50"
           >
             {resending ? 'resending...' : cooldown > 0 ? `resend in ${cooldown}s` : 'click here to resend the verification link'}
           </button>

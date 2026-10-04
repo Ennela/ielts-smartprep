@@ -138,7 +138,7 @@ export default function HistoryPage() {
       default:
         return {
           name: 'assignment',
-          wrapperClass: 'bg-primary-container/20 text-primary-container'
+          wrapperClass: 'bg-primary-container/20 text-primary'
         };
     }
   };
@@ -307,7 +307,7 @@ export default function HistoryPage() {
                       <div className="col-span-2 flex justify-end">
                         <button
                           onClick={() => navigate(item.actionUrl)}
-                          className="font-label-md text-label-md text-primary-container border border-outline-variant hover:bg-surface-container hover:border-outline px-md py-2 rounded-lg transition-colors"
+                          className="font-label-md text-label-md text-primary border border-outline-variant hover:bg-surface-container hover:border-outline px-md py-2 rounded-lg transition-colors"
                         >
                           View Review
                         </button>

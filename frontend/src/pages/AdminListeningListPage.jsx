@@ -252,17 +252,17 @@ export default function AdminListeningListPage() {
                       <td>{part.topic}</td>
                       <td>
                         {part.audioStatus === 'READY' && (
-                          <span className="essay-type-badge badge-opinion" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                          <span className="essay-type-badge badge-status-success">
                             Ready
                           </span>
                         )}
                         {part.audioStatus === 'PENDING' && (
-                          <span className="essay-type-badge badge-opinion" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.2)', animation: 'pulse 1.5s infinite' }}>
+                          <span className="essay-type-badge badge-status-warning" style={{ animation: 'pulse 1.5s infinite' }}>
                             Pending...
                           </span>
                         )}
                         {part.audioStatus === 'FAILED' && (
-                          <span className="essay-type-badge badge-opinion" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                          <span className="essay-type-badge badge-status-error">
                             Failed
                           </span>
                         )}

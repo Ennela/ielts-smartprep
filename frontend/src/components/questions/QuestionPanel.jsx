@@ -116,10 +116,10 @@ function QuestionGroup({ group, answers, setAnswer, disabled, showCorrectAnswers
               flexDirection: 'column',
               gap: '6px'
             }}>
-              <h5 style={{ margin: '0 0 4px 0', fontSize: '0.85rem', color: '#006c4a' }}>Đáp án đúng:</h5>
+              <h5 style={{ margin: '0 0 4px 0', fontSize: '0.85rem', color: 'var(--color-success)' }}>Đáp án đúng:</h5>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px' }}>
                 {group.questions.map((q) => (
-                  <div key={q.questionId} style={{ fontSize: '0.8rem', color: '#006c4a', display: 'flex', gap: '4px' }}>
+                  <div key={q.questionId} style={{ fontSize: '0.8rem', color: 'var(--color-success)', display: 'flex', gap: '4px' }}>
                     <strong>Q{numberOffset + q.orderIndex}:</strong>
                     <span>{q.correctAnswer}</span>
                   </div>
@@ -247,7 +247,7 @@ const ANSWER_KEY_STYLE = {
   marginTop: '8px',
   padding: '6px 12px',
   backgroundColor: 'rgba(0,108,74,0.06)',
-  color: '#006c4a',
+  color: 'var(--color-success)',
   borderRadius: '4px',
   fontSize: '0.8rem',
   fontWeight: 600,
