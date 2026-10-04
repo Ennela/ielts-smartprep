@@ -1,0 +1,10 @@
+[
+  {
+    "id": "GHSA-vfj7-8cjw-p6xm",
+    "package": "braces",
+    "via": "tailwindcss 3.4.19 -> chokidar, micromatch -> braces <= 3.0.3",
+    "reason": "No patched braces exists; the only fix is Tailwind 4, a major upgrade. tailwindcss is a devDependency that runs only while building the CSS, and the DoS needs deeply nested brace patterns, which here come from the project's own Tailwind config, never from a user.",
+    "added": "2026-10-04",
+    "remove_when": "braces publishes a fix, or the frontend moves to Tailwind 4"
+  }
+]
