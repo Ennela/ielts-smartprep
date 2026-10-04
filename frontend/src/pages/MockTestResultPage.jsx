@@ -168,11 +168,11 @@ export default function MockTestResultPage() {
 
           <div style={{ textAlign: 'left', background: 'var(--surface-container-low)', padding: '20px', borderRadius: 'var(--radius-lg)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span className="material-symbols-outlined" style={{ color: 'var(--secondary)' }}>check_circle</span>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--secondary)' }}>check_circle</span>
               <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>Score Listening answers (Done)</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <span className="material-symbols-outlined" style={{ color: 'var(--secondary)' }}>check_circle</span>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--secondary)' }}>check_circle</span>
               <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>Score Reading answers (Done)</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -180,7 +180,7 @@ export default function MockTestResultPage() {
               <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>Gemini evaluating Task 1 & Task 2 writing...</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', opacity: 0.5 }}>
-              <span className="material-symbols-outlined">hourglass_empty</span>
+              <span aria-hidden="true" className="material-symbols-outlined">hourglass_empty</span>
               <span style={{ fontSize: '0.9rem' }}>Aggregate overall band & compile report</span>
             </div>
           </div>
@@ -198,7 +198,7 @@ export default function MockTestResultPage() {
     return (
       <div className="dashboard-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
         <div className="card" style={{ maxWidth: '480px', width: '100%', textAlign: 'center', padding: '40px' }}>
-          <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--error)', marginBottom: '16px' }}>error</span>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--error)', marginBottom: '16px' }}>error</span>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '8px' }}>Grading Interrupted</h2>
           <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', marginBottom: '24px' }}>
             An unexpected error occurred during AI evaluation. Your listening and reading scores are saved, but writing could not be completed.
@@ -264,7 +264,7 @@ export default function MockTestResultPage() {
         
         {/* Back Button */}
         <button className="btn-back" onClick={() => navigate('/mock-tests')} id="back-to-lobby" style={{ marginBottom: '24px' }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>arrow_back</span>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 20 }}>arrow_back</span>
           Back to Exam Lobby
         </button>
 
@@ -613,7 +613,7 @@ export default function MockTestResultPage() {
         {/* ── LISTENING TAB CONTENT ── */}
         {skillTab === 'listening' && (
           <div className={`card ${styles['listening-card']}`}>
-            <span className="material-symbols-outlined" style={{ fontSize: '64px', color: 'var(--primary)' }}>headphones</span>
+            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '64px', color: 'var(--primary)' }}>headphones</span>
             
             <div>
               <h2 style={{ fontSize: '1.6rem', fontWeight: 700, marginBottom: '8px' }}>Listening Quiz Assessment Overview</h2>
@@ -631,7 +631,7 @@ export default function MockTestResultPage() {
                 onClick={() => navigate(`/listening/result/${result.listeningTest.testId}`)}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '14px 28px', fontSize: '0.95rem' }}
               >
-                <span className="material-symbols-outlined">menu_book</span>
+                <span aria-hidden="true" className="material-symbols-outlined">menu_book</span>
                 Open Detailed Listening Review
               </button>
             ) : (

@@ -11,13 +11,14 @@ import styles from '../styles/Profile.module.css';
 const DEFAULT_AVATAR = '/assets/avatars/avatar_sarah.png';
 
 export default function ProfilePage() {
-  const { user, updateUser, logout } = useAuth();
+  const { user, updateUser, logout, isAdmin } = useAuth();
   const { success, error } = useToast();
   const { theme: currentTheme, setTheme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Tab Control
-  const activeTab = searchParams.get('tab') || 'personal';
+  // Tab Control. Admins reach this page from /admin/profile and have no study goals.
+  const requestedTab = searchParams.get('tab') || 'personal';
+  const activeTab = isAdmin && requestedTab === 'goals' ? 'personal' : requestedTab;
   const setActiveTab = (tab) => {
     setSearchParams({ tab });
   };
@@ -333,12 +334,14 @@ export default function ProfilePage() {
         >
           Personal Info
         </button>
-        <button 
-          onClick={() => setActiveTab('goals')}
-          className={`${styles['tab-btn']} ${activeTab === 'goals' ? styles.active : ''}`}
-        >
-          Study Goals
-        </button>
+        {!isAdmin && (
+          <button 
+            onClick={() => setActiveTab('goals')}
+            className={`${styles['tab-btn']} ${activeTab === 'goals' ? styles.active : ''}`}
+          >
+            Study Goals
+          </button>
+        )}
         <button 
           onClick={() => setActiveTab('prefs')}
           className={`${styles['tab-btn']} ${activeTab === 'prefs' ? styles.active : ''}`}
@@ -373,7 +376,7 @@ export default function ProfilePage() {
                   }}
                 />
                 <div className={styles['avatar-overlay']}>
-                  <span className={`material-symbols-outlined ${styles['avatar-icon']}`}>photo_camera</span>
+                  <span aria-hidden="true" className={`material-symbols-outlined ${styles['avatar-icon']}`}>photo_camera</span>
                 </div>
               </div>
               <input 
@@ -544,7 +547,7 @@ export default function ProfilePage() {
                   </div>
                   {targetReading < currentReading && (
                     <div className="text-warning text-xs mt-sm flex items-center gap-xs font-semibold">
-                      <span className="material-symbols-outlined text-[16px]">warning</span>
+                      <span aria-hidden="true" className="material-symbols-outlined text-[16px]">warning</span>
                       Warning: Target is lower than your current estimated score ({currentReading.toFixed(1)})
                     </div>
                   )}
@@ -575,7 +578,7 @@ export default function ProfilePage() {
                   </div>
                   {targetWriting < currentWriting && (
                     <div className="text-warning text-xs mt-sm flex items-center gap-xs font-semibold">
-                      <span className="material-symbols-outlined text-[16px]">warning</span>
+                      <span aria-hidden="true" className="material-symbols-outlined text-[16px]">warning</span>
                       Warning: Target is lower than your current estimated score ({currentWriting.toFixed(1)})
                     </div>
                   )}
@@ -606,7 +609,7 @@ export default function ProfilePage() {
                   </div>
                   {targetListening < currentListening && (
                     <div className="text-warning text-xs mt-sm flex items-center gap-xs font-semibold">
-                      <span className="material-symbols-outlined text-[16px]">warning</span>
+                      <span aria-hidden="true" className="material-symbols-outlined text-[16px]">warning</span>
                       Warning: Target is lower than your current estimated score ({currentListening.toFixed(1)})
                     </div>
                   )}

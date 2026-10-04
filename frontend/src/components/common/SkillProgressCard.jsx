@@ -24,7 +24,7 @@ export default function SkillProgressCard({ skill, currentAvg, targetScore, prog
       {/* Header: icon + band score */}
       <div className={styles['spc-header']}>
         <div className={styles['spc-icon-wrap']}>
-          <span className="material-symbols-outlined">{icon}</span>
+          <span aria-hidden="true" className="material-symbols-outlined">{icon}</span>
         </div>
         <span className={`${styles['spc-band-score']} ${styles[`spc-band-${colorKey}`]}`}>{band}</span>
       </div>

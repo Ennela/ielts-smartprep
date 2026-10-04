@@ -27,13 +27,15 @@ export function ToastProvider({ children }) {
     <ToastContext.Provider value={{ success, error, info, warning }}>
       {children}
       {/* Toast container overlay */}
-      <div className="fixed top-5 right-5 z-[9999] flex flex-col gap-sm max-w-sm w-full pointer-events-none px-4 md:px-0">
+      {/* Always mounted so screen readers announce toasts as they arrive; errors interrupt. */}
+      <div aria-live="polite" className="fixed top-5 right-5 z-[9999] flex flex-col gap-sm max-w-sm w-full pointer-events-none px-4 md:px-0">
         {toasts.map(t => (
           <div
             key={t.id}
+            role={t.type === 'error' ? 'alert' : 'status'}
             className={`
               pointer-events-auto flex items-start gap-md p-md rounded-xl shadow-ambient border transition-all duration-300 animate-slide-in
-              ${t.type === 'success' ? 'bg-surface-container-lowest border-emerald/20 text-on-surface' : ''}
+              ${t.type === 'success' ? 'bg-surface-container-lowest border-outline-variant/30 text-on-surface' : ''}
               ${t.type === 'error' ? 'bg-surface-container-lowest border-error/20 text-on-surface' : ''}
               ${t.type === 'warning' ? 'bg-surface-container-lowest border-tertiary/20 text-on-surface' : ''}
               ${t.type === 'info' ? 'bg-surface-container-lowest border-outline-variant/30 text-on-surface' : ''}
@@ -41,16 +43,16 @@ export function ToastProvider({ children }) {
           >
             {/* Icons matching Google Material Symbols */}
             {t.type === 'success' && (
-              <span className="material-symbols-outlined text-emerald text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-[color:var(--color-success)] text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
             )}
             {t.type === 'error' && (
-              <span className="material-symbols-outlined text-error text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>error</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-error text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>error</span>
             )}
             {t.type === 'warning' && (
-              <span className="material-symbols-outlined text-tertiary text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-tertiary text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
             )}
             {t.type === 'info' && (
-              <span className="material-symbols-outlined text-primary text-[24px]">info</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-primary text-[24px]">info</span>
             )}
             
             <div className="flex-1 flex flex-col gap-xs">
@@ -59,9 +61,10 @@ export function ToastProvider({ children }) {
 
             <button 
               onClick={() => remove(t.id)}
+              aria-label="Dismiss notification"
               className="text-outline hover:text-on-surface-variant transition-colors flex-shrink-0"
             >
-              <span className="material-symbols-outlined text-[18px]">close</span>
+              <span aria-hidden="true" className="material-symbols-outlined text-[18px]">close</span>
             </button>
           </div>
         ))}

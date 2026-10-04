@@ -159,7 +159,7 @@ export default function WritingFullResultPage() {
                 background: 'rgba(186,26,26,0.08)', color: 'var(--error)',
                 fontSize: '0.8rem', fontWeight: 600, width: 'fit-content',
               }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>timer_off</span>
+                <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 16 }}>timer_off</span>
                 Auto-submitted (time expired)
               </div>
             )}
@@ -201,7 +201,7 @@ export default function WritingFullResultPage() {
               {/* Left Column: Prompt Text & Visual Chart */}
               <div style={{ flex: '1 1 320px', minWidth: 320, background: 'var(--surface-container-low)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--outline-variant)', display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <h3 style={{ marginTop: 0, marginBottom: 0, display: 'flex', alignItems: 'center', gap: 6, fontSize: '1.1rem' }}>
-                  <span className="material-symbols-outlined" style={{ color: 'var(--primary)', fontSize: 20 }}>description</span>
+                  <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--primary)', fontSize: 20 }}>description</span>
                   Prompt Description
                 </h3>
                 <p style={{ fontSize: '0.92rem', lineHeight: 1.6, color: 'var(--on-surface)', margin: 0 }}>
@@ -218,7 +218,7 @@ export default function WritingFullResultPage() {
                     border: '1px solid var(--outline-variant)', marginTop: 8
                   }}>
                     <div style={{ fontWeight: 700, marginBottom: 6, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.85rem' }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>mail</span>
+                      <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 16 }}>mail</span>
                       Letter Guidelines
                     </div>
                     <ul style={{ margin: 0, paddingLeft: 16, fontSize: '0.8rem', color: 'var(--on-surface-variant)', lineHeight: 1.4 }}>

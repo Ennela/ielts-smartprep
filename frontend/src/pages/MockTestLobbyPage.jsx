@@ -228,7 +228,7 @@ export default function MockTestLobbyPage() {
             style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}
             onClick={handleExitSetup}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>arrow_back</span>
+            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '18px' }}>arrow_back</span>
             Back to Lobby
           </button>
           <div>
@@ -243,13 +243,13 @@ export default function MockTestLobbyPage() {
             <div className="wizard-line"></div>
             <div className={`wizard-step ${setupStep === 1 ? 'active' : ''} ${setupStep > 1 ? 'completed' : ''}`}>
               <div className="wizard-step-num">
-                {setupStep > 1 ? <span className="material-symbols-outlined" style={{ fontSize: 20 }}>check</span> : '1'}
+                {setupStep > 1 ? <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 20 }}>check</span> : '1'}
               </div>
               <span style={{ fontSize: '0.85rem' }}>Step 1: Setup</span>
             </div>
             <div className={`wizard-step ${setupStep === 2 ? 'active' : ''} ${setupStep > 2 ? 'completed' : ''}`}>
               <div className="wizard-step-num">
-                {setupStep > 2 ? <span className="material-symbols-outlined" style={{ fontSize: 20 }}>check</span> : '2'}
+                {setupStep > 2 ? <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 20 }}>check</span> : '2'}
               </div>
               <span style={{ fontSize: '0.85rem' }}>Step 2: System Check</span>
             </div>
@@ -272,12 +272,12 @@ export default function MockTestLobbyPage() {
               <div className={styles['skill-card']}>
                 <div className={styles['skill-indicator']} style={{ backgroundColor: '#003178' }}></div>
                 <div className={styles['skill-icon-wrapper']} style={{ backgroundColor: 'rgba(0, 49, 120, 0.1)', color: '#003178' }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>headset</span>
+                  <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '32px' }}>headset</span>
                 </div>
                 <h3 className={styles['skill-title']}>Listening</h3>
                 <p className={styles['skill-desc']}>{selectedTestForSetup.listeningPartsCount || 4} Parts • 40 Questions</p>
                 <div className={styles['skill-footer']}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>schedule</span>
+                  <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px' }}>schedule</span>
                   <span>30 Minutes</span>
                 </div>
               </div>
@@ -285,12 +285,12 @@ export default function MockTestLobbyPage() {
               <div className={styles['skill-card']}>
                 <div className={styles['skill-indicator']} style={{ backgroundColor: '#005faf' }}></div>
                 <div className={styles['skill-icon-wrapper']} style={{ backgroundColor: 'rgba(0, 95, 175, 0.1)', color: '#005faf' }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>menu_book</span>
+                  <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '32px' }}>menu_book</span>
                 </div>
                 <h3 className={styles['skill-title']}>Reading</h3>
                 <p className={styles['skill-desc']}>{selectedTestForSetup.readingQuizzesCount || 3} Passages • 40 Questions</p>
                 <div className={styles['skill-footer']}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>schedule</span>
+                  <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px' }}>schedule</span>
                   <span>60 Minutes</span>
                 </div>
               </div>
@@ -298,12 +298,12 @@ export default function MockTestLobbyPage() {
               <div className={styles['skill-card']}>
                 <div className={styles['skill-indicator']} style={{ backgroundColor: '#853100' }}></div>
                 <div className={styles['skill-icon-wrapper']} style={{ backgroundColor: 'rgba(133, 49, 0, 0.1)', color: '#853100' }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>edit_note</span>
+                  <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '32px' }}>edit_note</span>
                 </div>
                 <h3 className={styles['skill-title']}>Writing</h3>
                 <p className={styles['skill-desc']}>{selectedTestForSetup.writingPromptsCount || 2} Tasks</p>
                 <div className={styles['skill-footer']}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>schedule</span>
+                  <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px' }}>schedule</span>
                   <span>60 Minutes</span>
                 </div>
               </div>
@@ -312,7 +312,7 @@ export default function MockTestLobbyPage() {
             <div className={styles['info-grid']} style={{ marginTop: '12px' }}>
               <div className={styles['info-card']}>
                 <div className={styles['info-header']}>
-                  <span className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>info</span>
+                  <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>info</span>
                   <h3 className={styles['info-title']}>Key Instructions</h3>
                 </div>
                 <ul style={{ paddingLeft: '20px', margin: 0, fontSize: '0.9rem', color: 'var(--on-surface-variant)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -342,7 +342,7 @@ export default function MockTestLobbyPage() {
               {/* Headphone audio test */}
               <div className={styles['info-card']} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div className={styles['info-header']} style={{ marginBottom: 0 }}>
-                  <span className="material-symbols-outlined" style={{ color: 'var(--secondary)' }}>headphones</span>
+                  <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--secondary)' }}>headphones</span>
                   <h3 className={styles['info-title']}>Headphone & Volume Test</h3>
                 </div>
                 <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--on-surface-variant)' }}>
@@ -354,7 +354,7 @@ export default function MockTestLobbyPage() {
                     className="btn btn-primary"
                     style={{ borderRadius: '50%', width: '48px', height: '48px', minWidth: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
                   >
-                    <span className="material-symbols-outlined" style={{ fontSize: 28 }}>
+                    <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 28 }}>
                       {audioTesting ? 'pause' : 'play_arrow'}
                     </span>
                   </button>
@@ -379,20 +379,20 @@ export default function MockTestLobbyPage() {
               {/* Technical checks */}
               <div className={styles['info-card']} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div className={styles['info-header']} style={{ marginBottom: 0 }}>
-                  <span className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>settings_suggest</span>
+                  <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>settings_suggest</span>
                   <h3 className={styles['info-title']}>System & Browser Compatibility</h3>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', borderBottom: '1px solid var(--outline-variant)', pb: '8px', paddingBottom: '8px' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--on-surface-variant)' }}>
-                      <span className="material-symbols-outlined" style={{ color: '#00875a', fontSize: '18px' }}>check_circle</span>
+                      <span aria-hidden="true" className="material-symbols-outlined" style={{ color: '#00875a', fontSize: '18px' }}>check_circle</span>
                       Browser check
                     </span>
                     <span style={{ fontWeight: 600 }}>Google Chrome / Edge Compatible</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', borderBottom: '1px solid var(--outline-variant)', pb: '8px', paddingBottom: '8px' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--on-surface-variant)' }}>
-                      <span className="material-symbols-outlined" style={{ color: '#00875a', fontSize: '18px' }}>check_circle</span>
+                      <span aria-hidden="true" className="material-symbols-outlined" style={{ color: '#00875a', fontSize: '18px' }}>check_circle</span>
                       Network check
                     </span>
                     <span style={{ fontWeight: 600 }}>Excellent (Latency &lt; 50ms)</span>
@@ -436,7 +436,7 @@ export default function MockTestLobbyPage() {
           <div className="setup-card" style={{ animation: 'fadeIn 0.4s', border: '1px solid var(--error-container)' }}>
             <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
               <div style={{ background: 'var(--error-container)', color: 'var(--on-error-container)', padding: '16px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 36 }}>warning</span>
+                <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 36 }}>warning</span>
               </div>
               <div style={{ flex: 1 }}>
                 <h2 style={{ fontSize: '1.3rem', fontWeight: 700, margin: '0 0 8px 0', color: 'var(--error)' }}>
@@ -529,7 +529,7 @@ export default function MockTestLobbyPage() {
         >
           <div>
             <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--tertiary-container)', margin: 0, fontWeight: 700 }}>
-              <span className="material-symbols-outlined">hourglass_empty</span>
+              <span aria-hidden="true" className="material-symbols-outlined">hourglass_empty</span>
               Test in Progress
             </h3>
             <p style={{ fontSize: '0.9rem', color: 'var(--on-surface-variant)', marginTop: '6px', marginBottom: 0 }}>
@@ -553,12 +553,12 @@ export default function MockTestLobbyPage() {
         <div className={styles['skill-card']}>
           <div className={styles['skill-indicator']} style={{ backgroundColor: '#005faf' }}></div>
           <div className={styles['skill-icon-wrapper']} style={{ backgroundColor: 'rgba(0, 95, 175, 0.1)', color: '#005faf' }}>
-            <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>menu_book</span>
+            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '32px' }}>menu_book</span>
           </div>
           <h3 className={styles['skill-title']}>Reading</h3>
           <p className={styles['skill-desc']}>3 Passages • 40 Questions</p>
           <div className={styles['skill-footer']}>
-            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>schedule</span>
+            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px' }}>schedule</span>
             <span>60 Minutes</span>
           </div>
         </div>
@@ -567,12 +567,12 @@ export default function MockTestLobbyPage() {
         <div className={styles['skill-card']}>
           <div className={styles['skill-indicator']} style={{ backgroundColor: '#003178' }}></div>
           <div className={styles['skill-icon-wrapper']} style={{ backgroundColor: 'rgba(0, 49, 120, 0.1)', color: '#003178' }}>
-            <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>headset</span>
+            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '32px' }}>headset</span>
           </div>
           <h3 className={styles['skill-title']}>Listening</h3>
           <p className={styles['skill-desc']}>4 Parts • 40 Questions</p>
           <div className={styles['skill-footer']}>
-            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>schedule</span>
+            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px' }}>schedule</span>
             <span>30 Minutes</span>
           </div>
         </div>
@@ -581,12 +581,12 @@ export default function MockTestLobbyPage() {
         <div className={styles['skill-card']}>
           <div className={styles['skill-indicator']} style={{ backgroundColor: '#853100' }}></div>
           <div className={styles['skill-icon-wrapper']} style={{ backgroundColor: 'rgba(133, 49, 0, 0.1)', color: '#853100' }}>
-            <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>edit_note</span>
+            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '32px' }}>edit_note</span>
           </div>
           <h3 className={styles['skill-title']}>Writing</h3>
           <p className={styles['skill-desc']}>2 Tasks</p>
           <div className={styles['skill-footer']}>
-            <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>schedule</span>
+            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px' }}>schedule</span>
             <span>60 Minutes</span>
           </div>
         </div>
@@ -597,26 +597,26 @@ export default function MockTestLobbyPage() {
         {/* Requirements */}
         <div className={styles['info-card']}>
           <div className={styles['info-header']}>
-            <span className="material-symbols-outlined" style={{ color: 'var(--error)' }}>verified_user</span>
+            <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--error)' }}>verified_user</span>
             <h3 className={styles['info-title']}>System Requirements</h3>
           </div>
           <ul className={styles['requirements-list']}>
             <li className={styles['requirement-item']}>
-              <span className="material-symbols-outlined" style={{ color: 'var(--secondary)', fontSize: '18px' }}>check_circle</span>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--secondary)', fontSize: '18px' }}>check_circle</span>
               <div>
                 <strong className={styles['req-name']}>Stable Internet Connection</strong>
                 <span className={styles['req-desc']}>At least 5 Mbps recommended to prevent interruptions.</span>
               </div>
             </li>
             <li className={styles['requirement-item']}>
-              <span className="material-symbols-outlined" style={{ color: 'var(--secondary)', fontSize: '18px' }}>check_circle</span>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--secondary)', fontSize: '18px' }}>check_circle</span>
               <div>
                 <strong className={styles['req-name']}>Working Audio</strong>
                 <span className={styles['req-desc']}>Headphones required for the Listening section.</span>
               </div>
             </li>
             <li className={styles['requirement-item']}>
-              <span className="material-symbols-outlined" style={{ color: 'var(--secondary)', fontSize: '18px' }}>check_circle</span>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--secondary)', fontSize: '18px' }}>check_circle</span>
               <div>
                 <strong className={styles['req-name']}>Quiet Environment</strong>
                 <span className={styles['req-desc']}>Ensure you will not be disturbed for the next 2.5 hours.</span>
@@ -628,7 +628,7 @@ export default function MockTestLobbyPage() {
         {/* Instructions */}
         <div className={styles['info-card']}>
           <div className={styles['info-header']}>
-            <span className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>info</span>
+            <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>info</span>
             <h3 className={styles['info-title']}>Test Instructions</h3>
           </div>
           <ol className={styles['instructions-list']}>
@@ -666,15 +666,15 @@ export default function MockTestLobbyPage() {
                 </p>
                 <div className={styles['test-metadata']}>
                   <span className={styles['metadata-item']}>
-                    <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>headphones</span>
+                    <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '14px' }}>headphones</span>
                     Listening: {test.listeningPartsCount} Parts
                   </span>
                   <span className={styles['metadata-item']}>
-                    <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>menu_book</span>
+                    <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '14px' }}>menu_book</span>
                     Reading: {test.readingQuizzesCount} Passages
                   </span>
                   <span className={styles['metadata-item']}>
-                    <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>edit_note</span>
+                    <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '14px' }}>edit_note</span>
                     Writing: {test.writingPromptsCount} Tasks
                   </span>
                 </div>
@@ -751,7 +751,7 @@ export default function MockTestLobbyPage() {
         </div>
       ) : (
         <div className={styles['info-card']} style={{ textAlign: 'center', padding: '48px' }}>
-          <span className="material-symbols-outlined" style={{ fontSize: '3rem', color: 'var(--outline)', marginBottom: '12px' }}>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '3rem', color: 'var(--outline)', marginBottom: '12px' }}>
             folder_open
           </span>
           <p style={{ color: 'var(--on-surface-variant)', margin: 0 }}>You haven't taken any full mock tests yet. Your reports will appear here once you complete an exam.</p>

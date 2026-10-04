@@ -132,7 +132,7 @@ export default function WritingPromptListPage() {
                             id="gen-ai-mock-test-btn"
                             style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
                         >
-                            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>auto_awesome</span>
+                            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18 }}>auto_awesome</span>
                             AI Mock Test
                         </button>
                         <button
@@ -165,7 +165,7 @@ export default function WritingPromptListPage() {
                         }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <span className="material-symbols-outlined" style={{ color: 'var(--primary)', fontSize: 24 }}>auto_awesome</span>
+                                    <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--primary)', fontSize: 24 }}>auto_awesome</span>
                                     <h3 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>AI Mock Test Generator</h3>
                                 </div>
                                 <button
@@ -173,7 +173,7 @@ export default function WritingPromptListPage() {
                                     onClick={() => setIsGenModalOpen(false)}
                                     disabled={generating}
                                 >
-                                    <span className="material-symbols-outlined">close</span>
+                                    <span aria-hidden="true" className="material-symbols-outlined">close</span>
                                 </button>
                             </div>
 

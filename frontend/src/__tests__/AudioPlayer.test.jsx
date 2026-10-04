@@ -36,7 +36,7 @@ describe('AudioPlayer load failures', () => {
   it('does not spend the mock test single listen on a play() that failed', async () => {
     play.mockRejectedValueOnce(Object.assign(new Error('no source'), { name: 'NotSupportedError' }));
     render(<AudioPlayer src="/api/v1/listening/audio/3.mp3" mode="mock-test" />);
-    const button = screen.getByRole('button', { name: '' });
+    const button = screen.getByRole('button', { name: 'Play' });
 
     fireEvent.click(button);
 
@@ -49,7 +49,7 @@ describe('AudioPlayer load failures', () => {
     play.mockRejectedValueOnce(Object.assign(new Error('interrupted'), { name: 'AbortError' }));
     render(<AudioPlayer src="/api/v1/listening/audio/3.mp3" />);
 
-    fireEvent.click(screen.getByRole('button', { name: '' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
     await Promise.resolve();
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();

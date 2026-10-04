@@ -219,7 +219,7 @@ export default function ReadingFullExamPage() {
             border: isCritical ? '1px solid var(--error)' : 'none',
             animation: isCritical ? 'pulse 1s ease-in-out infinite' : 'none',
           }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>timer</span>
+            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 20 }}>timer</span>
             {formattedTime}
           </div>
           <button
@@ -248,7 +248,7 @@ export default function ReadingFullExamPage() {
       {/* ── Bottom Action Bar ── */}
       <div className="exam-action-bar" style={{ flexShrink: 0 }}>
         <div className="exam-action-bar-left">
-          <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--secondary)' }}>check_circle</span>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--secondary)' }}>check_circle</span>
           <span>Answered <strong>{answeredCount}</strong> / {totalQuestions} questions</span>
         </div>
         <div className="exam-action-bar-right">

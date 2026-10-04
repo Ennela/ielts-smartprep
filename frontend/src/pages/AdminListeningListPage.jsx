@@ -5,6 +5,7 @@ import adminApi from '../api/adminApi';
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
 import ArchivedToggle from '../components/admin/ArchivedToggle';
+import useEscapeKey from '../hooks/useEscapeKey';
 
 const TOPICS = [
   { value: 'ACCOMMODATION', label: 'Accommodation / Booking' },
@@ -138,6 +139,8 @@ export default function AdminListeningListPage() {
       audioRef.current.play().catch(e => console.warn('Audio autoplay blocked', e));
     }
   };
+
+  useEscapeKey(!!deleteId, () => setDeleteId(null));
 
   return (
     <div className="admin-dashboard-content">
@@ -288,7 +291,7 @@ export default function AdminListeningListPage() {
                               onClick={() => playPreview(part)}
                               style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
                             >
-                              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>play_arrow</span>
+                              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 16 }}>play_arrow</span>
                               Play
                             </button>
                           )}
@@ -363,7 +366,7 @@ export default function AdminListeningListPage() {
       {/* Delete Confirm Modal */}
       {deleteId && (
         <div className="admin-modal-overlay" onClick={() => setDeleteId(null)}>
-          <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+          <div className="admin-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 700, marginBottom: 12 }}>
               Confirm Archive
             </h2>

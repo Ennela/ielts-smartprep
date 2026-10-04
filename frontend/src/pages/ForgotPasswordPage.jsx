@@ -41,7 +41,7 @@ export default function ForgotPasswordPage() {
         {/* Header / Logo */}
         <div className="flex flex-col items-center mb-xl">
           <div className="bg-primary/10 p-sm rounded-lg mb-sm">
-            <span className="material-symbols-outlined text-primary text-[32px]">lock_reset</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-primary text-[32px]">lock_reset</span>
           </div>
           <h1 className="font-display-lg text-display-lg text-primary text-center tracking-tight">SmartPrep</h1>
           <h2 className="font-headline-md text-headline-md text-on-surface mt-sm">Reset Password</h2>
@@ -74,7 +74,7 @@ export default function ForgotPasswordPage() {
               <label className="block font-label-md text-label-md text-on-surface" htmlFor="email">Email Address</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-sm flex items-center pointer-events-none">
-                  <span className="material-symbols-outlined text-outline text-[20px]">mail</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-outline text-[20px]">mail</span>
                 </div>
                 <input
                   className="block w-full pl-[40px] pr-sm py-sm font-body-md text-body-md text-on-surface bg-surface-container-lowest border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none transition-shadow"

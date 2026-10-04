@@ -100,7 +100,7 @@ export default function ReadingFullResultPage() {
                 background: 'rgba(186,26,26,0.08)', color: 'var(--error)',
                 fontSize: '0.8rem', fontWeight: 600,
               }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>timer_off</span>
+                <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 16 }}>timer_off</span>
                 Auto-submitted (time expired)
               </div>
             )}
@@ -118,7 +118,7 @@ export default function ReadingFullResultPage() {
             boxShadow: 'var(--shadow-sm)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primary)', marginBottom: '12px' }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 24, color: 'var(--primary)' }}>tips_and_updates</span>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 24, color: 'var(--primary)' }}>tips_and_updates</span>
               <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700, color: 'var(--on-surface)' }}>AI Weakness Analysis</h3>
             </div>
             <p style={{ margin: '0 0 12px 0', fontSize: '0.92rem', color: 'var(--on-surface-variant)' }}>

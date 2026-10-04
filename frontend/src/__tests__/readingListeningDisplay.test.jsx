@@ -14,20 +14,20 @@ describe('mock test listen-once rule', () => {
 
   it('survives a reload, which it used to reset', async () => {
     const { unmount } = render(<AudioPlayer src="/part1.mp3" mode="mock-test" playedStorageKey="mock_played_9" />);
-    fireEvent.click(screen.getByRole('button', { name: '' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
     await waitFor(() => expect(sessionStorage.getItem('mock_played_9')).toContain('/part1.mp3'));
     unmount();
 
     // A fresh page: same sitting, same recording.
     render(<AudioPlayer src="/part1.mp3" mode="mock-test" playedStorageKey="mock_played_9" />);
-    expect(screen.getByRole('button', { name: '' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Recording already played' })).toBeDisabled();
   });
 
   it('belongs to one sitting, so a later retake can play again', () => {
     sessionStorage.setItem('mock_played_9', JSON.stringify(['/part1.mp3']));
 
     render(<AudioPlayer src="/part1.mp3" mode="mock-test" playedStorageKey="mock_played_10" />);
-    expect(screen.getByRole('button', { name: '' })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Play' })).not.toBeDisabled();
   });
 });
 

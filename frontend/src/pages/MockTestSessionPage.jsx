@@ -272,11 +272,11 @@ export default function MockTestSessionPage() {
         <div className="exam-topbar-right">
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <div className={`exam-timer-pill ${timeRemaining < 300 ? 'warning' : ''}`} title="Section Remaining Time">
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>hourglass_empty</span>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 16 }}>hourglass_empty</span>
               Section: {formatTime(timeRemaining)}
             </div>
             <div className="exam-timer-pill" style={{ background: 'var(--surface-container-highest)', color: 'var(--primary)' }} title="Overall Remaining Time">
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>schedule</span>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 16 }}>schedule</span>
               Total: {formatTime(overallTimeRemaining)}
             </div>
           </div>
@@ -346,7 +346,7 @@ export default function MockTestSessionPage() {
                 borderRadius: 'var(--radius-xl)', padding: 24, marginBottom: 32
               }}>
                 <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem', fontWeight: 600, marginBottom: '12px' }}>
-                  <span className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>headphones</span>
+                  <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>headphones</span>
                   Part {currentListeningPart.partNumber}: {currentListeningPart.title}
                 </h3>
                 <AudioPlayer
@@ -493,7 +493,7 @@ export default function MockTestSessionPage() {
       {/* ── Sticky Footer ── */}
       <footer className="exam-action-bar">
         <div className="exam-action-bar-left">
-          <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--secondary)' }}>check_circle</span>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--secondary)' }}>check_circle</span>
           {currentSection === 'LISTENING' && (
             <span>Answered <strong>{answeredListeningCount}</strong> / {totalListeningQuestions} questions</span>
           )}

@@ -171,7 +171,7 @@ export default function ListeningResultPage() {
               background: 'rgba(186,26,26,0.08)', color: 'var(--error)',
               fontSize: '0.8rem', fontWeight: 600,
             }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>timer_off</span>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 16 }}>timer_off</span>
               Auto-submitted (time expired)
             </div>
           )}

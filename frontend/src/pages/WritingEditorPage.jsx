@@ -336,7 +336,7 @@ export default function WritingEditorPage() {
           position: 'relative',
           flexShrink: 0
         }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#f57c00' }}>warning</span>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18, color: '#f57c00' }}>warning</span>
           <span>⚠️ PREVIEW MODE — Bạn đang xem với tư cách Admin. Bài làm sẽ không được lưu.</span>
         </div>
       )}
@@ -350,7 +350,7 @@ export default function WritingEditorPage() {
             id="back-to-prompts"
             style={{ margin: 0 }}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>arrow_back</span>
+            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 20 }}>arrow_back</span>
             {isPreview ? '← Quay lại Admin' : 'Prompts'}
           </button>
           <div style={{ width: 1, height: 24, background: 'var(--outline-variant)' }} />
@@ -382,7 +382,7 @@ export default function WritingEditorPage() {
               }}
               title="Time remaining for this writing session"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>timer</span>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18 }}>timer</span>
               {formattedTime}
             </div>
           )}
@@ -404,7 +404,7 @@ export default function WritingEditorPage() {
       {/* ── Suggested time indicator ── */}
       {deadline && !isPreview && (
         <div className="writing-suggested-time" id="writing-suggested-time">
-          <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--primary)' }}>info</span>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--primary)' }}>info</span>
           <span>
             {isTask1
               ? 'Suggested: ~20 minutes for Task 1 (Report)'
@@ -510,7 +510,7 @@ export default function WritingEditorPage() {
               border: '1px solid var(--outline-variant)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--primary)' }}>{c.icon}</span>
+                <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--primary)' }}>{c.icon}</span>
                 <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.875rem' }}>{c.label}</span>
               </div>
               <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', lineHeight: 1.5 }}>{c.desc}</p>

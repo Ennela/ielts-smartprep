@@ -215,7 +215,7 @@ export default function ReadingExamPage() {
           zIndex: 1100,
           position: 'relative'
         }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#f57c00' }}>warning</span>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18, color: '#f57c00' }}>warning</span>
           <span>⚠️ PREVIEW MODE — Bạn đang xem với tư cách Admin. Bài làm sẽ không được lưu.</span>
         </div>
       )}
@@ -248,12 +248,12 @@ export default function ReadingExamPage() {
               border: isCritical ? '1px solid var(--error)' : 'none',
               animation: isCritical ? 'pulse 1s ease-in-out infinite' : 'none',
             }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>timer</span>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 20 }}>timer</span>
               {formattedTime}
             </div>
           )}
           <button className="btn-exam-help">
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>help_outline</span>
+            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18 }}>help_outline</span>
             Help
           </button>
           <button
@@ -281,7 +281,7 @@ export default function ReadingExamPage() {
       {/* ── Bottom Action Bar ── */}
       <div className="exam-action-bar">
         <div className="exam-action-bar-left">
-          <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--secondary)' }}>check_circle</span>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--secondary)' }}>check_circle</span>
           <span>Answered <strong>{answeredCount}</strong> / {totalQuestions} questions</span>
         </div>
         <div className="exam-action-bar-right">

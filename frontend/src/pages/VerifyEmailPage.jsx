@@ -73,7 +73,7 @@ export default function VerifyEmailPage() {
         {/* Header / Logo */}
         <div className="flex flex-col items-center mb-xl">
           <div className="bg-primary/10 p-sm rounded-lg mb-sm">
-            <span className="material-symbols-outlined text-primary text-[32px]">mark_email_read</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-primary text-[32px]">mark_email_read</span>
           </div>
           <h1 className="font-display-lg text-display-lg text-primary text-center tracking-tight">SmartPrep</h1>
           <h2 className="font-headline-md text-headline-md text-on-surface mt-sm">Email Verification</h2>

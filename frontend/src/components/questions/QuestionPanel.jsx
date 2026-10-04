@@ -408,6 +408,7 @@ function TfngOptions({ questionId, selected, onChange, disabled }) {
           key={opt}
           type="button"
           className={`tfng-btn ${selected === opt ? 'active' : ''}`}
+          aria-pressed={selected === opt}
           onClick={() => onChange(opt)}
           disabled={disabled}
           id={`tfng-${questionId}-${opt.replace(' ', '-').toLowerCase()}`}
@@ -432,6 +433,7 @@ function YnngOptions({ questionId, selected, onChange, disabled }) {
           key={opt}
           type="button"
           className={`tfng-btn ${selected === opt ? 'active' : ''}`}
+          aria-pressed={selected === opt}
           onClick={() => onChange(opt)}
           disabled={disabled}
           id={`ynng-${questionId}-${opt.replace(' ', '-').toLowerCase()}`}

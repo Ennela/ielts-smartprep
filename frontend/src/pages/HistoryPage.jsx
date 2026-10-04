@@ -173,7 +173,7 @@ export default function HistoryPage() {
               }}
               className="w-full bg-surface-container-lowest border border-outline-variant text-on-surface font-body-md text-body-md rounded-lg pl-9 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-transparent"
             />
-            <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
+            <span aria-hidden="true" className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
           </div>
 
           <div className="relative">
@@ -191,7 +191,7 @@ export default function HistoryPage() {
               <option value="Listening">Listening</option>
               <option value="Mock Tests">Mock Tests</option>
             </select>
-            <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+            <span aria-hidden="true" className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
           </div>
 
           <div className="relative">
@@ -207,7 +207,7 @@ export default function HistoryPage() {
               <option value="Last 30 Days">Last 30 Days</option>
               <option value="Last 3 Months">Last 3 Months</option>
             </select>
-            <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+            <span aria-hidden="true" className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
           </div>
         </div>
       </div>
@@ -220,14 +220,14 @@ export default function HistoryPage() {
         </div>
       ) : error ? (
         <div className="text-center py-20 bg-surface-container-lowest rounded-2xl border border-outline-variant">
-          <span className="material-symbols-outlined text-error text-[48px] mb-2">error</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-error text-[48px] mb-2">error</span>
           <h3 className="font-title-lg text-title-lg text-on-surface mb-2">{error}</h3>
           <button onClick={() => window.location.reload()} className="btn btn-primary mt-2">Retry</button>
         </div>
       ) : totalItems === 0 && !filtersActive ? (
         <div className="bg-surface-container-lowest rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-outline-variant p-xl flex flex-col items-center justify-center text-center py-20">
           <div className="w-24 h-24 mb-md opacity-50 flex items-center justify-center rounded-full bg-surface-container">
-            <span className="material-symbols-outlined text-[48px] text-outline">history</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[48px] text-outline">history</span>
           </div>
           <h3 className="font-title-lg text-title-lg text-on-surface mb-2">No attempts recorded yet</h3>
           <p className="font-body-md text-body-md text-on-surface-variant max-w-md mb-lg">Start practicing now to see your scores and detailed evaluations recorded here.</p>
@@ -236,7 +236,7 @@ export default function HistoryPage() {
       ) : totalItems === 0 ? (
         <div className="bg-surface-container-lowest rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-outline-variant p-xl flex flex-col items-center justify-center text-center py-20">
           <div className="w-24 h-24 mb-md opacity-50 flex items-center justify-center rounded-full bg-surface-container">
-            <span className="material-symbols-outlined text-[48px] text-outline">filter_list_off</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[48px] text-outline">filter_list_off</span>
           </div>
           <h3 className="font-title-lg text-title-lg text-on-surface mb-2">No matching history found</h3>
           <p className="font-body-md text-body-md text-on-surface-variant max-w-md mb-lg">No history items matched your search or filters. Try adjusting your selections.</p>
@@ -278,7 +278,7 @@ export default function HistoryPage() {
                       
                       <div className="col-span-4 flex items-center gap-sm">
                         <div className={`w-8 h-8 rounded-full ${icon.wrapperClass} flex items-center justify-center`}>
-                          <span className="material-symbols-outlined text-[18px]">{icon.name}</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-[18px]">{icon.name}</span>
                         </div>
                         <div>
                           <div className="font-bold text-[14px] leading-tight text-on-surface line-clamp-1">
@@ -331,7 +331,7 @@ export default function HistoryPage() {
                   disabled={currentPage === 1}
                   className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant text-on-surface-variant hover:bg-surface-container disabled:opacity-30"
                 >
-                  <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-[18px]">chevron_left</span>
                 </button>
                 
                 {pageWindow(currentPage, totalPages).map(page => (
@@ -353,7 +353,7 @@ export default function HistoryPage() {
                   disabled={currentPage === totalPages}
                   className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant text-on-surface-variant hover:bg-surface-container disabled:opacity-30"
                 >
-                  <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-[18px]">chevron_right</span>
                 </button>
               </div>
             )}

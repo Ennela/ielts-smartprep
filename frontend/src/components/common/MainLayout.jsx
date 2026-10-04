@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import styles from './MainLayout.module.css';
 
@@ -41,9 +41,10 @@ export default function MainLayout() {
         </div>
 
         {/* User Profile Card */}
-        <div
+        <button
+          type="button"
           className={styles['sidebar-user-card']}
-          onClick={() => { navigate('/profile'); setSidebarOpen(false); }}
+          onClick={() => { navigate('/admin/profile'); setSidebarOpen(false); }}
         >
           <div className={styles['sidebar-avatar']}>{initials}</div>
           <div className={styles['sidebar-user-info']}>
@@ -63,7 +64,7 @@ export default function MainLayout() {
               })()}`}
             </span>
           </div>
-        </div>
+        </button>
 
         {/* Main Navigation */}
         <nav className={styles['sidebar-nav']}>
@@ -77,7 +78,7 @@ export default function MainLayout() {
               id={`nav-admin-${item.label.toLowerCase().replace(/\s/g, '-')}`}
             >
               <span className={styles['sidebar-icon']}>
-                <span className="material-symbols-outlined">{item.icon}</span>
+                <span aria-hidden="true" className="material-symbols-outlined">{item.icon}</span>
               </span>
               <span className={styles['sidebar-label']}>{item.label}</span>
             </NavLink>
@@ -87,12 +88,12 @@ export default function MainLayout() {
         {/* Footer: links only */}
         <div className={styles['sidebar-footer']}>
           <div className={styles['sidebar-footer-links']}>
-            <button className={styles['sidebar-footer-link']} onClick={() => navigate('/profile')}>
-              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>settings</span>
+            <button className={styles['sidebar-footer-link']} onClick={() => { navigate('/admin/profile'); setSidebarOpen(false); }}>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 20 }}>settings</span>
               <span>Settings</span>
             </button>
             <button className={`${styles['sidebar-footer-link']} ${styles['sidebar-logout']}`} onClick={handleLogout} id="sidebar-logout-btn">
-              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>logout</span>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 20 }}>logout</span>
               <span>Logout</span>
             </button>
           </div>
@@ -106,36 +107,29 @@ export default function MainLayout() {
             className={styles.hamburger}
             onClick={() => setSidebarOpen(!sidebarOpen)}
             id="hamburger-btn"
+            aria-label={sidebarOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={sidebarOpen}
           >
-            <span className="material-symbols-outlined">menu</span>
+            <span aria-hidden="true" className="material-symbols-outlined">menu</span>
           </button>
 
           <div className={styles['topbar-brand']}>
-            <span className={styles['topbar-brand-text']} onClick={() => navigate('/admin')}>
+            <Link className={styles['topbar-brand-text']} to="/admin">
               SmartPrep
-            </span>
+            </Link>
           </div>
 
-          {/* Desktop nav links */}
-          <nav className={styles['topbar-nav']} style={{ display: 'none' }}>
-            <a href="#" className={`${styles['topbar-nav-link']} ${styles.active}`}>Practice</a>
-            <a href="#" className={styles['topbar-nav-link']}>Exams</a>
-            <a href="#" className={styles['topbar-nav-link']}>Resources</a>
-          </nav>
-
           <div className={styles['topbar-right']}>
-            <button className={styles['topbar-upgrade']} style={{ display: 'none' }}>Upgrade Pro</button>
-            <button className={styles['topbar-icon-btn']}>
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
             <span className={styles['topbar-greeting']}>{displayName}</span>
-            <div
+            <button
+              type="button"
               className={styles['topbar-avatar']}
-              onClick={() => navigate('/profile')}
+              onClick={() => navigate('/admin/profile')}
               id="topbar-profile-btn"
+              aria-label="Profile and settings"
             >
               {initials}
-            </div>
+            </button>
           </div>
         </header>
 

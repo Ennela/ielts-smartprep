@@ -366,7 +366,7 @@ export default function ListeningExamPage() {
           zIndex: 1100,
           position: 'relative'
         }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#f57c00' }}>warning</span>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18, color: '#f57c00' }}>warning</span>
           <span>⚠️ PREVIEW MODE — Bạn đang xem với tư cách Admin. Bài làm sẽ không được lưu.</span>
         </div>
       )}
@@ -416,7 +416,7 @@ export default function ListeningExamPage() {
                 border: isCritical ? '1px solid var(--error)' : '1px solid var(--outline-variant)',
                 animation: isCritical ? 'pulse 1s ease-in-out infinite' : 'none',
               }}>
-                <span className="material-symbols-outlined" style={{ fontSize: '18px', verticalAlign: 'middle' }}>alarm</span>
+                <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '18px', verticalAlign: 'middle' }}>alarm</span>
                 {formattedTime}
               </div>
             )}
@@ -454,7 +454,7 @@ export default function ListeningExamPage() {
               borderRadius: 'var(--radius-xl)', padding: 24, marginBottom: 32,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                <span className="material-symbols-outlined" style={{ color: 'var(--primary)', fontSize: 24 }}>headphones</span>
+                <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--primary)', fontSize: 24 }}>headphones</span>
                 <div>
                   <p style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.95rem' }}>
                     Part {currentPart.partNumber}: {currentPart.title}
@@ -478,7 +478,7 @@ export default function ListeningExamPage() {
                 borderRadius: 'var(--radius-xl)', padding: 24, marginBottom: 32,
               }}>
                 <h4 style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, color: 'var(--primary)', fontFamily: 'var(--font-heading)' }}>
-                  <span className="material-symbols-outlined">description</span>
+                  <span aria-hidden="true" className="material-symbols-outlined">description</span>
                   Transcript (Preview Mode)
                 </h4>
                 <div style={{

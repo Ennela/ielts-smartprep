@@ -181,7 +181,7 @@ export default function DashboardPage() {
               <span className="font-label-md text-label-md text-primary-fixed-dim block mb-1">Current Estimate</span>
               <span className="font-headline-md text-headline-md text-on-primary">{currentBand}</span>
             </div>
-            <span className="material-symbols-outlined text-[32px] text-tertiary-fixed-dim">trending_up</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[32px] text-tertiary-fixed-dim">trending_up</span>
           </div>
         </div>
 
@@ -202,7 +202,7 @@ export default function DashboardPage() {
               >
                 <div className="p-md border-b border-outline-variant/30 flex justify-between items-center bg-surface-bright">
                   <div className="flex items-center gap-sm">
-                    <span className={`material-symbols-outlined ${config.text}`}>{config.icon}</span>
+                    <span aria-hidden="true" className={`material-symbols-outlined ${config.text}`}>{config.icon}</span>
                     <h3 className="font-title-lg text-title-lg text-on-surface">{config.label}</h3>
                   </div>
                 </div>
@@ -274,7 +274,7 @@ export default function DashboardPage() {
               </Suspense>
             ) : (
               <div className="flex flex-col items-center justify-center text-center p-md">
-                <span className="material-symbols-outlined text-[48px] text-outline-variant mb-sm">show_chart</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-[48px] text-outline-variant mb-sm">show_chart</span>
                 <p className="font-body-md text-body-md text-outline">No score trends available for this skill. Try practicing!</p>
               </div>
             )}
@@ -344,7 +344,7 @@ export default function DashboardPage() {
         {/* Weakest Area card */}
         <div className="bg-surface-container-lowest rounded-xl shadow-sm p-md flex flex-col justify-center border border-outline-variant/20 hover:shadow-md transition-shadow">
           <h4 className="font-title-lg text-title-lg text-on-surface mb-sm flex items-center gap-sm">
-            <span className="material-symbols-outlined text-tertiary-container icon-fill">warning</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-tertiary-container icon-fill">warning</span>
             Focus Area Needed
           </h4>
           {sectionErrors.weakness ? (
@@ -408,7 +408,7 @@ export default function DashboardPage() {
                     >
                       <td className="py-4 px-md">
                         <span className={`inline-flex items-center gap-xs font-bold text-sm ${config.text}`}>
-                          <span className="material-symbols-outlined text-[18px]">{config.icon}</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-[18px]">{config.icon}</span>
                           {config.label}
                         </span>
                       </td>
@@ -424,7 +424,7 @@ export default function DashboardPage() {
                       <td className="py-4 px-md text-right">
                         <button className="text-primary hover:text-primary-container font-bold text-sm flex items-center gap-xs ml-auto group-hover:underline">
                           {isMockTest ? 'View Report' : 'Review Answers'}
-                          <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-[16px]">arrow_forward</span>
                         </button>
                       </td>
                     </tr>
@@ -458,7 +458,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-margin border border-dashed border-outline-variant/50 rounded-xl bg-surface-bright text-center">
-            <span className="material-symbols-outlined text-[48px] text-outline-variant mb-sm">history</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[48px] text-outline-variant mb-sm">history</span>
             <p className="font-body-md text-body-md text-outline">No recent activity found for the selected skill filter.</p>
           </div>
         )}
@@ -471,7 +471,7 @@ export default function DashboardPage() {
 function SectionError({ message, onRetry }) {
   return (
     <div className="flex flex-col items-center justify-center py-lg text-center gap-sm" role="alert">
-      <span className="material-symbols-outlined text-[40px] text-error">error</span>
+      <span aria-hidden="true" className="material-symbols-outlined text-[40px] text-error">error</span>
       <p className="font-body-md text-body-md text-on-surface-variant">{message}</p>
       <button
         onClick={onRetry}
@@ -530,7 +530,7 @@ function DashboardSkeleton() {
 function DashboardError({ message, onRetry }) {
   return (
     <div className="bg-surface-container-lowest border border-error/30 rounded-xl p-xl shadow-sm text-center max-w-md mx-auto my-12 flex flex-col items-center gap-md animate-fade-in">
-      <span className="material-symbols-outlined text-[64px] text-error icon-fill">error</span>
+      <span aria-hidden="true" className="material-symbols-outlined text-[64px] text-error icon-fill">error</span>
       <h2 className="font-headline-md text-headline-md text-on-surface">Something went wrong</h2>
       <p className="font-body-md text-body-md text-on-surface-variant">
         {message || 'Unable to load statistics. Please check your network and try again.'}
@@ -554,7 +554,7 @@ function DashboardEmptyState({ displayName, navigate }) {
       </header>
 
       <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-xl shadow-sm text-center max-w-2xl mx-auto my-12 flex flex-col items-center gap-md">
-        <span className="material-symbols-outlined text-[64px] text-primary icon-fill animate-bounce">school</span>
+        <span aria-hidden="true" className="material-symbols-outlined text-[64px] text-primary icon-fill animate-bounce">school</span>
         <h2 className="font-headline-md text-headline-md text-on-surface">Welcome to IELTS SmartPrep!</h2>
         <p className="font-body-lg text-body-lg text-on-surface-variant max-w-md">
           You haven't completed any practice tests yet. Start practicing Reading, Writing, Listening or take a Full Mock Test to receive dynamic feedback and progress analytics.

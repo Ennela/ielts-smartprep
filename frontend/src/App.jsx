@@ -114,6 +114,7 @@ export default function App() {
             {/* Admin Portal Routes wrapped in MainLayout & AdminRoute */}
             <Route element={<ProtectedRoute><AdminRoute><MainLayout /></AdminRoute></ProtectedRoute>}>
               <Route path="/admin" element={<AdminDashboardPage />} />
+              <Route path="/admin/profile" element={<ProfilePage />} />
               <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
               <Route path="/admin/mock-tests" element={<AdminRoute><AdminMockTestsPage /></AdminRoute>} />
               <Route path="/admin/writing-prompts" element={<AdminRoute><AdminWritingPromptsPage /></AdminRoute>} />
