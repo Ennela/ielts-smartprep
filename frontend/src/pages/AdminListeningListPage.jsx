@@ -5,6 +5,7 @@ import adminApi from '../api/adminApi';
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
 import ArchivedToggle from '../components/admin/ArchivedToggle';
+import useEscapeKey from '../hooks/useEscapeKey';
 
 const TOPICS = [
   { value: 'ACCOMMODATION', label: 'Accommodation / Booking' },
@@ -139,6 +140,8 @@ export default function AdminListeningListPage() {
     }
   };
 
+  useEscapeKey(!!deleteId, () => setDeleteId(null));
+
   return (
     <div className="admin-dashboard-content">
       {/* Header */}
@@ -249,17 +252,17 @@ export default function AdminListeningListPage() {
                       <td>{part.topic}</td>
                       <td>
                         {part.audioStatus === 'READY' && (
-                          <span className="essay-type-badge badge-opinion" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                          <span className="essay-type-badge badge-status-success">
                             Ready
                           </span>
                         )}
                         {part.audioStatus === 'PENDING' && (
-                          <span className="essay-type-badge badge-opinion" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.2)', animation: 'pulse 1.5s infinite' }}>
+                          <span className="essay-type-badge badge-status-warning" style={{ animation: 'pulse 1.5s infinite' }}>
                             Pending...
                           </span>
                         )}
                         {part.audioStatus === 'FAILED' && (
-                          <span className="essay-type-badge badge-opinion" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                          <span className="essay-type-badge badge-status-error">
                             Failed
                           </span>
                         )}
@@ -281,14 +284,14 @@ export default function AdminListeningListPage() {
                             className="btn btn-sm btn-outline"
                             onClick={() => navigate(`/listening/exam?parts=${part.partId}&preview=true&adminView=true`)}
                             id={`preview-part-${part.partId}`}
-                          >👁 Xem thử</button>
+                          >Preview</button>
                           {part.audioStatus === 'READY' && (
                             <button
                               className="btn btn-sm btn-outline"
                               onClick={() => playPreview(part)}
                               style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
                             >
-                              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>play_arrow</span>
+                              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 16 }}>play_arrow</span>
                               Play
                             </button>
                           )}
@@ -363,7 +366,7 @@ export default function AdminListeningListPage() {
       {/* Delete Confirm Modal */}
       {deleteId && (
         <div className="admin-modal-overlay" onClick={() => setDeleteId(null)}>
-          <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+          <div className="admin-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 700, marginBottom: 12 }}>
               Confirm Archive
             </h2>

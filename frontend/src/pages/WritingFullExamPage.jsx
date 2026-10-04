@@ -9,6 +9,7 @@ import useExamWarnings from '../hooks/useExamWarnings';
 import useElapsedSeconds, { formatElapsed } from '../hooks/useElapsedSeconds';
 import { useToast } from '../context/ToastContext';
 import { mayHaveGradedAnyway, latestSubmissionId, findNewSubmission } from '../utils/gradingRecovery';
+import { formatEssayType } from '../constants/examTypes';
 
 const SESSION_KEY = 'writing_full_attemptId';
 
@@ -253,6 +254,17 @@ export default function WritingFullExamPage() {
   const wordCount = activeText.trim() ? activeText.trim().split(/\s+/).length : 0;
   const minWords = activeTab === 1 ? 150 : 250;
 
+  // Same check the mock test makes before its Writing section is handed in.
+  const confirmWritingSubmit = () => {
+    const count = (text) => (text.trim() ? text.trim().split(/\s+/).length : 0);
+    const words1 = count(task1Text);
+    const words2 = count(task2Text);
+    const message = words1 < 150 || words2 < 250
+      ? `Your essays are below the minimum length (Task 1: ${words1}/150 words, Task 2: ${words2}/250 words). Submit anyway?`
+      : 'Submit both tasks for grading? You cannot edit them afterwards.';
+    if (window.confirm(message)) handleSubmit();
+  };
+
   // Timer styles
   const timerColor = isCritical ? 'var(--error)' : isWarning ? 'var(--error)' : 'var(--on-surface)';
 
@@ -317,12 +329,12 @@ export default function WritingFullExamPage() {
             border: isCritical ? '1px solid var(--error)' : 'none',
             animation: isCritical ? 'pulse 1s ease-in-out infinite' : 'none',
           }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>timer</span>
+            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 20 }}>timer</span>
             {formattedTime}
           </div>
           <button
             className="btn btn-primary btn-submit-exam"
-            onClick={handleSubmit}
+            onClick={confirmWritingSubmit}
             disabled={submitting || recovering}
             title={submitting ? 'Grading a full test usually takes 1-2 minutes' : undefined}
             id="submit-writing-btn"
@@ -353,7 +365,7 @@ export default function WritingFullExamPage() {
       </div>
 
       {/* ── Main Content ── */}
-      <div className="writing-exam-split" style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', overflow: 'hidden' }}>
+      <div className="writing-exam-split">
 
         {/* Left: Prompt */}
         <div className="writing-prompt-panel" style={{
@@ -373,7 +385,7 @@ export default function WritingFullExamPage() {
           {activeTask && (
             <>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: 16 }}>
-                {activeTask.essayType || (activeTab === 1 ? 'Task 1' : 'Task 2')}
+                {formatEssayType(activeTask.essayType) || (activeTab === 1 ? 'Task 1' : 'Task 2')}
               </h3>
               <p style={{ lineHeight: 1.8, fontSize: '0.95rem', whiteSpace: 'pre-wrap' }}>
                 {activeTask.promptText}
@@ -450,7 +462,7 @@ export default function WritingFullExamPage() {
           <button className="btn btn-outline" onClick={() => navigate('/writing')}>Exit</button>
           <button
             className="btn btn-primary"
-            onClick={handleSubmit}
+            onClick={confirmWritingSubmit}
             disabled={submitting || recovering}
             title={submitting ? 'Grading a full test usually takes 1-2 minutes' : undefined}
           >

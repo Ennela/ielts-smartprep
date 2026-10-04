@@ -366,7 +366,7 @@ export default function VocabInsightPanel({ vocab, onClose }) {
         if (event.target === event.currentTarget) onClose();
       }}
     >
-      <div className={styles.panel} role="dialog" aria-modal="true" aria-label={`Giải thích từ ${vocab.word}`}>
+      <div className={styles.panel} role="dialog" aria-modal="true" aria-label={`Giải thích từ ${vocab.word}`} lang="vi">
         <div className={styles.header}>
           <div className={styles['header-top']}>
             <div>
@@ -381,7 +381,7 @@ export default function VocabInsightPanel({ vocab, onClose }) {
               </div>
             </div>
             <button type="button" className={styles.close} onClick={onClose} aria-label="Đóng">
-              <span className="material-symbols-outlined">close</span>
+              <span aria-hidden="true" className="material-symbols-outlined">close</span>
             </button>
           </div>
 

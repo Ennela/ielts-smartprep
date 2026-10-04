@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import adminApi from '../api/adminApi';
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
+import useEscapeKey from '../hooks/useEscapeKey';
 
 export default function AdminUsersPage() {
   const navigate = useNavigate();
@@ -49,6 +50,8 @@ export default function AdminUsersPage() {
   };
 
   const closeDetail = () => setDetail(null);
+
+  useEscapeKey(!!(detail || detailLoading), closeDetail);
 
   return (
     <div className="admin-dashboard-content">
@@ -157,8 +160,8 @@ export default function AdminUsersPage() {
       {/* Detail Modal */}
       {(detail || detailLoading) && (
         <div className="admin-modal-overlay" onClick={closeDetail}>
-          <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="admin-modal-close" onClick={closeDetail} id="close-user-detail">
+          <div className="admin-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
+            <button className="admin-modal-close" onClick={closeDetail} aria-label="Close" id="close-user-detail">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
 

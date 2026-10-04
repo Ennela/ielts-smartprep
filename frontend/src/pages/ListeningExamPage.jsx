@@ -12,6 +12,7 @@ import { usesGroupedLayout, questionOffset } from '../components/listening/group
 import useExamTimer from '../hooks/useExamTimer';
 import useExamWarnings from '../hooks/useExamWarnings';
 import { useToast } from '../context/ToastContext';
+import { confirmSubmitAnswers } from '../utils/confirmSubmit';
 
 const SESSION_KEY = 'listening_attemptId';
 // Answers are drafted per attempt so a reload or a dropped connection does not lose
@@ -366,8 +367,8 @@ export default function ListeningExamPage() {
           zIndex: 1100,
           position: 'relative'
         }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#f57c00' }}>warning</span>
-          <span>⚠️ PREVIEW MODE — Bạn đang xem với tư cách Admin. Bài làm sẽ không được lưu.</span>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18, color: '#f57c00' }}>warning</span>
+          <span>Preview mode: you are viewing this as an admin, and answers are not saved.</span>
         </div>
       )}
 
@@ -416,7 +417,7 @@ export default function ListeningExamPage() {
                 border: isCritical ? '1px solid var(--error)' : '1px solid var(--outline-variant)',
                 animation: isCritical ? 'pulse 1s ease-in-out infinite' : 'none',
               }}>
-                <span className="material-symbols-outlined" style={{ fontSize: '18px', verticalAlign: 'middle' }}>alarm</span>
+                <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '18px', verticalAlign: 'middle' }}>alarm</span>
                 {formattedTime}
               </div>
             )}
@@ -454,7 +455,7 @@ export default function ListeningExamPage() {
               borderRadius: 'var(--radius-xl)', padding: 24, marginBottom: 32,
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                <span className="material-symbols-outlined" style={{ color: 'var(--primary)', fontSize: 24 }}>headphones</span>
+                <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--primary)', fontSize: 24 }}>headphones</span>
                 <div>
                   <p style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.95rem' }}>
                     Part {currentPart.partNumber}: {currentPart.title}
@@ -478,7 +479,7 @@ export default function ListeningExamPage() {
                 borderRadius: 'var(--radius-xl)', padding: 24, marginBottom: 32,
               }}>
                 <h4 style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, color: 'var(--primary)', fontFamily: 'var(--font-heading)' }}>
-                  <span className="material-symbols-outlined">description</span>
+                  <span aria-hidden="true" className="material-symbols-outlined">description</span>
                   Transcript (Preview Mode)
                 </h4>
                 <div style={{
@@ -525,14 +526,14 @@ export default function ListeningExamPage() {
                           marginTop: '12px',
                           padding: '6px 12px',
                           backgroundColor: 'rgba(0,108,74,0.06)',
-                          color: '#006c4a',
+                          color: 'var(--color-success)',
                           borderRadius: '4px',
                           fontSize: '0.85rem',
                           fontWeight: 600,
                           border: '1px solid rgba(0,108,74,0.15)',
                           display: 'inline-block'
                         }}>
-                          Đáp án đúng: {q.correctAnswer}
+                          Correct answer: {q.correctAnswer}
                         </div>
                       )}
                     </div>
@@ -554,13 +555,13 @@ export default function ListeningExamPage() {
           className="btn btn-outline"
           onClick={() => navigate(isPreview ? '/admin/listening' : '/listening')}
         >
-          {isPreview ? '← Quay lại Admin' : 'Exit'}
+          {isPreview ? 'Back to Admin' : 'Exit'}
         </button>
         <button
           className="btn btn-primary btn-lg"
-          onClick={handleSubmit}
+          onClick={() => confirmSubmitAnswers(totalQuestions - answeredCount) && handleSubmit()}
           disabled={isPreview || submitting || answeredCount === 0}
-          title={isPreview ? "Không thể nộp ở chế độ preview" : undefined}
+          title={isPreview ? "Submitting is disabled in preview" : undefined}
           id="submit-listening-btn"
         >
           {submitting ? 'Grading...' : `Submit (${answeredCount}/${totalQuestions})`}

@@ -50,7 +50,7 @@ export default function RegisterPage() {
         {/* Header / Logo */}
         <div className="flex flex-col items-center mb-xl">
           <div className="bg-primary/10 p-sm rounded-lg mb-sm">
-            <span className="material-symbols-outlined text-primary text-[32px]" style={{ fontVariationSettings: "'FILL' 1" }}>menu_book</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-primary text-[32px]" style={{ fontVariationSettings: "'FILL' 1" }}>menu_book</span>
           </div>
           <h1 className="font-display-lg text-display-lg text-primary text-center tracking-tight">SmartPrep</h1>
           <h2 className="font-headline-md text-headline-md text-on-surface mt-sm">Create Account</h2>
@@ -64,7 +64,7 @@ export default function RegisterPage() {
             <label className="block font-label-md text-label-md text-on-surface" htmlFor="email">Email Address</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-sm flex items-center pointer-events-none">
-                <span className="material-symbols-outlined text-outline text-[20px]">mail</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-outline text-[20px]">mail</span>
               </div>
               <input
                 className="block w-full pl-[40px] pr-sm py-sm font-body-md text-body-md text-on-surface bg-surface-container-lowest border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none transition-shadow"
@@ -85,7 +85,7 @@ export default function RegisterPage() {
             <label className="block font-label-md text-label-md text-on-surface" htmlFor="username">Username</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-sm flex items-center pointer-events-none">
-                <span className="material-symbols-outlined text-outline text-[20px]">person</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-outline text-[20px]">person</span>
               </div>
               <input
                 className="block w-full pl-[40px] pr-sm py-sm font-body-md text-body-md text-on-surface bg-surface-container-lowest border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none transition-shadow"
@@ -106,7 +106,7 @@ export default function RegisterPage() {
             <label className="block font-label-md text-label-md text-on-surface" htmlFor="password">Password</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-sm flex items-center pointer-events-none">
-                <span className="material-symbols-outlined text-outline text-[20px]">lock</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-outline text-[20px]">lock</span>
               </div>
               <input
                 className="block w-full pl-[40px] pr-[40px] py-sm font-body-md text-body-md text-on-surface bg-surface-container-lowest border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none transition-shadow"
@@ -121,11 +121,13 @@ export default function RegisterPage() {
               />
               <div className="absolute inset-y-0 right-0 pr-sm flex items-center">
                 <button
-                  className="text-outline hover:text-on-surface transition-colors focus:outline-none"
+                  className="w-10 h-10 -mr-sm flex items-center justify-center rounded-lg text-outline hover:text-on-surface transition-colors"
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
                 >
-                  <span className="material-symbols-outlined text-[20px]">{showPassword ? "visibility" : "visibility_off"}</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-[20px]">{showPassword ? "visibility" : "visibility_off"}</span>
                 </button>
               </div>
             </div>
@@ -152,7 +154,7 @@ export default function RegisterPage() {
         {/* Footnote Link */}
         <p className="mt-xl text-center font-body-md text-body-md text-on-surface-variant">
           Already have an account?{' '}
-          <Link className="font-title-lg text-[14px] text-primary hover:text-primary-container transition-colors font-semibold ml-xs" to="/login">Login here</Link>
+          <Link className="font-title-lg text-[14px] text-primary hover:text-surface-tint transition-colors font-semibold ml-xs" to="/login">Login here</Link>
         </p>
       </main>
     </div>

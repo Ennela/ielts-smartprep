@@ -336,18 +336,13 @@ export default function WritingEditorPage() {
           position: 'relative',
           flexShrink: 0
         }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#f57c00' }}>warning</span>
-          <span>⚠️ PREVIEW MODE — Bạn đang xem với tư cách Admin. Bài làm sẽ không được lưu.</span>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18, color: '#f57c00' }}>warning</span>
+          <span>Preview mode: you are viewing this as an admin, and answers are not saved.</span>
         </div>
       )}
 
       {/* ── Header ── */}
-      <header style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 24px', height: 64, flexShrink: 0,
-        background: 'var(--surface-container-lowest)',
-        borderBottom: '1px solid var(--outline-variant)',
-      }}>
+      <header className="writing-editor-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <button
             className="btn-back"
@@ -355,8 +350,8 @@ export default function WritingEditorPage() {
             id="back-to-prompts"
             style={{ margin: 0 }}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>arrow_back</span>
-            {isPreview ? '← Quay lại Admin' : 'Prompts'}
+            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 20 }}>arrow_back</span>
+            {isPreview ? 'Back to Admin' : 'Prompts'}
           </button>
           <div style={{ width: 1, height: 24, background: 'var(--outline-variant)' }} />
           <span style={{
@@ -387,7 +382,7 @@ export default function WritingEditorPage() {
               }}
               title="Time remaining for this writing session"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>timer</span>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18 }}>timer</span>
               {formattedTime}
             </div>
           )}
@@ -396,7 +391,7 @@ export default function WritingEditorPage() {
             className="btn btn-primary btn-grade"
             onClick={handleGrade}
             disabled={isPreview || !isOk || grading || recovering}
-            title={isPreview ? "Không thể nộp ở chế độ preview" : (grading ? 'Grading usually takes 1-2 minutes' : undefined)}
+            title={isPreview ? "Submitting is disabled in preview" : (grading ? 'Grading usually takes 1-2 minutes' : undefined)}
             id="grade-essay-btn"
           >
             {grading ? <><span className="spinner" />AI is grading... {formatElapsed(gradingSeconds)}</>
@@ -409,7 +404,7 @@ export default function WritingEditorPage() {
       {/* ── Suggested time indicator ── */}
       {deadline && !isPreview && (
         <div className="writing-suggested-time" id="writing-suggested-time">
-          <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--primary)' }}>info</span>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--primary)' }}>info</span>
           <span>
             {isTask1
               ? 'Suggested: ~20 minutes for Task 1 (Report)'
@@ -421,14 +416,10 @@ export default function WritingEditorPage() {
       )}
 
       {/* ── 3-Pane Body ── */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div className="writing-editor-body">
 
         {/* Left Pane: Prompt */}
-        <div style={{
-          width: '35%', minWidth: 280, overflowY: 'auto', padding: '32px 24px',
-          background: 'var(--surface-container-low)',
-          borderRight: '1px solid var(--outline-variant)',
-        }}>
+        <div className="writing-editor-prompt">
           <p style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--primary)', marginBottom: 8 }}>
             Prompt
           </p>
@@ -469,7 +460,7 @@ export default function WritingEditorPage() {
         </div>
 
         {/* Center Pane: Editor */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className="writing-editor-main">
           <textarea
             className="editor-textarea"
             value={essayText}
@@ -508,12 +499,7 @@ export default function WritingEditorPage() {
         </div>
 
         {/* Right Pane: Grading Criteria (hidden on small screens) */}
-        <div style={{
-          width: 260, flexShrink: 0, overflowY: 'auto',
-          padding: '32px 20px', background: 'var(--surface-container-low)',
-          borderLeft: '1px solid var(--outline-variant)',
-          display: 'flex', flexDirection: 'column', gap: 16,
-        }}>
+        <div className="writing-editor-criteria">
           <p style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--on-surface-variant)', marginBottom: 4 }}>
             Grading Criteria
           </p>
@@ -524,7 +510,7 @@ export default function WritingEditorPage() {
               border: '1px solid var(--outline-variant)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                <span className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--primary)' }}>{c.icon}</span>
+                <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--primary)' }}>{c.icon}</span>
                 <span style={{ fontFamily: 'var(--font-heading)', fontWeight: 600, fontSize: '0.875rem' }}>{c.label}</span>
               </div>
               <p style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)', lineHeight: 1.5 }}>{c.desc}</p>

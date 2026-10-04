@@ -90,7 +90,7 @@
 /* Skills Bento Row */
 .skills-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
   gap: 24px;
   margin-bottom: 40px;
 }
@@ -252,7 +252,7 @@
 
 .tests-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
   gap: 24px;
 }
 
@@ -425,6 +425,16 @@
    title across the top, the figures in two columns with their own labels, and the
    date + action across the bottom. The header row is redundant then and is hidden. */
 @media (max-width: 767px) {
+  /* The page shell already pads 16px; another 32px left cards too narrow for their grid. */
+  .container {
+    padding: 16px 0;
+  }
+
+  .info-card,
+  .test-card {
+    padding: 20px;
+  }
+
   .history-header {
     display: none;
   }

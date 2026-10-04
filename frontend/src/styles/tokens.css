@@ -136,6 +136,22 @@
   --clr-success: var(--color-success);
   --clr-warning: var(--color-warning);
   --clr-error: var(--color-error);
+
+  /* Names some pages use that were never defined, so their colours and borders silently
+     fell back to nothing (the Reading/Listening practice tabs showed no active tab). */
+  --primary-color: var(--primary);
+  --primary-light: var(--color-primary-08);
+  --text-main: var(--on-surface);
+  --text-primary: var(--on-surface);
+  --text-secondary: var(--on-surface-variant);
+  --border-color: var(--outline-variant);
+  --bg-body: var(--background);
+  --bg-card: var(--surface-container-lowest);
+  --card-bg: var(--surface-container-lowest);
+  --success: var(--color-success);
+  --color-danger: var(--error);
+  --success-container: #cdeedd;
+  --on-success-container: #00513a;
 }
 
 /* ===== DARK THEME OVERRIDES ===== */
@@ -220,13 +236,14 @@
   --color-primary-light: var(--primary-container);
   --color-emerald: #6cdbab;
   --color-emerald-light: #004d35;
-  --color-amber: var(--tertiary-container);
+  --color-amber: var(--tertiary); /* every use is text colour; the dark container shade was 2.9:1 */
   --color-amber-light: var(--on-tertiary-container);
   --color-blue: var(--secondary);
   --color-error: var(--error);
   --color-success: #6cdbab;
   --color-warning: #ffb77c;
-  --color-accent-gradient: linear-gradient(135deg, var(--primary), var(--primary-container));
+  /* Dark --on-primary is navy: on --primary-container it fell to 2:1, so the dark gradient stays light. */
+  --color-accent-gradient: linear-gradient(135deg, var(--primary), var(--primary-fixed-dim));
   --color-emerald-gradient: linear-gradient(135deg, #6cdbab, #004d35);
   --color-primary-02: rgba(123,168,247,0.02);
   --color-primary-03: rgba(123,168,247,0.03);
@@ -238,4 +255,7 @@
   --color-primary-15: rgba(123,168,247,0.15);
   --color-primary-20: rgba(123,168,247,0.2);
   --color-primary-40: rgba(123,168,247,0.4);
+
+  --success-container: #00513a;
+  --on-success-container: #a6f2cd;
 }

@@ -168,7 +168,11 @@ export default function MockTestSessionPage() {
     const currentName = currentSection === 'LISTENING' ? 'Listening' : 'Reading';
     const nextName = currentSection === 'LISTENING' ? 'Reading' : 'Writing';
     
-    if (window.confirm(`Are you sure you want to complete the ${currentName} section and move to the ${nextName} section? You will not be able to return.`)) {
+    const unanswered = currentSection === 'LISTENING'
+      ? totalListeningQuestions - answeredListeningCount
+      : totalReadingQuestions - answeredReadingCount;
+    const blanks = unanswered > 0 ? ` ${unanswered} question${unanswered === 1 ? ' is' : 's are'} still unanswered.` : '';
+    if (window.confirm(`Are you sure you want to complete the ${currentName} section and move to the ${nextName} section?${blanks} You will not be able to return.`)) {
       await advanceSection();
     }
   };
@@ -272,11 +276,11 @@ export default function MockTestSessionPage() {
         <div className="exam-topbar-right">
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <div className={`exam-timer-pill ${timeRemaining < 300 ? 'warning' : ''}`} title="Section Remaining Time">
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>hourglass_empty</span>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 16 }}>hourglass_empty</span>
               Section: {formatTime(timeRemaining)}
             </div>
             <div className="exam-timer-pill" style={{ background: 'var(--surface-container-highest)', color: 'var(--primary)' }} title="Overall Remaining Time">
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>schedule</span>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 16 }}>schedule</span>
               Total: {formatTime(overallTimeRemaining)}
             </div>
           </div>
@@ -346,7 +350,7 @@ export default function MockTestSessionPage() {
                 borderRadius: 'var(--radius-xl)', padding: 24, marginBottom: 32
               }}>
                 <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem', fontWeight: 600, marginBottom: '12px' }}>
-                  <span className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>headphones</span>
+                  <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>headphones</span>
                   Part {currentListeningPart.partNumber}: {currentListeningPart.title}
                 </h3>
                 <AudioPlayer
@@ -396,12 +400,12 @@ export default function MockTestSessionPage() {
 
         {/* ── READING SECTION ── */}
         {currentSection === 'READING' && currentReadingQuiz && (
-          <div className="exam-split" style={{ display: 'flex', flex: 1, width: '100%', overflow: 'hidden' }}>
-            <div className="exam-left" style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
+          <div className="exam-split">
+            <div className="exam-left">
               <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '16px' }}>Passage {activeReadingQuiz + 1}</h2>
               <PassageViewer passage={currentReadingQuiz.passageText} moduleType={currentReadingQuiz.moduleType} />
             </div>
-            <div className="exam-right" style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
+            <div className="exam-right">
               <MockTestQuestionPanel questions={currentReadingQuiz.questions} />
             </div>
           </div>
@@ -409,9 +413,9 @@ export default function MockTestSessionPage() {
 
         {/* ── WRITING SECTION ── */}
         {currentSection === 'WRITING' && currentWritingPrompt && (
-          <div className="exam-split" style={{ display: 'flex', flex: 1, width: '100%', overflow: 'hidden' }}>
+          <div className="exam-split">
             {/* Left Prompt Description */}
-            <div className="exam-left" style={{ width: '40%', minWidth: '320px', overflowY: 'auto', padding: '32px' }}>
+            <div className="exam-left exam-left-prompt">
               <p style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--primary)', marginBottom: 8 }}>
                 Task {activeWritingTask + 1} Prompt
               </p>
@@ -493,7 +497,7 @@ export default function MockTestSessionPage() {
       {/* ── Sticky Footer ── */}
       <footer className="exam-action-bar">
         <div className="exam-action-bar-left">
-          <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--secondary)' }}>check_circle</span>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--secondary)' }}>check_circle</span>
           {currentSection === 'LISTENING' && (
             <span>Answered <strong>{answeredListeningCount}</strong> / {totalListeningQuestions} questions</span>
           )}

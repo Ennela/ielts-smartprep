@@ -52,10 +52,10 @@ describe('shared QuestionPanel', () => {
 
   it('hides the answer key unless the caller asks for it', () => {
     const { rerender } = render(<QuestionPanel questions={questions} answers={{}} setAnswer={() => {}} />);
-    expect(screen.queryByText(/Đáp án đúng/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Correct answer/)).not.toBeInTheDocument();
 
     rerender(<QuestionPanel questions={questions} answers={{}} setAnswer={() => {}} showCorrectAnswers />);
-    expect(screen.getByText(/Đáp án đúng/)).toBeInTheDocument();
+    expect(screen.getByText(/Correct answer/)).toBeInTheDocument();
   });
 
   it('renders nothing for an empty question list', () => {

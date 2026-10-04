@@ -130,7 +130,7 @@ export default function AiVocabularyButton({ skillType, sourceId }) {
           e.currentTarget.style.boxShadow = '0 8px 30px rgba(0, 63, 177, 0.35)';
         }}
       >
-        <span className="material-symbols-outlined" style={{ fontSize: 22 }}>auto_awesome</span>
+        <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 22 }}>auto_awesome</span>
         AI Vocabulary
       </button>
 
@@ -208,7 +208,7 @@ export default function AiVocabularyButton({ skillType, sourceId }) {
           <div className="suggest-modal-card">
             <div className="suggest-modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span className="material-symbols-outlined" style={{ color: 'var(--primary)', fontSize: 24 }}>auto_awesome</span>
+                <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--primary)', fontSize: 24 }}>auto_awesome</span>
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>AI Vocabulary Suggestions</h3>
               </div>
               <button
@@ -216,7 +216,7 @@ export default function AiVocabularyButton({ skillType, sourceId }) {
                 onClick={() => setIsOpen(false)}
                 disabled={saveLoading}
               >
-                <span className="material-symbols-outlined">close</span>
+                <span aria-hidden="true" className="material-symbols-outlined">close</span>
               </button>
             </div>
 
@@ -232,7 +232,7 @@ export default function AiVocabularyButton({ skillType, sourceId }) {
                 <div className="error-msg" style={{ margin: 0 }}>{error}</div>
               ) : saveSuccess ? (
                 <div className="success-msg" style={{ margin: 0, textAlign: 'center', padding: '24px' }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: 40, display: 'block', marginBottom: '8px' }}>check_circle</span>
+                  <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 40, display: 'block', marginBottom: '8px' }}>check_circle</span>
                   {saveSuccess}
                 </div>
               ) : (

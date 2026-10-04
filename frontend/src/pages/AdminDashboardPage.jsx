@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import adminApi from '../api/adminApi';
 
 const STAT_CARDS = [
@@ -12,7 +12,7 @@ const STAT_CARDS = [
       </svg>
     ),
     color: 'var(--color-primary)',
-    bg: 'rgba(15,118,110,0.08)',
+    bg: 'var(--color-primary-08)',
     format: (v) => v?.toLocaleString?.() ?? '—',
   },
   {
@@ -24,7 +24,7 @@ const STAT_CARDS = [
       </svg>
     ),
     color: 'var(--color-blue)',
-    bg: 'rgba(37,99,235,0.08)',
+    bg: 'rgba(0,95,175,0.08)',
     format: (v) => v?.toLocaleString?.() ?? '—',
   },
   {
@@ -36,7 +36,7 @@ const STAT_CARDS = [
       </svg>
     ),
     color: 'var(--color-amber)',
-    bg: 'rgba(245,158,11,0.08)',
+    bg: 'rgba(133,49,0,0.08)',
     format: (v) => v?.toLocaleString?.() ?? '—',
   },
   {
@@ -48,14 +48,13 @@ const STAT_CARDS = [
       </svg>
     ),
     color: 'var(--color-success)',
-    bg: 'rgba(16,185,129,0.08)',
+    bg: 'rgba(0,108,74,0.08)',
     format: (v) => v ? 'Healthy' : 'Unhealthy',
     statusClass: (v) => v ? 'admin-health-ok' : 'admin-health-err',
   },
 ];
 
 export default function AdminDashboardPage() {
-  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -123,8 +122,8 @@ export default function AdminDashboardPage() {
       <div className="admin-quick-nav reveal reveal-delay-2">
         <h2>Quick Management</h2>
         <div className="admin-quick-grid">
-          <div className="card card-clickable" onClick={() => navigate('/admin/users')} id="admin-nav-users">
-            <div className="admin-quick-icon" style={{ background: 'rgba(15,118,110,0.08)', color: 'var(--color-primary)' }}>
+          <Link className="card card-clickable" to="/admin/users" id="admin-nav-users">
+            <div className="admin-quick-icon" style={{ background: 'var(--color-primary-08)', color: 'var(--color-primary)' }}>
               <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
@@ -132,10 +131,10 @@ export default function AdminDashboardPage() {
             <h3>Student Management</h3>
             <p>View list, search, and check details of each student's progress</p>
             <span className="card-action">View list →</span>
-          </div>
+          </Link>
 
-          <div className="card card-clickable" onClick={() => navigate('/admin/writing-prompts')} id="admin-nav-prompts">
-            <div className="admin-quick-icon" style={{ background: 'rgba(37,99,235,0.08)', color: 'var(--color-blue)' }}>
+          <Link className="card card-clickable" to="/admin/writing-prompts" id="admin-nav-prompts">
+            <div className="admin-quick-icon" style={{ background: 'rgba(0,95,175,0.08)', color: 'var(--color-blue)' }}>
               <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
               </svg>
@@ -143,10 +142,10 @@ export default function AdminDashboardPage() {
             <h3>Writing Prompts Management</h3>
             <p>Create, edit, and delete Task 1 and Task 2 writing prompts</p>
             <span className="card-action">Manage prompts →</span>
-          </div>
+          </Link>
 
-          <div className="card card-clickable" onClick={() => navigate('/admin/listening')} id="admin-nav-listening">
-            <div className="admin-quick-icon" style={{ background: 'rgba(16,185,129,0.08)', color: 'var(--color-success)' }}>
+          <Link className="card card-clickable" to="/admin/listening" id="admin-nav-listening">
+            <div className="admin-quick-icon" style={{ background: 'rgba(0,108,74,0.08)', color: 'var(--color-success)' }}>
               <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M3 18v-6a9 9 0 0 1 18 0v6" /><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
               </svg>
@@ -154,7 +153,7 @@ export default function AdminDashboardPage() {
             <h3>Listening Parts Management</h3>
             <p>Create, edit, delete listening parts and manage TTS audio generation</p>
             <span className="card-action">Manage listening →</span>
-          </div>
+          </Link>
         </div>
       </div>
     </div>

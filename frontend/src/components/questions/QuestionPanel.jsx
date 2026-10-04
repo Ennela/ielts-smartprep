@@ -116,10 +116,10 @@ function QuestionGroup({ group, answers, setAnswer, disabled, showCorrectAnswers
               flexDirection: 'column',
               gap: '6px'
             }}>
-              <h5 style={{ margin: '0 0 4px 0', fontSize: '0.85rem', color: '#006c4a' }}>Đáp án đúng:</h5>
+              <h5 style={{ margin: '0 0 4px 0', fontSize: '0.85rem', color: 'var(--color-success)' }}>Correct answer:</h5>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px' }}>
                 {group.questions.map((q) => (
-                  <div key={q.questionId} style={{ fontSize: '0.8rem', color: '#006c4a', display: 'flex', gap: '4px' }}>
+                  <div key={q.questionId} style={{ fontSize: '0.8rem', color: 'var(--color-success)', display: 'flex', gap: '4px' }}>
                     <strong>Q{numberOffset + q.orderIndex}:</strong>
                     <span>{q.correctAnswer}</span>
                   </div>
@@ -230,7 +230,7 @@ function MultiSelectTask({ questions, answers, setAnswer, disabled, numberOffset
       </div>
       {showCorrectAnswers && (
         <div style={ANSWER_KEY_STYLE}>
-          Đáp án đúng: {questions.map(q => q.correctAnswer).filter(Boolean).join(', ')}
+          Correct answer: {questions.map(q => q.correctAnswer).filter(Boolean).join(', ')}
         </div>
       )}
     </div>
@@ -247,7 +247,7 @@ const ANSWER_KEY_STYLE = {
   marginTop: '8px',
   padding: '6px 12px',
   backgroundColor: 'rgba(0,108,74,0.06)',
-  color: '#006c4a',
+  color: 'var(--color-success)',
   borderRadius: '4px',
   fontSize: '0.8rem',
   fontWeight: 600,
@@ -275,7 +275,7 @@ const QuestionItem = memo(function QuestionItem({
 
       {showCorrectAnswers && question.correctAnswer && (
         <div style={ANSWER_KEY_STYLE}>
-          Đáp án đúng: {question.correctAnswer} {question.explanation ? `(${question.explanation})` : ''}
+          Correct answer: {question.correctAnswer} {question.explanation ? `(${question.explanation})` : ''}
         </div>
       )}
     </div>
@@ -408,6 +408,7 @@ function TfngOptions({ questionId, selected, onChange, disabled }) {
           key={opt}
           type="button"
           className={`tfng-btn ${selected === opt ? 'active' : ''}`}
+          aria-pressed={selected === opt}
           onClick={() => onChange(opt)}
           disabled={disabled}
           id={`tfng-${questionId}-${opt.replace(' ', '-').toLowerCase()}`}
@@ -432,6 +433,7 @@ function YnngOptions({ questionId, selected, onChange, disabled }) {
           key={opt}
           type="button"
           className={`tfng-btn ${selected === opt ? 'active' : ''}`}
+          aria-pressed={selected === opt}
           onClick={() => onChange(opt)}
           disabled={disabled}
           id={`ynng-${questionId}-${opt.replace(' ', '-').toLowerCase()}`}

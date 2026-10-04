@@ -3,6 +3,7 @@ import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import historyApi from '../api/historyApi';
 import { TASK1_TYPES, formatEssayType } from '../constants/examTypes';
+import Pagination from '../components/Pagination';
 
 const PAGE_SIZE = 8;
 const SKILL_PARAM = { 'Reading': 'READING', 'Writing': 'WRITING', 'Listening': 'LISTENING', 'Mock Tests': 'MOCK_TEST' };
@@ -42,16 +43,6 @@ const toRow = (item) => {
 const localIso = (date) => {
   const p = (n) => String(n).padStart(2, '0');
   return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}T${p(date.getHours())}:${p(date.getMinutes())}:${p(date.getSeconds())}`;
-};
-
-// Page numbers to show around the current one; a long history is not a row of fifty buttons.
-const pageWindow = (current, total) => {
-  const span = 2;
-  const from = Math.max(1, Math.min(current - span, total - span * 2));
-  const to = Math.min(total, from + span * 2);
-  const pages = [];
-  for (let i = from; i <= to; i++) pages.push(i);
-  return pages;
 };
 
 export default function HistoryPage() {
@@ -108,7 +99,6 @@ export default function HistoryPage() {
   const filtersActive = skillFilter !== 'All Skills' || timeFilter !== 'All Time' || search !== '';
   const totalItems = pageInfo.totalElements;
   const totalPages = pageInfo.totalPages;
-  const startIndex = (currentPage - 1) * PAGE_SIZE;
   const paginatedItems = historyItems;
 
   const handlePageChange = (page) => {
@@ -138,7 +128,7 @@ export default function HistoryPage() {
       default:
         return {
           name: 'assignment',
-          wrapperClass: 'bg-primary-container/20 text-primary-container'
+          wrapperClass: 'bg-primary-container/20 text-primary'
         };
     }
   };
@@ -173,7 +163,7 @@ export default function HistoryPage() {
               }}
               className="w-full bg-surface-container-lowest border border-outline-variant text-on-surface font-body-md text-body-md rounded-lg pl-9 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-container focus:border-transparent"
             />
-            <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
+            <span aria-hidden="true" className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
           </div>
 
           <div className="relative">
@@ -191,7 +181,7 @@ export default function HistoryPage() {
               <option value="Listening">Listening</option>
               <option value="Mock Tests">Mock Tests</option>
             </select>
-            <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+            <span aria-hidden="true" className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
           </div>
 
           <div className="relative">
@@ -207,7 +197,7 @@ export default function HistoryPage() {
               <option value="Last 30 Days">Last 30 Days</option>
               <option value="Last 3 Months">Last 3 Months</option>
             </select>
-            <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
+            <span aria-hidden="true" className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>
           </div>
         </div>
       </div>
@@ -220,14 +210,14 @@ export default function HistoryPage() {
         </div>
       ) : error ? (
         <div className="text-center py-20 bg-surface-container-lowest rounded-2xl border border-outline-variant">
-          <span className="material-symbols-outlined text-error text-[48px] mb-2">error</span>
+          <span aria-hidden="true" className="material-symbols-outlined text-error text-[48px] mb-2">error</span>
           <h3 className="font-title-lg text-title-lg text-on-surface mb-2">{error}</h3>
           <button onClick={() => window.location.reload()} className="btn btn-primary mt-2">Retry</button>
         </div>
       ) : totalItems === 0 && !filtersActive ? (
         <div className="bg-surface-container-lowest rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-outline-variant p-xl flex flex-col items-center justify-center text-center py-20">
           <div className="w-24 h-24 mb-md opacity-50 flex items-center justify-center rounded-full bg-surface-container">
-            <span className="material-symbols-outlined text-[48px] text-outline">history</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[48px] text-outline">history</span>
           </div>
           <h3 className="font-title-lg text-title-lg text-on-surface mb-2">No attempts recorded yet</h3>
           <p className="font-body-md text-body-md text-on-surface-variant max-w-md mb-lg">Start practicing now to see your scores and detailed evaluations recorded here.</p>
@@ -236,7 +226,7 @@ export default function HistoryPage() {
       ) : totalItems === 0 ? (
         <div className="bg-surface-container-lowest rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.05)] border border-outline-variant p-xl flex flex-col items-center justify-center text-center py-20">
           <div className="w-24 h-24 mb-md opacity-50 flex items-center justify-center rounded-full bg-surface-container">
-            <span className="material-symbols-outlined text-[48px] text-outline">filter_list_off</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[48px] text-outline">filter_list_off</span>
           </div>
           <h3 className="font-title-lg text-title-lg text-on-surface mb-2">No matching history found</h3>
           <p className="font-body-md text-body-md text-on-surface-variant max-w-md mb-lg">No history items matched your search or filters. Try adjusting your selections.</p>
@@ -278,7 +268,7 @@ export default function HistoryPage() {
                       
                       <div className="col-span-4 flex items-center gap-sm">
                         <div className={`w-8 h-8 rounded-full ${icon.wrapperClass} flex items-center justify-center`}>
-                          <span className="material-symbols-outlined text-[18px]">{icon.name}</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-[18px]">{icon.name}</span>
                         </div>
                         <div>
                           <div className="font-bold text-[14px] leading-tight text-on-surface line-clamp-1">
@@ -307,7 +297,7 @@ export default function HistoryPage() {
                       <div className="col-span-2 flex justify-end">
                         <button
                           onClick={() => navigate(item.actionUrl)}
-                          className="font-label-md text-label-md text-primary-container border border-outline-variant hover:bg-surface-container hover:border-outline px-md py-2 rounded-lg transition-colors"
+                          className="font-label-md text-label-md text-primary border border-outline-variant hover:bg-surface-container hover:border-outline px-md py-2 rounded-lg transition-colors"
                         >
                           View Review
                         </button>
@@ -319,44 +309,15 @@ export default function HistoryPage() {
             </div>
           </div>
 
-          {/* Pagination Footer */}
-          <div className="px-lg py-md border-t border-outline-variant flex items-center justify-between bg-surface-container-lowest">
-            <span className="font-body-md text-body-md text-on-surface-variant">
-              Showing {startIndex + 1} to {startIndex + paginatedItems.length} of {totalItems} entries
-            </span>
-            {totalPages > 1 && (
-              <div className="flex gap-1">
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant text-on-surface-variant hover:bg-surface-container disabled:opacity-30"
-                >
-                  <span className="material-symbols-outlined text-[18px]">chevron_left</span>
-                </button>
-                
-                {pageWindow(currentPage, totalPages).map(page => (
-                  <button
-                    key={page}
-                    onClick={() => handlePageChange(page)}
-                    className={`w-8 h-8 flex items-center justify-center rounded font-label-md text-label-md ${
-                      currentPage === page 
-                        ? 'bg-primary-container text-on-primary-container font-bold' 
-                        : 'border border-outline-variant text-on-surface hover:bg-surface-container'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant text-on-surface-variant hover:bg-surface-container disabled:opacity-30"
-                >
-                  <span className="material-symbols-outlined text-[18px]">chevron_right</span>
-                </button>
-              </div>
-            )}
+          {/* Pagination Footer: the shared pager the admin lists and Mock lobby use */}
+          <div className="px-lg py-md border-t border-outline-variant bg-surface-container-lowest">
+            <Pagination
+              page={currentPage - 1}
+              totalPages={totalPages}
+              totalElements={totalItems}
+              size={PAGE_SIZE}
+              onPageChange={(page) => handlePageChange(page + 1)}
+            />
           </div>
         </div>
       )}

@@ -10,6 +10,8 @@ import PassageViewer from '../components/reading/PassageViewer';
 import useExamWarnings from '../hooks/useExamWarnings';
 import QuestionPanel from '../components/reading/QuestionPanel';
 import useExamTimer from '../hooks/useExamTimer';
+import { confirmSubmitAnswers } from '../utils/confirmSubmit';
+import { formatEnumLabel } from '../constants/examTypes';
 
 const SESSION_KEY_PREFIX = 'reading_single_attemptId_';
 
@@ -190,7 +192,8 @@ export default function ReadingExamPage() {
 
   if (!quiz) return null;
 
-  const answeredCount = Object.keys(answers).length;
+  // A cleared answer stays in the map as '', so count only real answers.
+  const answeredCount = Object.values(answers).filter(v => String(v ?? '').trim() !== '').length;
   const totalQuestions = quiz.questions?.length || 5;
 
   // Timer visual states (matching ReadingFullExamPage style)
@@ -215,8 +218,8 @@ export default function ReadingExamPage() {
           zIndex: 1100,
           position: 'relative'
         }}>
-          <span className="material-symbols-outlined" style={{ fontSize: 18, color: '#f57c00' }}>warning</span>
-          <span>⚠️ PREVIEW MODE — Bạn đang xem với tư cách Admin. Bài làm sẽ không được lưu.</span>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18, color: '#f57c00' }}>warning</span>
+          <span>Preview mode: you are viewing this as an admin, and answers are not saved.</span>
         </div>
       )}
 
@@ -226,8 +229,8 @@ export default function ReadingExamPage() {
         <div className="exam-topbar-left">
           <span className="exam-logo">SmartPrep</span>
           <div className="exam-divider-v" />
-          <span className="exam-topic-badge">{quiz.topic}</span>
-          <span className="exam-diff-badge">{quiz.difficulty?.replace('_', ' ')}</span>
+          <span className="exam-topic-badge">{formatEnumLabel(quiz.topic)}</span>
+          <span className="exam-diff-badge">{formatEnumLabel(quiz.difficulty)}</span>
         </div>
 
         {/* Center: Exam title */}
@@ -248,19 +251,15 @@ export default function ReadingExamPage() {
               border: isCritical ? '1px solid var(--error)' : 'none',
               animation: isCritical ? 'pulse 1s ease-in-out infinite' : 'none',
             }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 20 }}>timer</span>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 20 }}>timer</span>
               {formattedTime}
             </div>
           )}
-          <button className="btn-exam-help">
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>help_outline</span>
-            Help
-          </button>
           <button
             className="btn btn-primary btn-submit-exam"
-            onClick={handleSubmit}
+            onClick={() => confirmSubmitAnswers(totalQuestions - answeredCount) && handleSubmit()}
             disabled={isPreview || isSubmitted || loading}
-            title={isPreview ? "Không thể nộp ở chế độ preview" : undefined}
+            title={isPreview ? "Submitting is disabled in preview" : undefined}
             id="submit-exam-btn"
           >
             {loading ? 'Submitting...' : 'Submit'}
@@ -281,7 +280,7 @@ export default function ReadingExamPage() {
       {/* ── Bottom Action Bar ── */}
       <div className="exam-action-bar">
         <div className="exam-action-bar-left">
-          <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--secondary)' }}>check_circle</span>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--secondary)' }}>check_circle</span>
           <span>Answered <strong>{answeredCount}</strong> / {totalQuestions} questions</span>
         </div>
         <div className="exam-action-bar-right">
@@ -289,13 +288,13 @@ export default function ReadingExamPage() {
             className="btn btn-outline"
             onClick={() => navigate(isPreview ? '/admin/reading-quizzes' : '/reading')}
           >
-            {isPreview ? '← Quay lại Admin' : 'Exit'}
+            {isPreview ? 'Back to Admin' : 'Exit'}
           </button>
           <button
             className="btn btn-primary btn-submit-exam"
-            onClick={handleSubmit}
+            onClick={() => confirmSubmitAnswers(totalQuestions - answeredCount) && handleSubmit()}
             disabled={isPreview || isSubmitted || loading}
-            title={isPreview ? "Không thể nộp ở chế độ preview" : undefined}
+            title={isPreview ? "Submitting is disabled in preview" : undefined}
           >
             {loading ? 'Submitting...' : 'Complete & Submit'}
           </button>

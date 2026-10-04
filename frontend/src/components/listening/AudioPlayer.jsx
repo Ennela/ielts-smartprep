@@ -146,6 +146,9 @@ export default function AudioPlayer({ src, mode = 'practice', playedStorageKey }
         onClick={togglePlay}
         disabled={isMockTest && (isPlaying || hasPlayedThisSource)}
         id="audio-play-btn"
+        aria-label={isMockTest && hasPlayedThisSource && !isPlaying
+          ? 'Recording already played'
+          : isPlaying ? 'Pause' : 'Play'}
       >
         {isMockTest && hasPlayedThisSource && !isPlaying ? (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -188,6 +191,7 @@ export default function AudioPlayer({ src, mode = 'practice', playedStorageKey }
           type="range" min="0" max="1" step="0.05"
           value={volume} onChange={handleVolume}
           className="audio-volume-slider"
+          aria-label="Volume"
         />
       </div>
 

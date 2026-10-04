@@ -33,7 +33,7 @@ export default function ListeningHistoryPage() {
       {/* Header */}
       <div className={styles.header}>
         <button className="btn-back" onClick={() => navigate('/listening')} id="back-to-listening">
-          <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>arrow_back</span>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '18px' }}>arrow_back</span>
           Back to Listening
         </button>
         <h1 className={styles.title}>Listening History</h1>
@@ -90,7 +90,7 @@ export default function ListeningHistoryPage() {
                   </p>
                   {item.timeSpentSeconds != null && (
                     <p style={{ fontSize: '0.82rem', color: 'var(--on-surface-variant)', marginTop: '6px', marginBottom: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span className="material-symbols-outlined" style={{ fontSize: 14, color: 'var(--outline)' }}>timer</span>
+                      <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 14, color: 'var(--outline)' }}>timer</span>
                       {Math.floor(item.timeSpentSeconds / 60)}:{(item.timeSpentSeconds % 60).toString().padStart(2, '0')}
                       {item.autoSubmitted && (
                         <span style={{

@@ -36,23 +36,6 @@
   gap: 16px;
   margin-left: auto;
 }
-.topbar-icon-btn {
-  background: transparent;
-  border: none;
-  color: var(--on-surface-variant);
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background var(--transition);
-}
-.topbar-icon-btn:hover {
-  background: var(--surface-container-low);
-  color: var(--on-surface);
-}
 .topbar-greeting {
   font-size: 0.875rem;
   font-weight: 500;
@@ -70,6 +53,7 @@
   font-family: var(--font-heading);
   font-weight: 700;
   font-size: 0.9rem;
+  border: none;
   cursor: pointer;
   transition: transform var(--transition);
 }
@@ -121,6 +105,7 @@
   background: var(--surface-container-low); border: 1px solid var(--surface-variant);
   display: flex; align-items: center; gap: 10px; cursor: pointer;
   transition: background var(--transition);
+  width: calc(100% - 32px); text-align: left; font: inherit; color: inherit;
 }
 .sidebar-user-card:hover { background: var(--surface-container); }
 .sidebar-avatar {
@@ -140,7 +125,9 @@
   transition: all var(--transition); text-decoration: none;
   border-right: 4px solid transparent;
 }
-.sidebar-item:hover { background: var(--surface-container-low); color: var(--on-surface); }
+/* Hover is a step darker than the selected item, so hovering never looks like selecting. */
+.sidebar-item:hover { background: var(--surface-container); color: var(--on-surface); }
+.sidebar-item.active:hover { background: var(--surface-container-low); }
 .sidebar-item.active {
   background: var(--surface-container-low); color: var(--primary);
   border-right-color: var(--primary); font-weight: 700;

@@ -171,7 +171,7 @@ export default function ListeningResultPage() {
               background: 'rgba(186,26,26,0.08)', color: 'var(--error)',
               fontSize: '0.8rem', fontWeight: 600,
             }}>
-              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>timer_off</span>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 16 }}>timer_off</span>
               Auto-submitted (time expired)
             </div>
           )}
@@ -230,11 +230,11 @@ export default function ListeningResultPage() {
                             let optBg = 'transparent';
                             let optBorder = '1px solid var(--outline-variant)';
                             if (isCorrectOption) {
-                              optBg = 'rgba(76, 175, 80, 0.1)';
-                              optBorder = '1px solid #4CAF50';
+                              optBg = 'rgba(0, 108, 74, 0.08)';
+                              optBorder = '1px solid var(--color-success)';
                             } else if (isUserSelected) {
-                              optBg = 'rgba(244, 67, 54, 0.1)';
-                              optBorder = '1px solid #F44336';
+                              optBg = 'rgba(186, 26, 26, 0.08)';
+                              optBorder = '1px solid var(--error)';
                             }
                             return (
                               <div key={opt.optionId} style={{
@@ -247,7 +247,7 @@ export default function ListeningResultPage() {
                                 gap: 8,
                                 fontSize: '0.875rem'
                               }}>
-                                <strong style={{ color: isCorrectOption ? '#4CAF50' : (isUserSelected ? '#F44336' : 'inherit') }}>
+                                <strong style={{ color: isCorrectOption ? 'var(--color-success)' : (isUserSelected ? 'var(--error)' : 'inherit') }}>
                                   {opt.label}.
                                 </strong>
                                 <span>{opt.content}</span>

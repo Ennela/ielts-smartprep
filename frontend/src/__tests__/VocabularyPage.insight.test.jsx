@@ -58,13 +58,13 @@ describe('VocabularyPage explanations', () => {
 
     expect(await screen.findByText('ubiquitous')).toBeInTheDocument();
     expect(screen.getByText('phổ biến')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Giải thích chi tiết/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Explain this word/ })).toBeInTheDocument();
   });
 
   it('opens the explanation over the word bank without navigating away', async () => {
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: /Word Bank/ }));
-    fireEvent.click(await screen.findByRole('button', { name: /Giải thích chi tiết/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Explain this word/ }));
 
     expect(await screen.findByRole('dialog')).toHaveAccessibleName(/ubiquitous/);
     await waitFor(() => expect(vocabApi.getInsight).toHaveBeenCalledWith(1));
@@ -80,7 +80,7 @@ describe('VocabularyPage explanations', () => {
     renderPage();
     expect(await screen.findByText('Card 1 of 1')).toBeInTheDocument();
 
-    fireEvent.click(await screen.findByRole('button', { name: /Giải thích chi tiết/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Explain this word/ }));
 
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText('Card 1 of 1')).toBeInTheDocument();

@@ -6,6 +6,7 @@ import listeningApi from '../api/listeningApi';
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
 import ArchivedToggle from '../components/admin/ArchivedToggle';
+import useEscapeKey from '../hooks/useEscapeKey';
 
 export default function AdminMockTestsPage() {
   const navigate = useNavigate();
@@ -201,6 +202,9 @@ export default function AdminMockTestsPage() {
   };
 
 
+  useEscapeKey(modalOpen, closeModal);
+  useEscapeKey(!!deleteId, () => setDeleteId(null));
+
   return (
     <div className="admin-dashboard-content">
       {/* Header */}
@@ -323,8 +327,8 @@ export default function AdminMockTestsPage() {
       {/* Create/Edit Modal */}
       {modalOpen && (
         <div className="admin-modal-overlay" onClick={closeModal}>
-          <div className="admin-modal admin-modal-wide" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 800 }}>
-            <button className="admin-modal-close" onClick={closeModal} id="close-mock-modal">
+          <div className="admin-modal admin-modal-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 800 }}>
+            <button className="admin-modal-close" onClick={closeModal} aria-label="Close" id="close-mock-modal">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
 
@@ -472,7 +476,7 @@ export default function AdminMockTestsPage() {
       {/* Delete Confirmation Modal */}
       {deleteId && (
         <div className="admin-modal-overlay" onClick={() => setDeleteId(null)}>
-          <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+          <div className="admin-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 700, marginBottom: 12 }}>
               Confirm Archive
             </h2>

@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import statsApi from '../api/statsApi';
 import analyticsApi from '../api/analyticsApi';
+import { formatBand } from '../utils/formatBand';
+import { formatQuestionType } from '../constants/examTypes';
+import Pagination from '../components/Pagination';
 // recharts is the largest chunk in the build (336 kB) and the dashboard is the
 // first page after login; the trend card is one of eight and often has no data to
 // draw, so the library is fetched only when a chart is actually rendered.
@@ -121,8 +124,9 @@ export default function DashboardPage() {
     return <DashboardEmptyState displayName={displayName} navigate={navigate} />;
   }
 
-  const targetBand = overview?.targetBand || '7.5';
-  const currentBand = overview?.currentEstimate || '6.5';
+  // One decimal like every other band on the page (the API sends 8, not "8.0").
+  const targetBand = formatBand(overview?.targetBand || 7.5);
+  const currentBand = formatBand(overview?.currentEstimate || 6.5);
   
   // Default fallback lists if null
   const skillsList = overview?.skills && overview.skills.length > 0 ? overview.skills : [
@@ -136,9 +140,9 @@ export default function DashboardPage() {
       case 'READING':
         return { label: 'Reading', border: 'border-t-secondary', text: 'text-secondary', icon: 'menu_book', progressBg: 'bg-secondary' };
       case 'WRITING':
-        return { label: 'Writing', border: 'border-t-tertiary-container', text: 'text-tertiary-container', icon: 'edit_note', progressBg: 'bg-tertiary-container' };
+        return { label: 'Writing', border: 'border-t-tertiary-container', text: 'text-tertiary', icon: 'edit_note', progressBg: 'bg-tertiary-container' };
       case 'LISTENING':
-        return { label: 'Listening', border: 'border-t-primary-container', text: 'text-primary-container', icon: 'headset', progressBg: 'bg-primary-container' };
+        return { label: 'Listening', border: 'border-t-primary-container', text: 'text-primary', icon: 'headset', progressBg: 'bg-primary-container' };
       default:
         return { label: skillName, border: 'border-t-primary', text: 'text-primary', icon: 'school', progressBg: 'bg-primary' };
     }
@@ -166,22 +170,22 @@ export default function DashboardPage() {
       {/* Bento Grid Layout */}
       <div className="grid grid-cols-12 gap-gutter">
         {/* Overall Target Card (Span 12 mobile, 4 desktop) */}
-        <div className="col-span-12 lg:col-span-4 bg-primary-container text-on-primary rounded-xl p-lg shadow-sm border border-outline-variant/20 relative overflow-hidden flex flex-col justify-between min-h-[220px]">
+        <div className="col-span-12 lg:col-span-4 bg-primary-container text-white rounded-xl p-lg shadow-sm border border-outline-variant/20 relative overflow-hidden flex flex-col justify-between min-h-[220px]">
           {/* Background Blobs decoration */}
           <div className="absolute -right-8 -top-8 w-48 h-48 bg-primary rounded-full opacity-50 blur-3xl"></div>
           <div className="absolute -left-8 -bottom-8 w-32 h-32 bg-secondary rounded-full opacity-50 blur-2xl"></div>
           
           <div className="relative z-10">
-            <h2 className="font-title-lg text-title-lg text-primary-fixed-dim mb-xs">Overall Target Band</h2>
-            <div className="font-display-lg text-[64px] leading-none font-extrabold mb-sm text-on-primary tracking-tighter">{targetBand}</div>
+            <h2 className="font-title-lg text-title-lg text-primary-fixed mb-xs">Overall Target Band</h2>
+            <div className="font-display-lg text-[64px] leading-none font-extrabold mb-sm text-white tracking-tighter">{targetBand}</div>
           </div>
           
           <div className="relative z-10 flex justify-between items-end border-t border-primary/30 pt-md mt-auto">
             <div>
-              <span className="font-label-md text-label-md text-primary-fixed-dim block mb-1">Current Estimate</span>
-              <span className="font-headline-md text-headline-md text-on-primary">{currentBand}</span>
+              <span className="font-label-md text-label-md text-primary-fixed block mb-1">Current Estimate</span>
+              <span className="font-headline-md text-headline-md text-white">{currentBand}</span>
             </div>
-            <span className="material-symbols-outlined text-[32px] text-tertiary-fixed-dim">trending_up</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[32px] text-tertiary-fixed-dim">trending_up</span>
           </div>
         </div>
 
@@ -202,7 +206,7 @@ export default function DashboardPage() {
               >
                 <div className="p-md border-b border-outline-variant/30 flex justify-between items-center bg-surface-bright">
                   <div className="flex items-center gap-sm">
-                    <span className={`material-symbols-outlined ${config.text}`}>{config.icon}</span>
+                    <span aria-hidden="true" className={`material-symbols-outlined ${config.text}`}>{config.icon}</span>
                     <h3 className="font-title-lg text-title-lg text-on-surface">{config.label}</h3>
                   </div>
                 </div>
@@ -274,7 +278,7 @@ export default function DashboardPage() {
               </Suspense>
             ) : (
               <div className="flex flex-col items-center justify-center text-center p-md">
-                <span className="material-symbols-outlined text-[48px] text-outline-variant mb-sm">show_chart</span>
+                <span aria-hidden="true" className="material-symbols-outlined text-[48px] text-outline-variant mb-sm">show_chart</span>
                 <p className="font-body-md text-body-md text-outline">No score trends available for this skill. Try practicing!</p>
               </div>
             )}
@@ -335,16 +339,16 @@ export default function DashboardPage() {
           <div className="relative w-20 h-20 flex items-center justify-center flex-shrink-0">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
               <path className="text-surface-container-high" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="3"></path>
-              <path className="text-primary-container" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray={`${overallAccuracy}, 100`} stroke-linecap="round" stroke-width="3"></path>
+              <path className="text-primary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-dasharray={`${overallAccuracy}, 100`} stroke-linecap="round" stroke-width="3"></path>
             </svg>
-            <span className="absolute font-headline-md text-headline-md text-primary-container font-extrabold">{overallAccuracy}%</span>
+            <span className="absolute font-headline-md text-headline-md text-primary font-extrabold">{overallAccuracy}%</span>
           </div>
         </div>
 
         {/* Weakest Area card */}
         <div className="bg-surface-container-lowest rounded-xl shadow-sm p-md flex flex-col justify-center border border-outline-variant/20 hover:shadow-md transition-shadow">
           <h4 className="font-title-lg text-title-lg text-on-surface mb-sm flex items-center gap-sm">
-            <span className="material-symbols-outlined text-tertiary-container icon-fill">warning</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-tertiary icon-fill">warning</span>
             Focus Area Needed
           </h4>
           {sectionErrors.weakness ? (
@@ -354,7 +358,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="flex justify-between items-center bg-surface-bright p-sm rounded-md border border-outline-variant/30">
-              <span className="font-body-md text-body-md text-on-surface font-bold">{weakestType}</span>
+              <span className="font-body-md text-body-md text-on-surface font-bold">{weakestType === 'None' ? weakestType : formatQuestionType(weakestType)}</span>
               <span className="font-label-md text-label-md bg-error-container text-on-error-container px-2.5 py-1 rounded-full font-bold">
                 {weakestAccuracy}% Accuracy
               </span>
@@ -408,7 +412,7 @@ export default function DashboardPage() {
                     >
                       <td className="py-4 px-md">
                         <span className={`inline-flex items-center gap-xs font-bold text-sm ${config.text}`}>
-                          <span className="material-symbols-outlined text-[18px]">{config.icon}</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-[18px]">{config.icon}</span>
                           {config.label}
                         </span>
                       </td>
@@ -422,9 +426,9 @@ export default function DashboardPage() {
                         }) : '—'}
                       </td>
                       <td className="py-4 px-md text-right">
-                        <button className="text-primary hover:text-primary-container font-bold text-sm flex items-center gap-xs ml-auto group-hover:underline">
+                        <button className="text-primary hover:text-surface-tint font-bold text-sm flex items-center gap-xs ml-auto group-hover:underline">
                           {isMockTest ? 'View Report' : 'Review Answers'}
-                          <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                          <span aria-hidden="true" className="material-symbols-outlined text-[16px]">arrow_forward</span>
                         </button>
                       </td>
                     </tr>
@@ -433,32 +437,20 @@ export default function DashboardPage() {
               </tbody>
             </table>
 
-            {/* Pagination Controls */}
-            {history.totalPages > 1 && (
-              <div className="flex justify-between items-center pt-lg border-t border-outline-variant/30 mt-md">
-                <button 
-                  disabled={historyPage === 0}
-                  onClick={() => setHistoryPage(p => Math.max(0, p - 1))}
-                  className="px-4 py-2 rounded-lg font-bold text-sm bg-surface-container-low hover:bg-surface-container-high border border-outline-variant/30 text-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Previous
-                </button>
-                <span className="font-label-md text-label-md text-outline">
-                  Page {historyPage + 1} of {history.totalPages}
-                </span>
-                <button 
-                  disabled={historyPage >= history.totalPages - 1}
-                  onClick={() => setHistoryPage(p => p + 1)}
-                  className="px-4 py-2 rounded-lg font-bold text-sm bg-surface-container-low hover:bg-surface-container-high border border-outline-variant/30 text-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                </button>
-              </div>
-            )}
+            {/* Pagination Controls: the shared pager, as on History */}
+            <div className="pt-lg border-t border-outline-variant/30 mt-md">
+              <Pagination
+                page={historyPage}
+                totalPages={history.totalPages}
+                totalElements={history.totalItems}
+                size={5}
+                onPageChange={setHistoryPage}
+              />
+            </div>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-margin border border-dashed border-outline-variant/50 rounded-xl bg-surface-bright text-center">
-            <span className="material-symbols-outlined text-[48px] text-outline-variant mb-sm">history</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-[48px] text-outline-variant mb-sm">history</span>
             <p className="font-body-md text-body-md text-outline">No recent activity found for the selected skill filter.</p>
           </div>
         )}
@@ -471,7 +463,7 @@ export default function DashboardPage() {
 function SectionError({ message, onRetry }) {
   return (
     <div className="flex flex-col items-center justify-center py-lg text-center gap-sm" role="alert">
-      <span className="material-symbols-outlined text-[40px] text-error">error</span>
+      <span aria-hidden="true" className="material-symbols-outlined text-[40px] text-error">error</span>
       <p className="font-body-md text-body-md text-on-surface-variant">{message}</p>
       <button
         onClick={onRetry}
@@ -530,7 +522,7 @@ function DashboardSkeleton() {
 function DashboardError({ message, onRetry }) {
   return (
     <div className="bg-surface-container-lowest border border-error/30 rounded-xl p-xl shadow-sm text-center max-w-md mx-auto my-12 flex flex-col items-center gap-md animate-fade-in">
-      <span className="material-symbols-outlined text-[64px] text-error icon-fill">error</span>
+      <span aria-hidden="true" className="material-symbols-outlined text-[64px] text-error icon-fill">error</span>
       <h2 className="font-headline-md text-headline-md text-on-surface">Something went wrong</h2>
       <p className="font-body-md text-body-md text-on-surface-variant">
         {message || 'Unable to load statistics. Please check your network and try again.'}
@@ -554,7 +546,7 @@ function DashboardEmptyState({ displayName, navigate }) {
       </header>
 
       <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-xl shadow-sm text-center max-w-2xl mx-auto my-12 flex flex-col items-center gap-md">
-        <span className="material-symbols-outlined text-[64px] text-primary icon-fill animate-bounce">school</span>
+        <span aria-hidden="true" className="material-symbols-outlined text-[64px] text-primary icon-fill animate-bounce">school</span>
         <h2 className="font-headline-md text-headline-md text-on-surface">Welcome to IELTS SmartPrep!</h2>
         <p className="font-body-lg text-body-lg text-on-surface-variant max-w-md">
           You haven't completed any practice tests yet. Start practicing Reading, Writing, Listening or take a Full Mock Test to receive dynamic feedback and progress analytics.

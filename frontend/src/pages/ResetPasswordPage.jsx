@@ -64,7 +64,7 @@ export default function ResetPasswordPage() {
         {/* Header / Logo */}
         <div className="flex flex-col items-center mb-xl">
           <div className="bg-primary/10 p-sm rounded-lg mb-sm">
-            <span className="material-symbols-outlined text-primary text-[32px]">lock_open</span>
+            <span aria-hidden="true" className="material-symbols-outlined text-primary text-[32px]">lock_open</span>
           </div>
           <h1 className="font-display-lg text-display-lg text-primary text-center tracking-tight">SmartPrep</h1>
           <h2 className="font-headline-md text-headline-md text-on-surface mt-sm">Choose New Password</h2>
@@ -94,7 +94,7 @@ export default function ResetPasswordPage() {
               <label className="block font-label-md text-label-md text-on-surface" htmlFor="new-password">New Password</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-sm flex items-center pointer-events-none">
-                  <span className="material-symbols-outlined text-outline text-[20px]">lock</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-outline text-[20px]">lock</span>
                 </div>
                 <input
                   className="block w-full pl-[40px] pr-[40px] py-sm font-body-md text-body-md text-on-surface bg-surface-container-lowest border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none transition-shadow disabled:opacity-50"
@@ -115,7 +115,7 @@ export default function ResetPasswordPage() {
               <label className="block font-label-md text-label-md text-on-surface" htmlFor="confirm-password">Confirm Password</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-sm flex items-center pointer-events-none">
-                  <span className="material-symbols-outlined text-outline text-[20px]">lock</span>
+                  <span aria-hidden="true" className="material-symbols-outlined text-outline text-[20px]">lock</span>
                 </div>
                 <input
                   className="block w-full pl-[40px] pr-[40px] py-sm font-body-md text-body-md text-on-surface bg-surface-container-lowest border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none transition-shadow disabled:opacity-50"
@@ -130,12 +130,14 @@ export default function ResetPasswordPage() {
                 />
                 <div className="absolute inset-y-0 right-0 pr-sm flex items-center">
                   <button
-                    className="text-outline hover:text-on-surface transition-colors focus:outline-none"
+                    className="w-10 h-10 -mr-sm flex items-center justify-center rounded-lg text-outline hover:text-on-surface transition-colors"
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    aria-pressed={showPassword}
                     disabled={!token}
                   >
-                    <span className="material-symbols-outlined text-[20px]">{showPassword ? "visibility" : "visibility_off"}</span>
+                    <span aria-hidden="true" className="material-symbols-outlined text-[20px]">{showPassword ? "visibility" : "visibility_off"}</span>
                   </button>
                 </div>
               </div>
@@ -160,7 +162,7 @@ export default function ResetPasswordPage() {
 
             {/* Footnote Link */}
             <p className="mt-xl text-center font-body-md text-body-md text-on-surface-variant">
-              <Link className="font-title-lg text-[14px] text-primary hover:text-primary-container transition-colors font-semibold" to="/login">Back to Login</Link>
+              <Link className="font-title-lg text-[14px] text-primary hover:text-surface-tint transition-colors font-semibold" to="/login">Back to Login</Link>
             </p>
           </form>
         )}

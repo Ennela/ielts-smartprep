@@ -8,6 +8,7 @@ import QuestionPanel from '../components/reading/QuestionPanel';
 import useExamTimer from '../hooks/useExamTimer';
 import useExamWarnings from '../hooks/useExamWarnings';
 import { useToast } from '../context/ToastContext';
+import { confirmSubmitAnswers } from '../utils/confirmSubmit';
 
 const SESSION_KEY = 'reading_full_attemptId';
 
@@ -179,7 +180,8 @@ export default function ReadingFullExamPage() {
 
   const activeQuiz = quizzes[activeIdx];
   const totalQuestions = quizzes.reduce((sum, q) => sum + (q.questions?.length || 0), 0);
-  const answeredCount = Object.keys(answers).length;
+  // A cleared answer stays in the map as '', so count only real answers.
+  const answeredCount = Object.values(answers).filter(v => String(v ?? '').trim() !== '').length;
 
   // Timer color logic
   const timerColor = isCritical ? 'var(--error)' : isWarning ? 'var(--error)' : 'var(--on-surface)';
@@ -219,12 +221,12 @@ export default function ReadingFullExamPage() {
             border: isCritical ? '1px solid var(--error)' : 'none',
             animation: isCritical ? 'pulse 1s ease-in-out infinite' : 'none',
           }}>
-            <span className="material-symbols-outlined" style={{ fontSize: 20 }}>timer</span>
+            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 20 }}>timer</span>
             {formattedTime}
           </div>
           <button
             className="btn btn-primary btn-submit-exam"
-            onClick={handleSubmit}
+            onClick={() => confirmSubmitAnswers(totalQuestions - answeredCount) && handleSubmit()}
             disabled={submitting}
             id="submit-exam-btn"
           >
@@ -235,10 +237,10 @@ export default function ReadingFullExamPage() {
 
       {/* ── Split Screen passage content ── */}
       <div className="exam-split" style={{ flex: 1, overflow: 'hidden' }}>
-        <div className="exam-left" style={{ height: '100%', overflowY: 'auto' }}>
+        <div className="exam-left">
           <PassageViewer passage={activeQuiz.passageText} moduleType={activeQuiz.moduleType} />
         </div>
-        <div className="exam-right" style={{ height: '100%', overflowY: 'auto' }}>
+        <div className="exam-right">
           <ReadingContext.Provider value={{ answers, setAnswer: handleSetAnswer, isSubmitted: false }}>
             <QuestionPanel questions={activeQuiz.questions} />
           </ReadingContext.Provider>
@@ -248,7 +250,7 @@ export default function ReadingFullExamPage() {
       {/* ── Bottom Action Bar ── */}
       <div className="exam-action-bar" style={{ flexShrink: 0 }}>
         <div className="exam-action-bar-left">
-          <span className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--secondary)' }}>check_circle</span>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18, color: 'var(--secondary)' }}>check_circle</span>
           <span>Answered <strong>{answeredCount}</strong> / {totalQuestions} questions</span>
         </div>
         <div className="exam-action-bar-right">
@@ -257,7 +259,7 @@ export default function ReadingFullExamPage() {
           </button>
           <button
             className="btn btn-primary btn-submit-exam"
-            onClick={handleSubmit}
+            onClick={() => confirmSubmitAnswers(totalQuestions - answeredCount) && handleSubmit()}
             disabled={submitting}
           >
             {submitting ? 'Submitting...' : 'Complete & Submit'}

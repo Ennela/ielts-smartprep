@@ -119,7 +119,7 @@ export default function VisualDataRenderer({ visualDataJson, essayType }) {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 12 }}>
                         <div style={{ padding: 14, background: 'var(--surface-container-low)', borderRadius: 'var(--radius-md)', border: '1px solid var(--outline-variant)' }}>
                             <div style={{ fontWeight: 700, marginBottom: 8, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>map</span>
+                                <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18 }}>map</span>
                                 Map 1 Details
                             </div>
                             <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.9rem', lineHeight: 1.6 }}>
@@ -130,7 +130,7 @@ export default function VisualDataRenderer({ visualDataJson, essayType }) {
                         </div>
                         <div style={{ padding: 14, background: 'var(--surface-container-low)', borderRadius: 'var(--radius-md)', border: '1px solid var(--outline-variant)' }}>
                             <div style={{ fontWeight: 700, marginBottom: 8, color: 'var(--secondary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span className="material-symbols-outlined" style={{ fontSize: 18 }}>map</span>
+                                <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18 }}>map</span>
                                 Map 2 Details (Modifications)
                             </div>
                             <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.9rem', lineHeight: 1.6 }}>
@@ -146,7 +146,7 @@ export default function VisualDataRenderer({ visualDataJson, essayType }) {
                 return (
                     <div style={{ marginTop: 12 }}>
                         <div style={{ fontWeight: 700, marginBottom: 12, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>account_tree</span>
+                            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18 }}>account_tree</span>
                             Process Steps
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

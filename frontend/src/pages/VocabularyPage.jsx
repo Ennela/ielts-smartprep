@@ -244,7 +244,7 @@ export default function VocabularyPage() {
         }
         .vocab-badge-due {
           background: var(--error);
-          color: white;
+          color: var(--on-error);
           font-size: 0.75rem;
           padding: 2px 8px;
           border-radius: 99px;
@@ -424,7 +424,7 @@ export default function VocabularyPage() {
           </p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowAddModal(true)}>
-          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>add</span>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 20 }}>add</span>
           Add Custom Word
         </button>
       </div>
@@ -435,15 +435,15 @@ export default function VocabularyPage() {
       <div className="metric-cards-grid">
         <div className="metric-item-card" style={{ borderLeft: '4px solid var(--error)' }}>
           <div className="metric-item-num" style={{ color: 'var(--error)' }}>{stats.dueTodayCount}</div>
-          <div className="metric-item-lbl">Due Today (Đến hạn)</div>
+          <div className="metric-item-lbl">Due Today</div>
         </div>
         <div className="metric-item-card" style={{ borderLeft: '4px solid var(--secondary)' }}>
           <div className="metric-item-num" style={{ color: 'var(--secondary)' }}>{stats.learningCount}</div>
-          <div className="metric-item-lbl">Learning (Đang học)</div>
+          <div className="metric-item-lbl">Learning</div>
         </div>
         <div className="metric-item-card" style={{ borderLeft: '4px solid var(--color-success, #006c4a)' }}>
           <div className="metric-item-num" style={{ color: 'var(--color-success, #006c4a)' }}>{stats.masteredCount}</div>
-          <div className="metric-item-lbl">Mastered (Đã thuộc)</div>
+          <div className="metric-item-lbl">Mastered</div>
         </div>
       </div>
 
@@ -481,7 +481,7 @@ export default function VocabularyPage() {
             <div style={{ padding: '16px 0' }}>
               {dueList.length === 0 ? (
                 <div className="card" style={{ textAlign: 'center', padding: '48px 24px', maxWidth: '600px', margin: '0 auto' }}>
-                  <span className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--secondary)', marginBottom: '16px' }}>
+                  <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--secondary)', marginBottom: '16px' }}>
                     check_circle
                   </span>
                   <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '8px' }}>All caught up!</h3>
@@ -526,9 +526,12 @@ export default function VocabularyPage() {
                           {dueList[reviewIndex].partOfSpeech || 'adjective'}
                         </span>
 
-                        <p style={{ marginTop: '36px', fontSize: '0.8rem', color: 'var(--outline)', fontWeight: 600 }}>
-                          Click card to flip
-                        </p>
+                        {/* A real button so the card flips from the keyboard too: its click
+                            bubbles to the wrapper's flip handler. The rating buttons stay
+                            locked until the card is flipped. */}
+                        <button type="button" className="btn btn-outline btn-sm" style={{ marginTop: '36px' }}>
+                          Flip card
+                        </button>
                       </div>
 
                       {/* BACK OF CARD */}
@@ -551,7 +554,7 @@ export default function VocabularyPage() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', textAlign: 'left' }}>
                           <div>
                             <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--outline)' }}>Meaning</span>
-                            <p style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--on-surface)', marginTop: '2px' }}>
+                            <p lang="vi" style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--on-surface)', marginTop: '2px' }}>
                               {dueList[reviewIndex].meaningVi}
                             </p>
                           </div>
@@ -588,13 +591,13 @@ export default function VocabularyPage() {
                               <span className="material-symbols-outlined" style={{ fontSize: 16 }} aria-hidden="true">
                                 menu_book
                               </span>
-                              Giải thích chi tiết
+                              Explain this word
                             </button>
                           </div>
 
                           {dueList[reviewIndex].sourceSkill && (
                             <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '4px' }}>
-                              <span className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--outline)' }}>link</span>
+                              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 16, color: 'var(--outline)' }}>link</span>
                               <span style={{ fontSize: '0.72rem', color: 'var(--outline)', fontWeight: 500 }}>
                                 Source: {dueList[reviewIndex].sourceSkill} {dueList[reviewIndex].sourceRef ? `(${dueList[reviewIndex].sourceRef})` : ''}
                               </span>
@@ -640,7 +643,7 @@ export default function VocabularyPage() {
               {/* Search & Filter Controls */}
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '16px', marginBottom: '24px' }}>
                 <div style={{ position: 'relative' }}>
-                  <span className="material-symbols-outlined" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--outline)' }}>
+                  <span aria-hidden="true" className="material-symbols-outlined" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--outline)' }}>
                     search
                   </span>
                   <input
@@ -724,7 +727,7 @@ export default function VocabularyPage() {
                   {filteredAllList.map((item) => (
                     <div key={item.vocabId} className="vocab-item-card">
                       <button className="vocab-delete-btn" onClick={() => handleDeleteWord(item.vocabId)}>
-                        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
+                        <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18 }}>delete</span>
                       </button>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
@@ -754,7 +757,7 @@ export default function VocabularyPage() {
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.88rem' }}>
                         <div>
                           <span style={{ fontWeight: 700, fontSize: '0.72rem', color: 'var(--outline)', textTransform: 'uppercase' }}>Meaning</span>
-                          <p style={{ color: 'var(--on-surface)', fontWeight: 500, marginTop: '1px' }}>{item.meaningVi}</p>
+                          <p lang="vi" style={{ color: 'var(--on-surface)', fontWeight: 500, marginTop: '1px' }}>{item.meaningVi}</p>
                         </div>
 
                         {item.collocation && (
@@ -781,7 +784,7 @@ export default function VocabularyPage() {
                           <span className="material-symbols-outlined" style={{ fontSize: 16 }} aria-hidden="true">
                             menu_book
                           </span>
-                          {item.hasInsight ? 'Xem giải thích' : 'Giải thích chi tiết'}
+                          {item.hasInsight ? 'View explanation' : 'Explain this word'}
                         </button>
                       </div>
 
@@ -822,7 +825,7 @@ export default function VocabularyPage() {
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--outline)' }}
                 onClick={() => setShowAddModal(false)}
               >
-                <span className="material-symbols-outlined">close</span>
+                <span aria-hidden="true" className="material-symbols-outlined">close</span>
               </button>
             </div>
             <form onSubmit={handleManualAdd}>

@@ -7,6 +7,7 @@ import { nextRowKey, withRowKeys } from '../utils/rowKey';
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
 import ArchivedToggle from '../components/admin/ArchivedToggle';
+import useEscapeKey from '../hooks/useEscapeKey';
 
 const TOPICS = [
   { value: 'ENVIRONMENT', label: 'Environment' },
@@ -292,6 +293,9 @@ export default function AdminReadingQuizzesPage() {
   };
 
 
+  useEscapeKey(modalOpen, closeModal);
+  useEscapeKey(!!deleteId, () => setDeleteId(null));
+
   return (
     <div className="admin-dashboard-content">
       {/* Header */}
@@ -392,9 +396,9 @@ export default function AdminReadingQuizzesPage() {
                       </td>
                       <td>
                         {quiz.isTemplate ? (
-                          <span className="essay-type-badge" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.2)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>Admin</span>
+                          <span className="essay-type-badge badge-status-info">Admin</span>
                         ) : (
-                          <span className="essay-type-badge" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }} title={`Tạo bởi user: ${quiz.createdBy || 'AI'}`}>AI Generate</span>
+                          <span className="essay-type-badge badge-status-success" title={`Created by: ${quiz.createdBy || 'AI'}`}>AI Generated</span>
                         )}
                       </td>
                       <td>{Math.round(quiz.timeLimitSeconds / 60)} mins</td>
@@ -416,7 +420,7 @@ export default function AdminReadingQuizzesPage() {
                                 className="btn btn-sm btn-outline"
                                 onClick={() => navigate(`/reading/exam/${quiz.quizId}?preview=true&adminView=true`)}
                                 id={`preview-quiz-${quiz.quizId}`}
-                              >👁 Xem thử</button>
+                              >Preview</button>
                               <button
                                 className="btn btn-sm btn-outline"
                                 onClick={() => openEdit(quiz)}
@@ -453,8 +457,8 @@ export default function AdminReadingQuizzesPage() {
       {/* Create/Edit Modal */}
       {modalOpen && (
         <div className="admin-modal-overlay" onClick={closeModal}>
-          <div className="admin-modal admin-modal-wide" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '900px', width: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
-            <button className="admin-modal-close" onClick={closeModal} id="close-quiz-modal">
+          <div className="admin-modal admin-modal-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '900px', width: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
+            <button className="admin-modal-close" onClick={closeModal} aria-label="Close" id="close-quiz-modal">
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
 
@@ -793,7 +797,7 @@ export default function AdminReadingQuizzesPage() {
       {/* Delete Confirm Modal */}
       {deleteId && (
         <div className="admin-modal-overlay" onClick={() => setDeleteId(null)}>
-          <div className="admin-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+          <div className="admin-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 700, marginBottom: 12 }}>
               Confirm Archive
             </h2>
