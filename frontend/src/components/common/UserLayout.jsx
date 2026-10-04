@@ -74,6 +74,7 @@ export default function UserLayout() {
     { to: '/reading', label: 'Reading' },
     { to: '/writing', label: 'Writing' },
     { to: '/listening', label: 'Listening' },
+    { to: '/speaking', label: 'Speaking' },
     { to: '/vocabulary', label: 'Vocabulary' },
     { to: '/history', label: 'History' },
   ];
@@ -94,7 +95,7 @@ export default function UserLayout() {
           </Link>
 
           {/* Centered Navigation Links (Desktop) */}
-          <div className="hidden md:flex items-center justify-center gap-lg flex-1 absolute inset-0 pointer-events-none">
+          <div className="hidden lg:flex items-center justify-center gap-lg flex-1 absolute inset-0 pointer-events-none">
             <div className="flex items-center gap-lg pointer-events-auto">
               {navLinks.map((link) => (
                 <NavLink
@@ -167,7 +168,7 @@ export default function UserLayout() {
 
             {/* Mobile Hamburger Button */}
             <button 
-              className="md:hidden text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-container-low"
+              className="lg:hidden text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-container-low"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
               aria-expanded={mobileMenuOpen}
@@ -179,7 +180,7 @@ export default function UserLayout() {
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-outline-variant/30 bg-surface-container-lowest shadow-inner py-2 px-md">
+          <div className="lg:hidden border-t border-outline-variant/30 bg-surface-container-lowest shadow-inner py-2 px-md">
             <div className="flex flex-col gap-xs">
               {navLinks.map((link) => (
                 <NavLink

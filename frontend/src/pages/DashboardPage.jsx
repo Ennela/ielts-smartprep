@@ -143,6 +143,8 @@ export default function DashboardPage() {
         return { label: 'Writing', border: 'border-t-tertiary-container', text: 'text-tertiary', icon: 'edit_note', progressBg: 'bg-tertiary-container' };
       case 'LISTENING':
         return { label: 'Listening', border: 'border-t-primary-container', text: 'text-primary', icon: 'headset', progressBg: 'bg-primary-container' };
+      case 'SPEAKING':
+        return { label: 'Speaking', border: 'border-t-primary', text: 'text-primary', icon: 'record_voice_over', progressBg: 'bg-primary' };
       default:
         return { label: skillName, border: 'border-t-primary', text: 'text-primary', icon: 'school', progressBg: 'bg-primary' };
     }
@@ -380,6 +382,7 @@ export default function DashboardPage() {
             <option value="READING">Reading</option>
             <option value="WRITING">Writing</option>
             <option value="LISTENING">Listening</option>
+            <option value="SPEAKING">Speaking</option>
           </select>
         </div>
 
@@ -402,12 +405,14 @@ export default function DashboardPage() {
                   // Rows a full mock test wrote have their review on the mock test report;
                   // the per-answer review is empty for the ones backfilled by V48.
                   const isMockTest = Boolean(item.mockTestSubmissionId);
+                  // A Speaking answer has no per-question review; its results live on /speaking.
+                  const isSpeaking = item.skillType === 'SPEAKING';
                   return (
                     <tr 
                       key={item.historyId || index}
                       onClick={() => navigate(isMockTest
                         ? `/mock-tests/result/${item.mockTestSubmissionId}`
-                        : `/history/${item.historyId}/review`)}
+                        : isSpeaking ? '/speaking' : `/history/${item.historyId}/review`)}
                       className="hover:bg-surface-container-low/30 cursor-pointer transition-colors duration-150 group"
                     >
                       <td className="py-4 px-md">
@@ -427,7 +432,7 @@ export default function DashboardPage() {
                       </td>
                       <td className="py-4 px-md text-right">
                         <button className="text-primary hover:text-surface-tint font-bold text-sm flex items-center gap-xs ml-auto group-hover:underline">
-                          {isMockTest ? 'View Report' : 'Review Answers'}
+                          {isMockTest ? 'View Report' : isSpeaking ? 'View Results' : 'Review Answers'}
                           <span aria-hidden="true" className="material-symbols-outlined text-[16px]">arrow_forward</span>
                         </button>
                       </td>

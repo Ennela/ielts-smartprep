@@ -59,6 +59,8 @@ class HistoryFeedIntegrationTest extends AbstractMySQLContainerTest {
     @Autowired private MockTestSessionRepository sessionRepository;
     @Autowired private MockTestSubmissionRepository submissionRepository;
     @Autowired private ScoreHistoryRepository scoreHistoryRepository;
+    @Autowired private SpeakingPromptRepository speakingPromptRepository;
+    @Autowired private SpeakingSubmissionRepository speakingSubmissionRepository;
 
     @MockBean private MockTestAsyncGrader asyncGrader;
     @MockBean private ProxyManager<String> proxyManager;
@@ -222,8 +224,30 @@ class HistoryFeedIntegrationTest extends AbstractMySQLContainerTest {
                 .andExpect(jsonPath("$.data.totalElements").value(1))
                 .andExpect(jsonPath("$.data.content[0].title").value("SCIENCE"));
 
-        mockMvc.perform(get("/api/v1/history").param("skill", "SPEAKING").with(asUser()))
+        mockMvc.perform(get("/api/v1/history").param("skill", "DANCING").with(asUser()))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("a graded Speaking answer is in the feed, titled by part and topic, timed by its length")
+    void speakingAnswer() throws Exception {
+        SpeakingPrompt prompt = speakingPromptRepository.findByPartOrderByPromptIdAsc(2).get(0);
+        SpeakingSubmission answer = speakingSubmissionRepository.save(SpeakingSubmission.builder()
+                .user(user).prompt(prompt).audioKey("speaking_test.webm").audioMimeType("audio/webm")
+                .durationSeconds(97).transcript("t")
+                .overallBand(new BigDecimal("6.5")).fluencyBand(new BigDecimal("6.5"))
+                .lexicalBand(new BigDecimal("6.5")).grammarBand(new BigDecimal("6.0"))
+                .pronunciationBand(new BigDecimal("7.0")).feedbackJson("{}").build());
+        stamp("speaking_submissions", "submission_id", answer.getSubmissionId(), T0.plusHours(8));
+
+        mockMvc.perform(get("/api/v1/history").param("skill", "speaking").with(asUser()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.content[0].skill").value("SPEAKING"))
+                .andExpect(jsonPath("$.data.content[0].refId").value(answer.getSubmissionId()))
+                .andExpect(jsonPath("$.data.content[0].title").value("Part 2: " + prompt.getTopic()))
+                .andExpect(jsonPath("$.data.content[0].score").value(6.5))
+                .andExpect(jsonPath("$.data.content[0].timeSpentSeconds").value(97));
     }
 
     @Test

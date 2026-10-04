@@ -20,6 +20,12 @@ server:
     connection-timeout: 20s
 
 spring:
+  servlet:
+    multipart:
+      # Spring's 1 MB default refused the 5 MB the image upload advertises; a Speaking
+      # recording is usually well under 1 MB but a long Part 3 answer can pass it.
+      max-file-size: 5MB
+      max-request-size: 6MB
   lifecycle:
     # Upper bound on the graceful shutdown above, chosen to sit inside the deploy script's
     # health-wait budget rather than to be generous.

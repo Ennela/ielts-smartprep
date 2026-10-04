@@ -81,6 +81,35 @@ public class GeminiClient {
         return executeAndParse(systemPrompt, userPrompt, parser, GRADING_TEMPERATURE);
     }
 
+    /**
+     * Grade a recording: the prompt plus the audio itself, sent inline, sampled at
+     * temperature 0 like {@link #gradeAndParse}. Gemini listens to the audio, so
+     * pronunciation and fluency are judged from the speech, not from a transcript.
+     *
+     * @param audio    the recording; inline data is limited to about 20 MB per request
+     * @param mimeType e.g. "audio/webm"
+     */
+    @CircuitBreaker(name = "gemini")
+    public <T> T gradeAudioAndParse(String systemPrompt, String userPrompt, byte[] audio, String mimeType,
+                                    CheckedFunction<String, T> parser) {
+        Map<String, Object> audioPart = Map.of("inline_data", Map.of(
+                "mime_type", mimeType,
+                "data", java.util.Base64.getEncoder().encodeToString(audio)));
+        List<Map<String, Object>> parts = List.of(Map.of("text", userPrompt), audioPart);
+        return retry.executeSupplier(() -> {
+            String rawResponse = postGenerate(buildRequestBody(systemPrompt, parts, GRADING_TEMPERATURE));
+            try {
+                return parser.apply(rawResponse);
+            } catch (Exception ex) {
+                log.warn("AI response validation/parsing failed ({})", ex.getClass().getSimpleName());
+                if (ex instanceof InvalidAiResponseException) {
+                    throw (InvalidAiResponseException) ex;
+                }
+                throw new InvalidAiResponseException("AI response validation/parsing failed: " + ex.getMessage(), ex);
+            }
+        });
+    }
+
     private <T> T executeAndParse(String systemPrompt, String userPrompt,
                                   CheckedFunction<String, T> parser, double temperature) {
         return retry.executeSupplier(() -> {
@@ -107,11 +136,14 @@ public class GeminiClient {
     }
 
     private String generateInternal(String systemPrompt, String userPrompt, double temperature) {
+        return postGenerate(buildRequestBody(systemPrompt, userPrompt, temperature));
+    }
+
+    private String postGenerate(Map<String, Object> requestBody) {
         if (!StringUtils.hasText(apiKey)) {
             throw new ServiceUnavailableException("Gemini API key is not configured");
         }
         String url = baseUrl + ":generateContent";
-        Map<String, Object> requestBody = buildRequestBody(systemPrompt, userPrompt, temperature);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -179,12 +211,17 @@ public class GeminiClient {
     }
 
     private Map<String, Object> buildRequestBody(String systemPrompt, String userPrompt, double temperature) {
+        return buildRequestBody(systemPrompt, List.of(Map.of("text", userPrompt)), temperature);
+    }
+
+    private Map<String, Object> buildRequestBody(String systemPrompt, List<? extends Map<String, ?>> userParts,
+                                                 double temperature) {
         return Map.of(
                 "system_instruction", Map.of(
                         "parts", List.of(Map.of("text", systemPrompt))
                 ),
                 "contents", List.of(
-                        Map.of("parts", List.of(Map.of("text", userPrompt)))
+                        Map.of("parts", userParts)
                 ),
                 "generationConfig", Map.of(
                         "temperature", temperature,

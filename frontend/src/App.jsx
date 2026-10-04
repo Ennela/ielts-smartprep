@@ -46,6 +46,9 @@ const WritingFullExamPage = lazy(() => import('./pages/WritingFullExamPage'));
 const WritingFullResultPage = lazy(() => import('./pages/WritingFullResultPage'));
 const HistoryReviewPage = lazy(() => import('./pages/HistoryReviewPage'));
 const VocabularyPage = lazy(() => import('./pages/VocabularyPage'));
+const SpeakingPage = lazy(() => import('./pages/SpeakingPage'));
+const SpeakingPracticePage = lazy(() => import('./pages/SpeakingPracticePage'));
+const SpeakingResultPage = lazy(() => import('./pages/SpeakingResultPage'));
 const HistoryPage = lazy(() => import('./pages/HistoryPage'));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
@@ -101,6 +104,11 @@ export default function App() {
               <Route path="/listening" element={<ListeningPracticePage />} />
               <Route path="/listening/result/:testId" element={<ListeningResultPage />} />
               <Route path="/listening/history" element={<ListeningHistoryPage />} />
+
+              {/* Speaking */}
+              <Route path="/speaking" element={<SpeakingPage />} />
+              <Route path="/speaking/practice/:promptId" element={<SpeakingPracticePage />} />
+              <Route path="/speaking/result/:submissionId" element={<SpeakingResultPage />} />
 
               {/* Vocabulary Builder */}
               <Route path="/vocabulary" element={<VocabularyPage />} />
