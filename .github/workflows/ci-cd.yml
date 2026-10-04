@@ -103,8 +103,11 @@ jobs:
       - name: Build
         run: npm run build
 
+      # npm audit --audit-level=high, minus the advisories in audit-allowlist.json: ones with
+      # no fix that have been looked at and accepted, each with its reason. Anything else
+      # high or critical still fails the job, dev dependencies included.
       - name: Audit dependencies
-        run: npm audit --audit-level=high
+        run: npm run audit:ci
 
   docker-images:
     # On a pull request this only builds, proving the Dockerfiles still work. On a push to

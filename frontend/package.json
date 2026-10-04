@@ -11,7 +11,8 @@
     "lint": "eslint src",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,md}\"",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "audit:ci": "node scripts/audit-check.mjs"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
