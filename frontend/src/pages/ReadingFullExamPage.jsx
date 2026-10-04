@@ -8,12 +8,14 @@ import QuestionPanel from '../components/reading/QuestionPanel';
 import useExamTimer from '../hooks/useExamTimer';
 import useExamWarnings from '../hooks/useExamWarnings';
 import { useToast } from '../context/ToastContext';
-import { confirmSubmitAnswers } from '../utils/confirmSubmit';
+import { submitAnswersPrompt } from '../utils/confirmSubmit';
+import { useConfirm } from '../context/ConfirmContext';
 
 const SESSION_KEY = 'reading_full_attemptId';
 
 export default function ReadingFullExamPage() {
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const { warning: triggerWarningToast } = useToast();
   const [quizzes, setQuizzes] = useState([]);
   const [activeIdx, setActiveIdx] = useState(0);
@@ -226,7 +228,7 @@ export default function ReadingFullExamPage() {
           </div>
           <button
             className="btn btn-primary btn-submit-exam"
-            onClick={() => confirmSubmitAnswers(totalQuestions - answeredCount) && handleSubmit()}
+            onClick={async () => { if (await confirm(submitAnswersPrompt(totalQuestions - answeredCount))) handleSubmit(); }}
             disabled={submitting}
             id="submit-exam-btn"
           >
@@ -259,7 +261,7 @@ export default function ReadingFullExamPage() {
           </button>
           <button
             className="btn btn-primary btn-submit-exam"
-            onClick={() => confirmSubmitAnswers(totalQuestions - answeredCount) && handleSubmit()}
+            onClick={async () => { if (await confirm(submitAnswersPrompt(totalQuestions - answeredCount))) handleSubmit(); }}
             disabled={submitting}
           >
             {submitting ? 'Submitting...' : 'Complete & Submit'}

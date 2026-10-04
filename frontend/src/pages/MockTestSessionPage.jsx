@@ -10,9 +10,11 @@ import PassageViewer from '../components/reading/PassageViewer';
 import MockTestQuestionPanel from '../components/mocktest/MockTestQuestionPanel';
 import { useToast } from '../context/ToastContext';
 import { isTask1Type } from '../constants/examTypes';
+import { useConfirm } from '../context/ConfirmContext';
 
 export default function MockTestSessionPage() {
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const { error: showErrorToast } = useToast();
   const { sessionId } = useParams();
   const {
@@ -75,8 +77,13 @@ export default function MockTestSessionPage() {
     };
   }, []);
 
-  const handleExitLobby = () => {
-    if (window.confirm('Are you sure you want to exit to the lobby? The exam timer will NOT pause, and the test will continue running on the server.')) {
+  const handleExitLobby = async () => {
+    const ok = await confirm({
+      title: 'Leave for the lobby?',
+      message: 'The timer does not pause: the test keeps running on the server while you are away.',
+      confirmLabel: 'Go to lobby',
+    });
+    if (ok) {
       navigate('/mock-tests');
     }
   };
@@ -172,17 +179,22 @@ export default function MockTestSessionPage() {
       ? totalListeningQuestions - answeredListeningCount
       : totalReadingQuestions - answeredReadingCount;
     const blanks = unanswered > 0 ? ` ${unanswered} question${unanswered === 1 ? ' is' : 's are'} still unanswered.` : '';
-    if (window.confirm(`Are you sure you want to complete the ${currentName} section and move to the ${nextName} section?${blanks} You will not be able to return.`)) {
+    const ok = await confirm({
+      title: `Finish ${currentName}?`,
+      message: `You will move on to ${nextName} and cannot come back to ${currentName}.${blanks}`,
+      confirmLabel: `Start ${nextName}`,
+    });
+    if (ok) {
       await advanceSection();
     }
   };
 
   const handleSubmitTest = async () => {
     if (wordCountTask1 < 150 || wordCountTask2 < 250) {
-      const confirmStr = `Your essays do not meet the minimum length (Task 1: ${wordCountTask1}/150 words, Task 2: ${wordCountTask2}/250 words).\nAre you sure you want to submit the exam anyway?`;
-      if (!window.confirm(confirmStr)) return;
+      const confirmStr = `Your essays are below the minimum length (Task 1: ${wordCountTask1}/150 words, Task 2: ${wordCountTask2}/250 words).`;
+      if (!(await confirm({ title: 'Submit the mock test?', message: confirmStr, confirmLabel: 'Submit anyway' }))) return;
     } else {
-      if (!window.confirm('Are you sure you want to submit your mock test for AI grading? This will close the test.')) return;
+      if (!(await confirm({ title: 'Submit the mock test?', message: 'Your answers go to AI grading and the test closes.', confirmLabel: 'Submit' }))) return;
     }
 
     try {

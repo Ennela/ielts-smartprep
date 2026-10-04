@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback, lazy, Suspense } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import statsApi from '../api/statsApi';
 import analyticsApi from '../api/analyticsApi';
@@ -199,10 +199,10 @@ export default function DashboardPage() {
             const gap = parseFloat(skillItem.gap) || 0;
 
             return (
-              <div 
+              <Link
                 key={skillItem.skill}
-                onClick={() => navigate(`/${skillItem.skill.toLowerCase()}`)}
-                className={`bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/20 border-t-[4px] ${config.border} overflow-hidden flex flex-col hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer`}
+                to={`/${skillItem.skill.toLowerCase()}`}
+                className={`text-on-surface hover:text-on-surface bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/20 border-t-[4px] ${config.border} overflow-hidden flex flex-col hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer`}
               >
                 <div className="p-md border-b border-outline-variant/30 flex justify-between items-center bg-surface-bright">
                   <div className="flex items-center gap-sm">
@@ -232,7 +232,7 @@ export default function DashboardPage() {
                     {gap > 0 ? `Need ${gap.toFixed(1)} more` : 'Target met!'}
                   </p>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>

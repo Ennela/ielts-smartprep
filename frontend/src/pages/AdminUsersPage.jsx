@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import adminApi from '../api/adminApi';
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
-import useEscapeKey from '../hooks/useEscapeKey';
+import Modal from '../components/common/Modal';
 
 export default function AdminUsersPage() {
   const navigate = useNavigate();
@@ -50,8 +50,6 @@ export default function AdminUsersPage() {
   };
 
   const closeDetail = () => setDetail(null);
-
-  useEscapeKey(!!(detail || detailLoading), closeDetail);
 
   return (
     <div className="admin-dashboard-content">
@@ -159,85 +157,83 @@ export default function AdminUsersPage() {
 
       {/* Detail Modal */}
       {(detail || detailLoading) && (
-        <div className="admin-modal-overlay" onClick={closeDetail}>
-          <div className="admin-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-            <button className="admin-modal-close" onClick={closeDetail} aria-label="Close" id="close-user-detail">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
+        <Modal ariaLabel="Student details" onClose={closeDetail} className="admin-modal">
+          <button className="admin-modal-close" onClick={closeDetail} aria-label="Close" id="close-user-detail">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
 
-            {detailLoading ? (
-              <div className="loading-spinner"><div className="spinner" /></div>
-            ) : detail && (
-              <>
-                <div className="admin-modal-header">
-                  <div className="admin-detail-avatar">
-                    {(detail.displayName || detail.username || 'U').charAt(0).toUpperCase()}
-                  </div>
-                  <div>
-                    <h2>{detail.displayName || detail.username}</h2>
-                    <p className="admin-detail-meta">@{detail.username} · {detail.email}</p>
-                    <p className="admin-detail-meta">
-                      Joined: {formatDate(detail.createdAt)}
-                      {detail.role === 'ADMIN' && <span className="admin-role-badge">ADMIN</span>}
-                    </p>
-                  </div>
+          {detailLoading ? (
+            <div className="loading-spinner"><div className="spinner" /></div>
+          ) : detail && (
+            <>
+              <div className="admin-modal-header">
+                <div className="admin-detail-avatar">
+                  {(detail.displayName || detail.username || 'U').charAt(0).toUpperCase()}
                 </div>
-
-                {/* Targets */}
-                <div className="admin-detail-targets">
-                  <h3>Target Band Scores</h3>
-                  <div className="admin-target-row">
-                    <span>Reading: <strong>{detail.targetReadingScore ?? '—'}</strong></span>
-                    <span>Writing: <strong>{detail.targetWritingScore ?? '—'}</strong></span>
-                    <span>Listening: <strong>{detail.targetListeningScore ?? '—'}</strong></span>
-                  </div>
+                <div>
+                  <h2>{detail.displayName || detail.username}</h2>
+                  <p className="admin-detail-meta">@{detail.username} · {detail.email}</p>
+                  <p className="admin-detail-meta">
+                    Joined: {formatDate(detail.createdAt)}
+                    {detail.role === 'ADMIN' && <span className="admin-role-badge">ADMIN</span>}
+                  </p>
                 </div>
+              </div>
 
-                {/* Skill Stats */}
-                {detail.skillStats?.length > 0 && (
-                  <div className="admin-detail-section">
-                    <h3>Skill Statistics</h3>
-                    <div className="admin-skill-stats">
-                      {detail.skillStats.map(s => (
-                        <div key={s.skill} className="admin-skill-stat-card">
-                          <span className={`ht-skill badge-${s.skill?.toLowerCase()}`}>{s.skill}</span>
-                          <div className="admin-skill-stat-numbers">
-                            <div>
-                              <span className="stat-value">{s.totalTests}</span>
-                              <span className="stat-label">Tests</span>
-                            </div>
-                            <div>
-                              <span className="stat-value">{s.avgScore != null ? Number(s.avgScore).toFixed(1) : '—'}</span>
-                              <span className="stat-label">Avg Score</span>
-                            </div>
+              {/* Targets */}
+              <div className="admin-detail-targets">
+                <h3>Target Band Scores</h3>
+                <div className="admin-target-row">
+                  <span>Reading: <strong>{detail.targetReadingScore ?? '—'}</strong></span>
+                  <span>Writing: <strong>{detail.targetWritingScore ?? '—'}</strong></span>
+                  <span>Listening: <strong>{detail.targetListeningScore ?? '—'}</strong></span>
+                </div>
+              </div>
+
+              {/* Skill Stats */}
+              {detail.skillStats?.length > 0 && (
+                <div className="admin-detail-section">
+                  <h3>Skill Statistics</h3>
+                  <div className="admin-skill-stats">
+                    {detail.skillStats.map(s => (
+                      <div key={s.skill} className="admin-skill-stat-card">
+                        <span className={`ht-skill badge-${s.skill?.toLowerCase()}`}>{s.skill}</span>
+                        <div className="admin-skill-stat-numbers">
+                          <div>
+                            <span className="stat-value">{s.totalTests}</span>
+                            <span className="stat-label">Tests</span>
+                          </div>
+                          <div>
+                            <span className="stat-value">{s.avgScore != null ? Number(s.avgScore).toFixed(1) : '—'}</span>
+                            <span className="stat-label">Avg Score</span>
                           </div>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
                   </div>
-                )}
+                </div>
+              )}
 
-                {/* Recent Scores */}
-                {detail.recentScores?.length > 0 && (
-                  <div className="admin-detail-section">
-                    <h3>Recent History</h3>
-                    <div className="admin-recent-scores">
-                      {detail.recentScores.map((s, i) => (
-                        <div key={i} className="admin-recent-row">
-                          <span className={`ht-skill badge-${s.skillType?.toLowerCase()}`}>{s.skillType}</span>
-                          <span className={`band-score band-${getBandClass(s.score)}`}>
-                            {Number(s.score).toFixed(1)}
-                          </span>
-                          <span className="ht-date">{formatDate(s.recordedAt)}</span>
-                        </div>
-                      ))}
-                    </div>
+              {/* Recent Scores */}
+              {detail.recentScores?.length > 0 && (
+                <div className="admin-detail-section">
+                  <h3>Recent History</h3>
+                  <div className="admin-recent-scores">
+                    {detail.recentScores.map((s, i) => (
+                      <div key={i} className="admin-recent-row">
+                        <span className={`ht-skill badge-${s.skillType?.toLowerCase()}`}>{s.skillType}</span>
+                        <span className={`band-score band-${getBandClass(s.score)}`}>
+                          {Number(s.score).toFixed(1)}
+                        </span>
+                        <span className="ht-date">{formatDate(s.recordedAt)}</span>
+                      </div>
+                    ))}
                   </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
+                </div>
+              )}
+            </>
+          )}
+        </Modal>
       )}
     </div>
   );

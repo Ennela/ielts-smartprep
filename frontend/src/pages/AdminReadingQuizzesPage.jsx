@@ -7,7 +7,7 @@ import { nextRowKey, withRowKeys } from '../utils/rowKey';
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
 import ArchivedToggle from '../components/admin/ArchivedToggle';
-import useEscapeKey from '../hooks/useEscapeKey';
+import Modal from '../components/common/Modal';
 
 const TOPICS = [
   { value: 'ENVIRONMENT', label: 'Environment' },
@@ -293,9 +293,6 @@ export default function AdminReadingQuizzesPage() {
   };
 
 
-  useEscapeKey(modalOpen, closeModal);
-  useEscapeKey(!!deleteId, () => setDeleteId(null));
-
   return (
     <div className="admin-dashboard-content">
       {/* Header */}
@@ -456,363 +453,359 @@ export default function AdminReadingQuizzesPage() {
 
       {/* Create/Edit Modal */}
       {modalOpen && (
-        <div className="admin-modal-overlay" onClick={closeModal}>
-          <div className="admin-modal admin-modal-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '900px', width: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
-            <button className="admin-modal-close" onClick={closeModal} aria-label="Close" id="close-quiz-modal">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
+        <Modal ariaLabel="Reading passage form" onClose={closeModal} className="admin-modal admin-modal-wide" style={{ maxWidth: '900px', width: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
+          <button className="admin-modal-close" onClick={closeModal} aria-label="Close" id="close-quiz-modal">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
 
-            <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.25rem', fontWeight: 700, marginBottom: 24 }}>
-              {editing ? 'Edit Reading Passage' : 'Create New Sample Reading Passage'}
-            </h2>
+          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.25rem', fontWeight: 700, marginBottom: 24 }}>
+            {editing ? 'Edit Reading Passage' : 'Create New Sample Reading Passage'}
+          </h2>
 
-            {error && <div className="error-msg" style={{ marginBottom: '1rem' }}>{error}</div>}
+          {error && <div className="error-msg" style={{ marginBottom: '1rem' }}>{error}</div>}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-              <div className="admin-form-group">
-                <label className="admin-form-label">Topic</label>
-                <select
-                  className="matching-select"
-                  value={form.topic}
-                  onChange={e => setForm(f => ({ ...f, topic: e.target.value }))}
-                  style={{ width: '100%', maxWidth: '100%' }}
-                >
-                  {TOPICS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </select>
-              </div>
-
-              <div className="admin-form-group">
-                <label className="admin-form-label">Difficulty (Passage)</label>
-                <select
-                  className="matching-select"
-                  value={form.difficulty}
-                  onChange={e => handleDifficultyChange(e.target.value)}
-                  style={{ width: '100%', maxWidth: '100%' }}
-                >
-                  {DIFFICULTIES.map(d => <option key={d.value} value={d.value}>{d.value.replace('_', ' ')}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
-              <label className="admin-form-label">Time Limit (seconds)</label>
-              <input
-                type="number"
-                className="completion-input"
-                value={form.timeLimitSeconds}
-                onChange={e => setForm(f => ({ ...f, timeLimitSeconds: parseInt(e.target.value) || 0 }))}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="admin-form-group">
+              <label className="admin-form-label">Topic</label>
+              <select
+                className="matching-select"
+                value={form.topic}
+                onChange={e => setForm(f => ({ ...f, topic: e.target.value }))}
                 style={{ width: '100%', maxWidth: '100%' }}
-              />
+              >
+                {TOPICS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
             </div>
 
-            <div className="admin-form-group" style={{ marginBottom: '1.5rem' }}>
-              <label className="admin-form-label">Passage Text</label>
-              <textarea
-                className="editor-textarea"
-                value={form.passageText}
-                onChange={e => setForm(f => ({ ...f, passageText: e.target.value }))}
-                placeholder="Enter passage text..."
-                style={{ minHeight: 200, width: '100%', fontFamily: 'inherit' }}
-              />
+            <div className="admin-form-group">
+              <label className="admin-form-label">Difficulty (Passage)</label>
+              <select
+                className="matching-select"
+                value={form.difficulty}
+                onChange={e => handleDifficultyChange(e.target.value)}
+                style={{ width: '100%', maxWidth: '100%' }}
+              >
+                {DIFFICULTIES.map(d => <option key={d.value} value={d.value}>{d.value.replace('_', ' ')}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+            <label className="admin-form-label">Time Limit (seconds)</label>
+            <input
+              type="number"
+              className="completion-input"
+              value={form.timeLimitSeconds}
+              onChange={e => setForm(f => ({ ...f, timeLimitSeconds: parseInt(e.target.value) || 0 }))}
+              style={{ width: '100%', maxWidth: '100%' }}
+            />
+          </div>
+
+          <div className="admin-form-group" style={{ marginBottom: '1.5rem' }}>
+            <label className="admin-form-label">Passage Text</label>
+            <textarea
+              className="editor-textarea"
+              value={form.passageText}
+              onChange={e => setForm(f => ({ ...f, passageText: e.target.value }))}
+              placeholder="Enter passage text..."
+              style={{ minHeight: 200, width: '100%', fontFamily: 'inherit' }}
+            />
+          </div>
+
+          {/* Questions Section */}
+          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: '600' }}>Question List ({form.questions.length})</h3>
+              <button type="button" className="btn btn-outline" onClick={addQuestion}>
+                + Add Question
+              </button>
             </div>
 
-            {/* Questions Section */}
-            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem', marginBottom: '1.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: '600' }}>Question List ({form.questions.length})</h3>
-                <button type="button" className="btn btn-outline" onClick={addQuestion}>
-                  + Add Question
-                </button>
-              </div>
-
-              {form.questions.length === 0 ? (
-                <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
-                  No questions added yet. Click "+ Add Question" to start.
-                </p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  {form.questions.map((q, idx) => (
-                    <div
-                      key={q.rowKey}
+            {form.questions.length === 0 ? (
+              <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '2rem', border: '1px dashed var(--border-color)', borderRadius: '8px' }}>
+                No questions added yet. Click "+ Add Question" to start.
+              </p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {form.questions.map((q, idx) => (
+                  <div
+                    key={q.rowKey}
+                    style={{
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      padding: '1.25rem',
+                      background: 'var(--bg-body)',
+                      position: 'relative'
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => removeQuestion(idx)}
                       style={{
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '8px',
-                        padding: '1.25rem',
-                        background: 'var(--bg-body)',
-                        position: 'relative'
+                        position: 'absolute',
+                        top: '1rem',
+                        right: '1rem',
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--color-danger, #ef4444)',
+                        cursor: 'pointer',
+                        fontWeight: '600'
                       }}
                     >
-                      <button
-                        type="button"
-                        onClick={() => removeQuestion(idx)}
-                        style={{
-                          position: 'absolute',
-                          top: '1rem',
-                          right: '1rem',
-                          background: 'none',
-                          border: 'none',
-                          color: 'var(--color-danger, #ef4444)',
-                          cursor: 'pointer',
-                          fontWeight: '600'
-                        }}
-                      >
-                        Delete Question
-                      </button>
+                      Delete Question
+                    </button>
 
-                      <h4 style={{ fontWeight: '600', marginBottom: '1rem', color: 'var(--primary-color)' }}>
-                        Question #{idx + 1}
-                      </h4>
+                    <h4 style={{ fontWeight: '600', marginBottom: '1rem', color: 'var(--primary-color)' }}>
+                      Question #{idx + 1}
+                    </h4>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                        <div>
-                          <label className="admin-form-label" style={{ fontSize: '0.85rem' }}>Question Type</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                      <div>
+                        <label className="admin-form-label" style={{ fontSize: '0.85rem' }}>Question Type</label>
+                        <select
+                          className="matching-select"
+                          value={q.questionType}
+                          onChange={e => updateQuestionField(idx, 'questionType', e.target.value)}
+                          style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
+                        >
+                          {QUESTION_TYPES.map(qt => <option key={qt.value} value={qt.value}>{qt.label}</option>)}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="admin-form-label" style={{ fontSize: '0.85rem' }}>Correct Answer</label>
+                        {q.questionType === 'MCQ' ? (
                           <select
                             className="matching-select"
-                            value={q.questionType}
-                            onChange={e => updateQuestionField(idx, 'questionType', e.target.value)}
+                            value={q.correctAnswer}
+                            onChange={e => updateQuestionField(idx, 'correctAnswer', e.target.value)}
                             style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
                           >
-                            {QUESTION_TYPES.map(qt => <option key={qt.value} value={qt.value}>{qt.label}</option>)}
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                            <option value="D">D</option>
+                            <option value="E">E</option>
                           </select>
-                        </div>
-
-                        <div>
-                          <label className="admin-form-label" style={{ fontSize: '0.85rem' }}>Correct Answer</label>
-                          {q.questionType === 'MCQ' ? (
-                            <select
-                              className="matching-select"
-                              value={q.correctAnswer}
-                              onChange={e => updateQuestionField(idx, 'correctAnswer', e.target.value)}
-                              style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
-                            >
-                              <option value="A">A</option>
-                              <option value="B">B</option>
-                              <option value="C">C</option>
-                              <option value="D">D</option>
-                              <option value="E">E</option>
-                            </select>
-                          ) : q.questionType === 'TFNG' ? (
-                            <select
-                              className="matching-select"
-                              value={q.correctAnswer}
-                              onChange={e => updateQuestionField(idx, 'correctAnswer', e.target.value)}
-                              style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
-                            >
-                              <option value="TRUE">TRUE</option>
-                              <option value="FALSE">FALSE</option>
-                              <option value="NOT_GIVEN">NOT GIVEN</option>
-                            </select>
-                          ) : q.questionType === 'YNNG' ? (
-                            <select
-                              className="matching-select"
-                              value={q.correctAnswer}
-                              onChange={e => updateQuestionField(idx, 'correctAnswer', e.target.value)}
-                              style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
-                            >
-                              <option value="YES">YES</option>
-                              <option value="NO">NO</option>
-                              <option value="NOT_GIVEN">NOT GIVEN</option>
-                            </select>
-                          ) : (
-                            <input
-                              type="text"
-                              className="completion-input"
-                              value={q.correctAnswer}
-                              onChange={e => updateQuestionField(idx, 'correctAnswer', e.target.value)}
-                              placeholder="Enter the correct answer word or phrase..."
-                              style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
-                            />
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
-                        <label className="admin-form-label" style={{ fontSize: '0.85rem' }}>Question Text</label>
-                        <input
-                          type="text"
-                          className="completion-input"
-                          value={q.questionText}
-                          onChange={e => updateQuestionField(idx, 'questionText', e.target.value)}
-                          placeholder="e.g. According to paragraph 1, what is the primary benefit..."
-                          style={{ width: '100%', maxWidth: '100%', padding: '0.5rem 0.8rem' }}
-                        />
-                      </div>
-
-                      {q.questionType === 'MCQ' && (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
-                          <div>
-                            <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Option A</label>
-                            <input
-                              type="text"
-                              className="completion-input"
-                              value={q.optionA || ''}
-                              onChange={e => updateQuestionField(idx, 'optionA', e.target.value)}
-                              style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
-                            />
-                          </div>
-                          <div>
-                            <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Option B</label>
-                            <input
-                              type="text"
-                              className="completion-input"
-                              value={q.optionB || ''}
-                              onChange={e => updateQuestionField(idx, 'optionB', e.target.value)}
-                              style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
-                            />
-                          </div>
-                          <div>
-                            <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Option C</label>
-                            <input
-                              type="text"
-                              className="completion-input"
-                              value={q.optionC || ''}
-                              onChange={e => updateQuestionField(idx, 'optionC', e.target.value)}
-                              style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
-                            />
-                          </div>
-                          <div>
-                            <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Option D</label>
-                            <input
-                              type="text"
-                              className="completion-input"
-                              value={q.optionD || ''}
-                              onChange={e => updateQuestionField(idx, 'optionD', e.target.value)}
-                              style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
-                            />
-                          </div>
-                          <div>
-                            <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Option E</label>
-                            <input
-                              type="text"
-                              className="completion-input"
-                              value={q.optionE || ''}
-                              onChange={e => updateQuestionField(idx, 'optionE', e.target.value)}
-                              style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Advanced details (optional metadata) */}
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
-                        <div>
-                          <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Group ID (optional)</label>
-                          <input
-                            type="number"
-                            className="completion-input"
-                            value={q.groupId || ''}
-                            onChange={e => updateQuestionField(idx, 'groupId', parseInt(e.target.value) || null)}
+                        ) : q.questionType === 'TFNG' ? (
+                          <select
+                            className="matching-select"
+                            value={q.correctAnswer}
+                            onChange={e => updateQuestionField(idx, 'correctAnswer', e.target.value)}
                             style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
-                          />
-                        </div>
-                        <div>
-                          <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Group Label (optional)</label>
+                          >
+                            <option value="TRUE">TRUE</option>
+                            <option value="FALSE">FALSE</option>
+                            <option value="NOT_GIVEN">NOT GIVEN</option>
+                          </select>
+                        ) : q.questionType === 'YNNG' ? (
+                          <select
+                            className="matching-select"
+                            value={q.correctAnswer}
+                            onChange={e => updateQuestionField(idx, 'correctAnswer', e.target.value)}
+                            style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
+                          >
+                            <option value="YES">YES</option>
+                            <option value="NO">NO</option>
+                            <option value="NOT_GIVEN">NOT GIVEN</option>
+                          </select>
+                        ) : (
                           <input
                             type="text"
                             className="completion-input"
-                            value={q.groupLabel || ''}
-                            onChange={e => updateQuestionField(idx, 'groupLabel', e.target.value)}
-                            placeholder="Questions 1-5"
+                            value={q.correctAnswer}
+                            onChange={e => updateQuestionField(idx, 'correctAnswer', e.target.value)}
+                            placeholder="Enter the correct answer word or phrase..."
+                            style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                      <label className="admin-form-label" style={{ fontSize: '0.85rem' }}>Question Text</label>
+                      <input
+                        type="text"
+                        className="completion-input"
+                        value={q.questionText}
+                        onChange={e => updateQuestionField(idx, 'questionText', e.target.value)}
+                        placeholder="e.g. According to paragraph 1, what is the primary benefit..."
+                        style={{ width: '100%', maxWidth: '100%', padding: '0.5rem 0.8rem' }}
+                      />
+                    </div>
+
+                    {q.questionType === 'MCQ' && (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+                        <div>
+                          <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Option A</label>
+                          <input
+                            type="text"
+                            className="completion-input"
+                            value={q.optionA || ''}
+                            onChange={e => updateQuestionField(idx, 'optionA', e.target.value)}
                             style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
                           />
                         </div>
                         <div>
-                          <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Word Limit (optional)</label>
+                          <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Option B</label>
                           <input
-                            type="number"
+                            type="text"
                             className="completion-input"
-                            value={q.wordLimit || ''}
-                            onChange={e => updateQuestionField(idx, 'wordLimit', parseInt(e.target.value) || null)}
+                            value={q.optionB || ''}
+                            onChange={e => updateQuestionField(idx, 'optionB', e.target.value)}
+                            style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
+                          />
+                        </div>
+                        <div>
+                          <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Option C</label>
+                          <input
+                            type="text"
+                            className="completion-input"
+                            value={q.optionC || ''}
+                            onChange={e => updateQuestionField(idx, 'optionC', e.target.value)}
+                            style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
+                          />
+                        </div>
+                        <div>
+                          <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Option D</label>
+                          <input
+                            type="text"
+                            className="completion-input"
+                            value={q.optionD || ''}
+                            onChange={e => updateQuestionField(idx, 'optionD', e.target.value)}
+                            style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
+                          />
+                        </div>
+                        <div>
+                          <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Option E</label>
+                          <input
+                            type="text"
+                            className="completion-input"
+                            value={q.optionE || ''}
+                            onChange={e => updateQuestionField(idx, 'optionE', e.target.value)}
                             style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
                           />
                         </div>
                       </div>
+                    )}
 
-                      {q.questionType === 'MCQ' && (
-                        <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
-                          <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Letters to choose (MCQ) — 2 for "Choose TWO letters": give every question of the task the same group number and count, and each its own correct letter</label>
-                          <input
-                            type="number"
-                            min="1"
-                            max="3"
-                            className="completion-input"
-                            value={q.selectCount || 1}
-                            onChange={e => updateQuestionField(idx, 'selectCount', parseInt(e.target.value) || 1)}
-                            style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
-                          />
-                        </div>
-                      )}
-
-                      {q.groupId && (
-                        <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
-                          <ImageUploadField
-                            id={`reading-question-image-${idx}`}
-                            label="Diagram for the group (first question of the group)"
-                            value={q.imageUrl || ''}
-                            onChange={url => updateQuestionField(idx, 'imageUrl', url)}
-                          />
-                        </div>
-                      )}
-
-                      {q.groupId && (
-                        <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
-                          <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Group Context (shared text/summary with blanks)</label>
-                          <textarea
-                            className="editor-textarea"
-                            value={q.groupContext || ''}
-                            onChange={e => updateQuestionField(idx, 'groupContext', e.target.value)}
-                            placeholder="Enter shared context or summary with blanks for the question group..."
-                            style={{ minHeight: 60, width: '100%', fontSize: '0.875rem' }}
-                          />
-                        </div>
-                      )}
-
-                      <div className="admin-form-group" style={{ marginBottom: 0 }}>
-                        <label className="admin-form-label" style={{ fontSize: '0.85rem' }}>Detailed Explanation</label>
-                        <textarea
-                          className="editor-textarea"
-                          value={q.explanation || ''}
-                          onChange={e => updateQuestionField(idx, 'explanation', e.target.value)}
-                          placeholder="Enter explanation of why this answer is correct and cite the passage text..."
-                          style={{ minHeight: 60, width: '100%' }}
+                    {/* Advanced details (optional metadata) */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+                      <div>
+                        <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Group ID (optional)</label>
+                        <input
+                          type="number"
+                          className="completion-input"
+                          value={q.groupId || ''}
+                          onChange={e => updateQuestionField(idx, 'groupId', parseInt(e.target.value) || null)}
+                          style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
+                        />
+                      </div>
+                      <div>
+                        <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Group Label (optional)</label>
+                        <input
+                          type="text"
+                          className="completion-input"
+                          value={q.groupLabel || ''}
+                          onChange={e => updateQuestionField(idx, 'groupLabel', e.target.value)}
+                          placeholder="Questions 1-5"
+                          style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
+                        />
+                      </div>
+                      <div>
+                        <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Word Limit (optional)</label>
+                        <input
+                          type="number"
+                          className="completion-input"
+                          value={q.wordLimit || ''}
+                          onChange={e => updateQuestionField(idx, 'wordLimit', parseInt(e.target.value) || null)}
+                          style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
                         />
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
 
-            <div className="admin-form-actions" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
-              <button className="btn btn-outline" onClick={closeModal} type="button">Cancel</button>
-              <button className="btn btn-primary" onClick={handleSave} disabled={saving} type="button">
-                {saving && <span className="spinner" />}
-                {editing ? 'Update Passage' : 'Create New Passage'}
-              </button>
-            </div>
+                    {q.questionType === 'MCQ' && (
+                      <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                        <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Letters to choose (MCQ) — 2 for "Choose TWO letters": give every question of the task the same group number and count, and each its own correct letter</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="3"
+                          className="completion-input"
+                          value={q.selectCount || 1}
+                          onChange={e => updateQuestionField(idx, 'selectCount', parseInt(e.target.value) || 1)}
+                          style={{ width: '100%', maxWidth: '100%', padding: '0.4rem 0.8rem' }}
+                        />
+                      </div>
+                    )}
+
+                    {q.groupId && (
+                      <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                        <ImageUploadField
+                          id={`reading-question-image-${idx}`}
+                          label="Diagram for the group (first question of the group)"
+                          value={q.imageUrl || ''}
+                          onChange={url => updateQuestionField(idx, 'imageUrl', url)}
+                        />
+                      </div>
+                    )}
+
+                    {q.groupId && (
+                      <div className="admin-form-group" style={{ marginBottom: '1rem' }}>
+                        <label className="admin-form-label" style={{ fontSize: '0.8rem' }}>Group Context (shared text/summary with blanks)</label>
+                        <textarea
+                          className="editor-textarea"
+                          value={q.groupContext || ''}
+                          onChange={e => updateQuestionField(idx, 'groupContext', e.target.value)}
+                          placeholder="Enter shared context or summary with blanks for the question group..."
+                          style={{ minHeight: 60, width: '100%', fontSize: '0.875rem' }}
+                        />
+                      </div>
+                    )}
+
+                    <div className="admin-form-group" style={{ marginBottom: 0 }}>
+                      <label className="admin-form-label" style={{ fontSize: '0.85rem' }}>Detailed Explanation</label>
+                      <textarea
+                        className="editor-textarea"
+                        value={q.explanation || ''}
+                        onChange={e => updateQuestionField(idx, 'explanation', e.target.value)}
+                        placeholder="Enter explanation of why this answer is correct and cite the passage text..."
+                        style={{ minHeight: 60, width: '100%' }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
+
+          <div className="admin-form-actions" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
+            <button className="btn btn-outline" onClick={closeModal} type="button">Cancel</button>
+            <button className="btn btn-primary" onClick={handleSave} disabled={saving} type="button">
+              {saving && <span className="spinner" />}
+              {editing ? 'Update Passage' : 'Create New Passage'}
+            </button>
+          </div>
+        </Modal>
       )}
 
       {/* Delete Confirm Modal */}
       {deleteId && (
-        <div className="admin-modal-overlay" onClick={() => setDeleteId(null)}>
-          <div className="admin-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
-            <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 700, marginBottom: 12 }}>
-              Confirm Archive
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 24, lineHeight: 1.6 }}>
-              Archive this reading passage? It will disappear from active lists, while its questions, mock-test links, and history remain available for restoration.
-            </p>
-            <div className="admin-form-actions">
-              <button className="btn btn-outline" onClick={() => setDeleteId(null)}>Cancel</button>
-              <button className="btn admin-btn-danger-fill" onClick={handleDelete} disabled={deleting}>
-                {deleting && <span className="spinner" />}
-                Archive Passage
-              </button>
-            </div>
+        <Modal ariaLabel="Delete reading passage" onClose={() => setDeleteId(null)} className="admin-modal" style={{ maxWidth: 420 }}>
+          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 700, marginBottom: 12 }}>
+            Confirm Archive
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 24, lineHeight: 1.6 }}>
+            Archive this reading passage? It will disappear from active lists, while its questions, mock-test links, and history remain available for restoration.
+          </p>
+          <div className="admin-form-actions">
+            <button className="btn btn-outline" onClick={() => setDeleteId(null)}>Cancel</button>
+            <button className="btn admin-btn-danger-fill" onClick={handleDelete} disabled={deleting}>
+              {deleting && <span className="spinner" />}
+              Archive Passage
+            </button>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

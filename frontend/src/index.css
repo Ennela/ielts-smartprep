@@ -1242,7 +1242,7 @@ html:not([data-theme]) {
     --on-surface-variant: #434652;
     --primary: #003178;
     --on-primary: #ffffff;
-    --outline: #737783;
+    --outline: #5f6370;
     --outline-variant: #c3c6d4;
     --error: #ba1a1a;
     --on-error: #ffffff;
@@ -1250,7 +1250,7 @@ html:not([data-theme]) {
     --color-surface-solid: #ffffff;
     --color-text: #191c1e;
     --color-text-secondary: #434652;
-    --color-text-muted: #737783;
+    --color-text-muted: #5f6370;
     --color-border: #c3c6d4;
     --color-border-subtle: rgba(25,28,30,0.06);
     --color-primary: #003178;

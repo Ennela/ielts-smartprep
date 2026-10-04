@@ -5,7 +5,7 @@ import adminApi from '../api/adminApi';
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
 import ArchivedToggle from '../components/admin/ArchivedToggle';
-import useEscapeKey from '../hooks/useEscapeKey';
+import Modal from '../components/common/Modal';
 
 const TOPICS = [
   { value: 'ACCOMMODATION', label: 'Accommodation / Booking' },
@@ -139,8 +139,6 @@ export default function AdminListeningListPage() {
       audioRef.current.play().catch(e => console.warn('Audio autoplay blocked', e));
     }
   };
-
-  useEscapeKey(!!deleteId, () => setDeleteId(null));
 
   return (
     <div className="admin-dashboard-content">
@@ -365,23 +363,21 @@ export default function AdminListeningListPage() {
 
       {/* Delete Confirm Modal */}
       {deleteId && (
-        <div className="admin-modal-overlay" onClick={() => setDeleteId(null)}>
-          <div className="admin-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
-            <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 700, marginBottom: 12 }}>
-              Confirm Archive
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 24, lineHeight: 1.6 }}>
-              Archive this listening part? It will disappear from active lists, while its questions, mock-test links, test history, and MP3 audio remain available for restoration.
-            </p>
-            <div className="admin-form-actions">
-              <button className="btn btn-outline" onClick={() => setDeleteId(null)}>Cancel</button>
-              <button className="btn admin-btn-danger-fill" onClick={handleDelete} disabled={deleting}>
-                {deleting && <span className="spinner" />}
-                Archive Part
-              </button>
-            </div>
+        <Modal ariaLabel="Delete listening part" onClose={() => setDeleteId(null)} className="admin-modal" style={{ maxWidth: 420 }}>
+          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 700, marginBottom: 12 }}>
+            Confirm Archive
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 24, lineHeight: 1.6 }}>
+            Archive this listening part? It will disappear from active lists, while its questions, mock-test links, test history, and MP3 audio remain available for restoration.
+          </p>
+          <div className="admin-form-actions">
+            <button className="btn btn-outline" onClick={() => setDeleteId(null)}>Cancel</button>
+            <button className="btn admin-btn-danger-fill" onClick={handleDelete} disabled={deleting}>
+              {deleting && <span className="spinner" />}
+              Archive Part
+            </button>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

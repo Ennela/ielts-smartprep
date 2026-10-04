@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
+import { ConfirmProvider } from './context/ConfirmContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ReadingProvider } from './context/ReadingContext';
 import { MockTestProvider } from './context/MockTestContext';
@@ -57,6 +58,7 @@ export default function App() {
     <BrowserRouter>
       <ThemeProvider>
       <ToastProvider>
+      <ConfirmProvider>
         <AuthProvider>
           <Suspense fallback={<FullPageLoader message="Loading page..." />}>
             <Routes>
@@ -158,6 +160,7 @@ export default function App() {
           </Routes>
         </Suspense>
       </AuthProvider>
+      </ConfirmProvider>
       </ToastProvider>
       </ThemeProvider>
     </BrowserRouter>

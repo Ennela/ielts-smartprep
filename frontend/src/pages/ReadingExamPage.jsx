@@ -10,8 +10,9 @@ import PassageViewer from '../components/reading/PassageViewer';
 import useExamWarnings from '../hooks/useExamWarnings';
 import QuestionPanel from '../components/reading/QuestionPanel';
 import useExamTimer from '../hooks/useExamTimer';
-import { confirmSubmitAnswers } from '../utils/confirmSubmit';
+import { submitAnswersPrompt } from '../utils/confirmSubmit';
 import { formatEnumLabel } from '../constants/examTypes';
+import { useConfirm } from '../context/ConfirmContext';
 
 const SESSION_KEY_PREFIX = 'reading_single_attemptId_';
 
@@ -23,6 +24,7 @@ const PASSAGE_SECONDS = { PASSAGE_1: 10 * 60, PASSAGE_2: 15 * 60, PASSAGE_3: 20 
 export default function ReadingExamPage() {
   const { quizId } = useParams();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { quiz, answers, loading, error, isSubmitted, setQuiz, setLoading, setError, submitStart, setResult } = useReading();
@@ -257,7 +259,7 @@ export default function ReadingExamPage() {
           )}
           <button
             className="btn btn-primary btn-submit-exam"
-            onClick={() => confirmSubmitAnswers(totalQuestions - answeredCount) && handleSubmit()}
+            onClick={async () => { if (await confirm(submitAnswersPrompt(totalQuestions - answeredCount))) handleSubmit(); }}
             disabled={isPreview || isSubmitted || loading}
             title={isPreview ? "Submitting is disabled in preview" : undefined}
             id="submit-exam-btn"
@@ -292,7 +294,7 @@ export default function ReadingExamPage() {
           </button>
           <button
             className="btn btn-primary btn-submit-exam"
-            onClick={() => confirmSubmitAnswers(totalQuestions - answeredCount) && handleSubmit()}
+            onClick={async () => { if (await confirm(submitAnswersPrompt(totalQuestions - answeredCount))) handleSubmit(); }}
             disabled={isPreview || isSubmitted || loading}
             title={isPreview ? "Submitting is disabled in preview" : undefined}
           >

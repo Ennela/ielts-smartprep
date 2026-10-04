@@ -6,6 +6,7 @@ import mockTestApi from '../api/mockTestApi';
 import { useToast } from '../context/ToastContext';
 import Pagination from '../components/Pagination';
 import styles from '../styles/MockTest.module.css';
+import { useConfirm } from '../context/ConfirmContext';
 
 const HISTORY_PAGE_SIZE = 10;
 
@@ -14,6 +15,7 @@ const formatBand = (band) => (band === null || band === undefined ? '—' : Numb
 
 export default function MockTestLobbyPage() {
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const { activeSession, startOrResumeTest, loadActiveSession, abandonSession } = useMockTest();
   const { error: showErrorToast } = useToast();
   const [historyPage, setHistoryPage] = useState(0);
@@ -121,7 +123,13 @@ export default function MockTestLobbyPage() {
   };
 
   const handleCancelActive = async () => {
-    if (!window.confirm('Are you sure you want to abandon this mock test? Your progress will be lost.')) return;
+    const ok = await confirm({
+      title: 'Abandon this mock test?',
+      message: 'Your answers will be lost and the session cannot be resumed.',
+      confirmLabel: 'Abandon test',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       await abandonSession();
     } catch (err) {
