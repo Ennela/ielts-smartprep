@@ -227,7 +227,7 @@ a.card-clickable, a.card-clickable:hover { display: block; color: inherit; }
 .passage-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
 .passage-header h3 { font-family: var(--font-heading); font-size: 1.1rem; font-weight: 700; }
 .passage-badge { font-size: 0.72rem; font-weight: 600; padding: 3px 10px; background: var(--color-primary-08); color: var(--color-primary); border-radius: 999px; }
-.passage-paragraph { font-size: 1rem; line-height: 1.85; color: var(--color-text-secondary); margin-bottom: 16px; text-align: justify; }
+.passage-paragraph { font-size: 1rem; line-height: 1.85; color: var(--color-text-secondary); margin-bottom: 16px; }
 .passage-paragraph::selection { background: var(--color-primary-15); }
 
 /* Questions */
@@ -438,7 +438,7 @@ a.card-clickable, a.card-clickable:hover { display: block; color: inherit; }
 .empty-state p { font-size: 1rem; margin-bottom: 20px; }
 .history-table-wrapper { overflow-x: auto; margin-top: 24px; }
 .history-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-.history-table th { font-family: var(--font-heading); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--color-border); }
+.history-table th { font-family: var(--font-heading); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--color-border); white-space: nowrap; }
 .history-table td { padding: 14px 16px; font-size: 0.9rem; border-bottom: 1px solid var(--color-border); color: var(--color-text); }
 .history-table tbody tr { transition: background var(--transition); }
 .history-table tbody tr:hover { background: var(--color-bg-secondary); }
@@ -965,12 +965,14 @@ select.profile-input { cursor: pointer; }
   font-size: 0.88rem; color: var(--color-text-secondary); line-height: 1.4;
 }
 .admin-action-btns { display: flex; gap: 6px; }
+.admin-action-btns .btn { white-space: nowrap; }
+/* Quiet in every row; it only fills on hover, and the delete itself is confirmed in a dialog. */
 .admin-btn-danger {
-  background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2);
+  background: transparent; border: 1px solid var(--color-border);
   color: var(--color-error); font-family: var(--font-heading); font-weight: 600;
   cursor: pointer; transition: all var(--transition);
 }
-.admin-btn-danger:hover { background: rgba(239,68,68,0.12); border-color: var(--color-error); }
+.admin-btn-danger:hover { background: rgba(186,26,26,0.08); border-color: var(--color-error); }
 .admin-btn-danger-fill {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   padding: 10px 24px; border: none; border-radius: var(--radius-sm);
