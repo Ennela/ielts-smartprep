@@ -47,6 +47,9 @@ export function MockTestProvider({ children }) {
     } catch (err) {
       setError(err.message || 'Failed to start mock test');
       setLoading(false);
+      // The lobby shows the failure; swallowing it here left the Begin Exam button
+      // doing nothing at all.
+      throw err;
     }
   };
 

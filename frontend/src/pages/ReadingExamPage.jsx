@@ -10,6 +10,7 @@ import PassageViewer from '../components/reading/PassageViewer';
 import useExamWarnings from '../hooks/useExamWarnings';
 import QuestionPanel from '../components/reading/QuestionPanel';
 import useExamTimer from '../hooks/useExamTimer';
+import { confirmSubmitAnswers } from '../utils/confirmSubmit';
 
 const SESSION_KEY_PREFIX = 'reading_single_attemptId_';
 
@@ -190,7 +191,8 @@ export default function ReadingExamPage() {
 
   if (!quiz) return null;
 
-  const answeredCount = Object.keys(answers).length;
+  // A cleared answer stays in the map as '', so count only real answers.
+  const answeredCount = Object.values(answers).filter(v => String(v ?? '').trim() !== '').length;
   const totalQuestions = quiz.questions?.length || 5;
 
   // Timer visual states (matching ReadingFullExamPage style)
@@ -258,7 +260,7 @@ export default function ReadingExamPage() {
           </button>
           <button
             className="btn btn-primary btn-submit-exam"
-            onClick={handleSubmit}
+            onClick={() => confirmSubmitAnswers(totalQuestions - answeredCount) && handleSubmit()}
             disabled={isPreview || isSubmitted || loading}
             title={isPreview ? "Không thể nộp ở chế độ preview" : undefined}
             id="submit-exam-btn"
@@ -293,7 +295,7 @@ export default function ReadingExamPage() {
           </button>
           <button
             className="btn btn-primary btn-submit-exam"
-            onClick={handleSubmit}
+            onClick={() => confirmSubmitAnswers(totalQuestions - answeredCount) && handleSubmit()}
             disabled={isPreview || isSubmitted || loading}
             title={isPreview ? "Không thể nộp ở chế độ preview" : undefined}
           >

@@ -12,6 +12,7 @@ import { usesGroupedLayout, questionOffset } from '../components/listening/group
 import useExamTimer from '../hooks/useExamTimer';
 import useExamWarnings from '../hooks/useExamWarnings';
 import { useToast } from '../context/ToastContext';
+import { confirmSubmitAnswers } from '../utils/confirmSubmit';
 
 const SESSION_KEY = 'listening_attemptId';
 // Answers are drafted per attempt so a reload or a dropped connection does not lose
@@ -558,7 +559,7 @@ export default function ListeningExamPage() {
         </button>
         <button
           className="btn btn-primary btn-lg"
-          onClick={handleSubmit}
+          onClick={() => confirmSubmitAnswers(totalQuestions - answeredCount) && handleSubmit()}
           disabled={isPreview || submitting || answeredCount === 0}
           title={isPreview ? "Không thể nộp ở chế độ preview" : undefined}
           id="submit-listening-btn"

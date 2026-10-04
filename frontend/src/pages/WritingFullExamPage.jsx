@@ -253,6 +253,17 @@ export default function WritingFullExamPage() {
   const wordCount = activeText.trim() ? activeText.trim().split(/\s+/).length : 0;
   const minWords = activeTab === 1 ? 150 : 250;
 
+  // Same check the mock test makes before its Writing section is handed in.
+  const confirmWritingSubmit = () => {
+    const count = (text) => (text.trim() ? text.trim().split(/\s+/).length : 0);
+    const words1 = count(task1Text);
+    const words2 = count(task2Text);
+    const message = words1 < 150 || words2 < 250
+      ? `Your essays are below the minimum length (Task 1: ${words1}/150 words, Task 2: ${words2}/250 words). Submit anyway?`
+      : 'Submit both tasks for grading? You cannot edit them afterwards.';
+    if (window.confirm(message)) handleSubmit();
+  };
+
   // Timer styles
   const timerColor = isCritical ? 'var(--error)' : isWarning ? 'var(--error)' : 'var(--on-surface)';
 
@@ -322,7 +333,7 @@ export default function WritingFullExamPage() {
           </div>
           <button
             className="btn btn-primary btn-submit-exam"
-            onClick={handleSubmit}
+            onClick={confirmWritingSubmit}
             disabled={submitting || recovering}
             title={submitting ? 'Grading a full test usually takes 1-2 minutes' : undefined}
             id="submit-writing-btn"
@@ -450,7 +461,7 @@ export default function WritingFullExamPage() {
           <button className="btn btn-outline" onClick={() => navigate('/writing')}>Exit</button>
           <button
             className="btn btn-primary"
-            onClick={handleSubmit}
+            onClick={confirmWritingSubmit}
             disabled={submitting || recovering}
             title={submitting ? 'Grading a full test usually takes 1-2 minutes' : undefined}
           >

@@ -8,6 +8,7 @@ import QuestionPanel from '../components/reading/QuestionPanel';
 import useExamTimer from '../hooks/useExamTimer';
 import useExamWarnings from '../hooks/useExamWarnings';
 import { useToast } from '../context/ToastContext';
+import { confirmSubmitAnswers } from '../utils/confirmSubmit';
 
 const SESSION_KEY = 'reading_full_attemptId';
 
@@ -179,7 +180,8 @@ export default function ReadingFullExamPage() {
 
   const activeQuiz = quizzes[activeIdx];
   const totalQuestions = quizzes.reduce((sum, q) => sum + (q.questions?.length || 0), 0);
-  const answeredCount = Object.keys(answers).length;
+  // A cleared answer stays in the map as '', so count only real answers.
+  const answeredCount = Object.values(answers).filter(v => String(v ?? '').trim() !== '').length;
 
   // Timer color logic
   const timerColor = isCritical ? 'var(--error)' : isWarning ? 'var(--error)' : 'var(--on-surface)';
@@ -224,7 +226,7 @@ export default function ReadingFullExamPage() {
           </div>
           <button
             className="btn btn-primary btn-submit-exam"
-            onClick={handleSubmit}
+            onClick={() => confirmSubmitAnswers(totalQuestions - answeredCount) && handleSubmit()}
             disabled={submitting}
             id="submit-exam-btn"
           >
@@ -257,7 +259,7 @@ export default function ReadingFullExamPage() {
           </button>
           <button
             className="btn btn-primary btn-submit-exam"
-            onClick={handleSubmit}
+            onClick={() => confirmSubmitAnswers(totalQuestions - answeredCount) && handleSubmit()}
             disabled={submitting}
           >
             {submitting ? 'Submitting...' : 'Complete & Submit'}

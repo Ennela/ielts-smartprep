@@ -168,7 +168,11 @@ export default function MockTestSessionPage() {
     const currentName = currentSection === 'LISTENING' ? 'Listening' : 'Reading';
     const nextName = currentSection === 'LISTENING' ? 'Reading' : 'Writing';
     
-    if (window.confirm(`Are you sure you want to complete the ${currentName} section and move to the ${nextName} section? You will not be able to return.`)) {
+    const unanswered = currentSection === 'LISTENING'
+      ? totalListeningQuestions - answeredListeningCount
+      : totalReadingQuestions - answeredReadingCount;
+    const blanks = unanswered > 0 ? ` ${unanswered} question${unanswered === 1 ? ' is' : 's are'} still unanswered.` : '';
+    if (window.confirm(`Are you sure you want to complete the ${currentName} section and move to the ${nextName} section?${blanks} You will not be able to return.`)) {
       await advanceSection();
     }
   };
