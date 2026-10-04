@@ -896,7 +896,7 @@ select.profile-input { cursor: pointer; }
   margin-bottom: 20px;
 }
 .admin-quick-grid {
-  display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 20px;
 }
 .admin-quick-grid .card h3 {
   font-family: var(--font-heading); font-size: 1.1rem; font-weight: 700;
@@ -1123,7 +1123,6 @@ select.profile-input { cursor: pointer; }
   .dash-target-card { grid-column: 1; min-height: 160px; }
   .dash-welcome-card h1 { font-size: 1.75rem; }
   .skill-cards, .skill-progress-row { grid-template-columns: 1fr; }
-  .admin-quick-grid { grid-template-columns: 1fr; }
   .admin-dashboard-content { padding: 24px 16px; }
   .admin-dash-header { flex-direction: column; }
   .target-scores-grid { grid-template-columns: 1fr; }

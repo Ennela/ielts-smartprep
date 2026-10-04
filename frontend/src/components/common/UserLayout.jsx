@@ -125,15 +125,18 @@ export default function UserLayout() {
                 aria-haspopup="menu"
                 aria-expanded={dropdownOpen}
               >
-                <img 
-                  alt="" 
-                  className="w-full h-full object-cover" 
-                  src={user?.avatarUrl ? (user.avatarUrl.startsWith('http') ? user.avatarUrl : (import.meta.env.VITE_API_URL || '/api/v1').replace('/api/v1', '') + user.avatarUrl) : '/assets/avatars/avatar_sarah.png'}
-                  onError={(e) => {
-                    // Fallback to initials if image fails to load
-                    e.currentTarget.style.display = 'none';
-                  }}
-                />
+                {/* No picture: the initial behind it shows. The old fallback was a stock portrait. */}
+                {user?.avatarUrl && (
+                  <img
+                    alt=""
+                    className="w-full h-full object-cover"
+                    src={user.avatarUrl.startsWith('http') ? user.avatarUrl : (import.meta.env.VITE_API_URL || '/api/v1').replace('/api/v1', '') + user.avatarUrl}
+                    onError={(e) => {
+                      // Fallback to initials if image fails to load
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                )}
                 <span aria-hidden="true" className="absolute z-[-1]">{initials}</span>
               </button>
 

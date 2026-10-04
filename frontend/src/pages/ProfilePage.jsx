@@ -8,7 +8,6 @@ import analyticsApi from '../api/analyticsApi';
 import styles from '../styles/Profile.module.css';
 
 /** Bundled with the app, so it always resolves. */
-const DEFAULT_AVATAR = '/assets/avatars/avatar_sarah.png';
 
 export default function ProfilePage() {
   const { user, updateUser, logout, isAdmin } = useAuth();
@@ -28,6 +27,7 @@ export default function ProfilePage() {
   const [lastName, setLastName] = useState('');
   const [savingPersonal, setSavingPersonal] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState(null);
+  const [failedAvatarSrc, setFailedAvatarSrc] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -298,7 +298,11 @@ export default function ProfilePage() {
     ? (user.avatarUrl.startsWith('http') 
         ? user.avatarUrl 
         : (import.meta.env.VITE_API_URL || '/api/v1').replace('/api/v1', '') + user.avatarUrl)
-    : DEFAULT_AVATAR);
+    : null);
+  // No picture, or one storage has lost: show the learner's initial. The old default was a
+  // stock portrait of someone else.
+  const showInitial = !avatarSrc || failedAvatarSrc === avatarSrc;
+  const avatarInitial = (user?.displayName || user?.username || '?').charAt(0).toUpperCase();
 
   // --- Skeleton Screen Loading States ---
   if (!user) {
@@ -362,19 +366,20 @@ export default function ProfilePage() {
                     <div className="spinner border-white border-t-transparent !mr-0"></div>
                   </div>
                 ) : null}
-                <img
-                  alt="User avatar"
-                  className={styles['avatar-img']}
-                  src={avatarSrc}
-                  onError={(e) => {
+                {showInitial ? (
+                  <div className={`${styles['avatar-img']} ${styles['avatar-initial']}`} role="img" aria-label="User avatar">
+                    {avatarInitial}
+                  </div>
+                ) : (
+                  <img
+                    alt="User avatar"
+                    className={styles['avatar-img']}
+                    src={avatarSrc}
                     // Storage can lose an object and an old row can point at a file that is
-                    // no longer there. Either way the learner should see the default
-                    // picture rather than a broken-image icon.
-                    if (!e.currentTarget.src.endsWith(DEFAULT_AVATAR)) {
-                      e.currentTarget.src = DEFAULT_AVATAR;
-                    }
-                  }}
-                />
+                    // no longer there; the initial then stands in for a broken-image icon.
+                    onError={() => setFailedAvatarSrc(avatarSrc)}
+                  />
+                )}
                 <div className={styles['avatar-overlay']}>
                   <span aria-hidden="true" className={`material-symbols-outlined ${styles['avatar-icon']}`}>photo_camera</span>
                 </div>

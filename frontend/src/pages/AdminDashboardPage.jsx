@@ -133,6 +133,28 @@ export default function AdminDashboardPage() {
             <span className="card-action">View list →</span>
           </Link>
 
+          <Link className="card card-clickable" to="/admin/mock-tests" id="admin-nav-mock-tests">
+            <div className="admin-quick-icon" style={{ background: 'var(--color-primary-08)', color: 'var(--color-primary)' }}>
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="8" y="2" width="8" height="4" rx="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="m9 14 2 2 4-4" />
+              </svg>
+            </div>
+            <h3>Mock Tests Builder</h3>
+            <p>Assemble full tests from listening parts, reading passages and writing prompts</p>
+            <span className="card-action">Build tests →</span>
+          </Link>
+
+          <Link className="card card-clickable" to="/admin/reading-quizzes" id="admin-nav-reading">
+            <div className="admin-quick-icon" style={{ background: 'rgba(0,95,175,0.08)', color: 'var(--color-blue)' }}>
+              <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+              </svg>
+            </div>
+            <h3>Reading Passages Management</h3>
+            <p>Create, edit, preview and archive reading passages and their questions</p>
+            <span className="card-action">Manage passages →</span>
+          </Link>
+
           <Link className="card card-clickable" to="/admin/writing-prompts" id="admin-nav-prompts">
             <div className="admin-quick-icon" style={{ background: 'rgba(0,95,175,0.08)', color: 'var(--color-blue)' }}>
               <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
