@@ -116,7 +116,10 @@ export default function ListeningResultPage() {
         {/* Score Ring */}
         <div className="result-score-section">
           <div className="score-ring-container">
-            <svg className="score-ring" width="140" height="140" viewBox="0 0 120 120">
+            {/* Not rotated as a whole, unlike the other result pages: the score is drawn
+                inside this SVG, so the shared .score-ring rotation turned the number on its
+                side. The progress arc turns itself to start at the top. */}
+            <svg className="score-ring" width="140" height="140" viewBox="0 0 120 120" style={{ transform: 'none' }}>
               <circle cx="60" cy="60" r="54" fill="none" stroke="var(--color-border)" strokeWidth="8" />
               <circle
                 cx="60" cy="60" r="54" fill="none"
