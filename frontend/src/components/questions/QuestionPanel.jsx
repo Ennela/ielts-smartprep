@@ -211,16 +211,17 @@ function MultiSelectTask({ questions, answers, setAnswer, disabled, numberOffset
       <div className="mcq-options">
         {options.map(opt => {
           const checked = chosen.includes(opt.key);
+          const unavailable = !checked && chosen.length >= limit;
           return (
-            <label key={opt.key} className={`mcq-option ${checked ? 'selected' : ''}`}>
+            <label key={opt.key} className={`mcq-option ${checked ? 'selected' : ''} ${unavailable ? 'unavailable' : ''}`}>
               <input
                 type="checkbox"
                 name={`q-${first.questionId}-${opt.key}`}
                 checked={checked}
                 onChange={() => toggle(opt.key)}
-                disabled={disabled || (!checked && chosen.length >= limit)}
+                disabled={disabled || unavailable}
               />
-              <span className="mcq-radio-mark"></span>
+              <span className="mcq-radio-mark mcq-check-mark"></span>
               <span className="mcq-key">{opt.key}.</span>
               <span className="mcq-label">{opt.text}</span>
             </label>

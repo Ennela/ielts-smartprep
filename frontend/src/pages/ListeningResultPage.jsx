@@ -220,7 +220,9 @@ export default function ListeningResultPage() {
                       {q.questionType === 'MCQ' && q.options && q.options.length > 0 && (
                         <div className="mcq-options-review" style={{ marginTop: 12, marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
                           {q.options.map(opt => {
-                            const isUserSelected = q.userAnswer === opt.label;
+                            // A "Choose TWO" answer is the whole choice, e.g. "B,D".
+                            const isUserSelected = (q.selectCount > 1
+                              ? (q.userAnswer || '').split(',') : [q.userAnswer]).includes(opt.label);
                             const isCorrectOption = opt.isCorrect || q.correctAnswer === opt.label;
                             let optBg = 'transparent';
                             let optBorder = '1px solid var(--outline-variant)';
