@@ -76,7 +76,14 @@ public class ListeningGradingService {
                         .questionText(q.getQuestionText())
                         .options(QuestionOptionMapper.mapForReview(q.getOptions()))
                         .correctAnswer(q.getCorrectAnswer()).userAnswer(userAnswer)
-                        .isCorrect(isCorrect).orderIndex(q.getOrderIndex()).build());
+                        .isCorrect(isCorrect).orderIndex(q.getOrderIndex())
+                        // The result page draws this response straight after the submit, so it
+                        // needs what GET /{testId}/result returns: without the group fields a
+                        // grouped part came back with no instructions and no map.
+                        .groupId(q.getGroupId()).groupLabel(q.getGroupLabel())
+                        .selectCount(q.getSelectCount()).imageUrl(q.getImageUrl())
+                        .groupContext(q.getGroupContext()).optionsJson(q.getOptionsJson())
+                        .wordLimit(q.getWordLimit()).explanation(q.getExplanation()).build());
             }
 
             partResults.add(ListeningTestResponse.PartResult.builder()

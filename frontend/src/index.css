@@ -214,13 +214,16 @@ body::after {
 }
 .mcq-option:hover { border-color: var(--color-primary); background: var(--color-primary-02); }
 .mcq-option.selected { border-color: var(--color-primary); background: var(--color-primary-06); }
-.mcq-option input[type="radio"] { display: none; }
+.mcq-option input[type="radio"], .mcq-option input[type="checkbox"] { display: none; }
 .mcq-radio-mark {
   width: 18px; height: 18px; min-width: 18px; border: 2px solid var(--color-border);
   border-radius: 50%; margin-top: 2px; transition: all var(--transition); position: relative;
 }
 .mcq-option.selected .mcq-radio-mark { border-color: var(--color-primary); background: var(--color-primary); }
 .mcq-option.selected .mcq-radio-mark::after { content: ''; position: absolute; top: 3px; left: 3px; width: 8px; height: 8px; border-radius: 50%; background: var(--on-primary); }
+/* "Choose TWO letters": square marks, and options past the limit look unavailable. */
+.mcq-check-mark, .mcq-option.selected .mcq-check-mark::after { border-radius: 3px; }
+.mcq-option.unavailable { opacity: 0.5; cursor: not-allowed; }
 .mcq-label { flex: 1; }
 .mcq-letter {
   width: 28px; height: 28px; background: var(--color-bg-secondary); border: 1px solid var(--color-border);
@@ -295,7 +298,7 @@ body::after {
   background: var(--color-surface-solid); border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
-.summary-text { font-size: 0.95rem; line-height: 2; color: var(--color-text); }
+.summary-text { font-size: 0.95rem; line-height: 2; color: var(--color-text); white-space: pre-line; }
 .summary-blank {
   display: inline-block; min-width: 120px; padding: 4px 10px; margin: 0 4px;
   background: var(--color-bg); border: 1px dashed var(--color-primary);

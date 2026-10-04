@@ -116,7 +116,10 @@ export default function ListeningResultPage() {
         {/* Score Ring */}
         <div className="result-score-section">
           <div className="score-ring-container">
-            <svg className="score-ring" width="140" height="140" viewBox="0 0 120 120">
+            {/* Not rotated as a whole, unlike the other result pages: the score is drawn
+                inside this SVG, so the shared .score-ring rotation turned the number on its
+                side. The progress arc turns itself to start at the top. */}
+            <svg className="score-ring" width="140" height="140" viewBox="0 0 120 120" style={{ transform: 'none' }}>
               <circle cx="60" cy="60" r="54" fill="none" stroke="var(--color-border)" strokeWidth="8" />
               <circle
                 cx="60" cy="60" r="54" fill="none"
@@ -220,7 +223,9 @@ export default function ListeningResultPage() {
                       {q.questionType === 'MCQ' && q.options && q.options.length > 0 && (
                         <div className="mcq-options-review" style={{ marginTop: 12, marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
                           {q.options.map(opt => {
-                            const isUserSelected = q.userAnswer === opt.label;
+                            // A "Choose TWO" answer is the whole choice, e.g. "B,D".
+                            const isUserSelected = (q.selectCount > 1
+                              ? (q.userAnswer || '').split(',') : [q.userAnswer]).includes(opt.label);
                             const isCorrectOption = opt.isCorrect || q.correctAnswer === opt.label;
                             let optBg = 'transparent';
                             let optBorder = '1px solid var(--outline-variant)';
