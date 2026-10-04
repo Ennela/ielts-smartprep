@@ -6,11 +6,16 @@ const adminApi = {
     getDashboard: () =>
         axiosClient.get('/admin/dashboard'),
 
-    listUsers: (search, page = 0, size = DEFAULT_SIZE, sort = 'createdAt,desc') => {
+    listUsers: (search, page = 0, size = DEFAULT_SIZE, sort = 'createdAt,desc', role = null) => {
         const params = { page, size, sort };
         if (search) params.search = search;
+        if (role) params.role = role;
         return axiosClient.get('/admin/users', { params });
     },
+
+    /** body: { role: 'STUDENT' | 'ADMIN' } and/or { suspended: boolean } */
+    updateUser: (userId, body) =>
+        axiosClient.patch(`/admin/users/${userId}`, body),
 
     getUserDetail: (userId) =>
         axiosClient.get(`/admin/users/${userId}`),

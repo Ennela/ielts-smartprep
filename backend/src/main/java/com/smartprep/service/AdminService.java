@@ -4,12 +4,14 @@ import com.smartprep.service.util.ImageUrls;
 import com.smartprep.dto.request.AdminMockTestRequest;
 import com.smartprep.dto.request.AdminReadingQuizRequest;
 import com.smartprep.dto.request.AdminWritingPromptRequest;
+import com.smartprep.dto.request.AdminUserUpdateRequest;
 import com.smartprep.dto.response.*;
 import com.smartprep.exception.ResourceNotFoundException;
 import com.smartprep.model.entity.*;
 import com.smartprep.model.enums.Difficulty;
 import com.smartprep.model.enums.MockTestDifficulty;
 import com.smartprep.model.enums.QuestionType;
+import com.smartprep.model.enums.Role;
 import com.smartprep.model.enums.Topic;
 import com.smartprep.model.enums.EssayType;
 import com.smartprep.model.enums.WritingTaskType;
@@ -48,7 +50,20 @@ public class AdminService {
      * List users with pagination, optional search, and configurable sort.
      */
     public Page<AdminUserResponse> listUsers(String search, int page, int size, String sort) {
+        return listUsers(search, null, page, size, sort);
+    }
+
+    /**
+     * The same list narrowed to one role ("STUDENT" or "ADMIN"); null or blank keeps every role.
+     */
+    public Page<AdminUserResponse> listUsers(String search, String role, int page, int size, String sort) {
         size = Math.min(size, MAX_PAGE_SIZE);
+        if (role != null && !role.isBlank()) {
+            Role roleFilter = parseRole(role);
+            String term = (search != null && !search.isBlank()) ? search.trim() : null;
+            return userRepository.findByRoleAndSearch(roleFilter, term,
+                    PageRequest.of(page, size, parseSort(sort, "createdAt"))).map(this::toAdminUserResponse);
+        }
         PageRequest pageRequest = PageRequest.of(page, size, parseSort(sort, "createdAt"));
 
         Page<User> userPage;
@@ -65,6 +80,34 @@ public class AdminService {
     /**
      * Get detailed user info with per-skill stats and recent scores.
      */
+    /**
+     * Change an account's role or suspension. An admin cannot do either to their own account:
+     * demoting or suspending yourself would lock you out of this page.
+     */
+    @Transactional
+    public AdminUserResponse updateUser(Long actingAdminId, Long userId, AdminUserUpdateRequest request) {
+        if (actingAdminId != null && actingAdminId.equals(userId)) {
+            throw new IllegalArgumentException("You cannot change the role or suspension of your own account");
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+        if (request.getRole() != null && !request.getRole().isBlank()) {
+            user.setRole(parseRole(request.getRole()));
+        }
+        if (request.getSuspended() != null) {
+            user.setSuspended(request.getSuspended());
+        }
+        return toAdminUserResponse(userRepository.save(user));
+    }
+
+    private Role parseRole(String role) {
+        try {
+            return Role.valueOf(role.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Unknown role: " + role);
+        }
+    }
+
     public AdminUserDetailResponse getUserDetail(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
@@ -97,6 +140,7 @@ public class AdminService {
                 .email(user.getEmail())
                 .displayName(user.getDisplayName())
                 .role(user.getRole() != null ? user.getRole().name() : "STUDENT")
+                .suspended(Boolean.TRUE.equals(user.getSuspended()))
                 .targetReadingScore(user.getTargetReadingScore())
                 .targetWritingScore(user.getTargetWritingScore())
                 .targetListeningScore(user.getTargetListeningScore())
@@ -109,7 +153,8 @@ public class AdminService {
     // ===== Dashboard Stats =====
 
     public AdminDashboardResponse getDashboardStats() {
-        long totalUsers = userRepository.count();
+        // "Total Students" on the dashboard: admin accounts are not learners.
+        long totalUsers = userRepository.countByRole(Role.STUDENT);
         LocalDateTime todayStart = LocalDate.now().atStartOfDay();
         long testsToday = scoreHistoryRepository.countByRecordedAtAfter(todayStart);
         // pendingWritings: count submissions not yet graded (overallBand is null) — simplified as 0 for now
@@ -199,6 +244,7 @@ public class AdminService {
                 .email(user.getEmail())
                 .displayName(user.getDisplayName())
                 .role(user.getRole() != null ? user.getRole().name() : "STUDENT")
+                .suspended(Boolean.TRUE.equals(user.getSuspended()))
                 .targetReadingScore(user.getTargetReadingScore())
                 .targetWritingScore(user.getTargetWritingScore())
                 .targetListeningScore(user.getTargetListeningScore())

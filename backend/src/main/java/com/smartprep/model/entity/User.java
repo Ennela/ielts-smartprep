@@ -62,6 +62,11 @@ public class User {
     @Builder.Default
     private Boolean emailNotifications = true;
 
+    /** Set by an admin: a suspended account cannot log in or keep its session (V57). */
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean suspended = false;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

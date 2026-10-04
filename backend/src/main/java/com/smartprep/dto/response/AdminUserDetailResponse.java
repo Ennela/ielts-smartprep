@@ -13,6 +13,7 @@ public class AdminUserDetailResponse {
     private String email;
     private String displayName;
     private String role;
+    private boolean suspended;
     private BigDecimal targetReadingScore;
     private BigDecimal targetWritingScore;
     private BigDecimal targetListeningScore;

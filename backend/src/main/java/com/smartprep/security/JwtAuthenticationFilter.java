@@ -63,6 +63,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 if (user.getRole() == null || !user.getRole().name().equals(role)) {
                     return;
                 }
+                // Suspension takes effect on the next request, not when the token expires.
+                if (Boolean.TRUE.equals(user.getSuspended())) {
+                    return;
+                }
 
                 // Enrich MDC with userId for structured logging after successful auth.
                 TraceIdFilter.setUserId(String.valueOf(userId));

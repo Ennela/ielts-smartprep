@@ -68,6 +68,19 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
+    @DisplayName("should reject a still-valid token once the account is suspended")
+    void suspendedUser_rejected() throws Exception {
+        stubValidAccessToken("token", "jti", 1L, "STUDENT");
+        User suspended = user(Role.STUDENT);
+        suspended.setSuspended(true);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(suspended));
+
+        filter.doFilter(requestWithBearer("token"), new MockHttpServletResponse(), new MockFilterChain());
+
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+    }
+
+    @Test
     @DisplayName("should reject when JWT role claim is missing")
     void missingRoleClaim_rejected() throws Exception {
         stubValidAccessToken("token", "jti", 1L, null);
