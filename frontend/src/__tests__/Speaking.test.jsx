@@ -9,18 +9,25 @@ import SpeakingResultPage from '../pages/SpeakingResultPage';
 
 /*
  * Speaking practice: Part 2 gives a minute to prepare and then records; a stopped
- * recording can be played back and is sent with its length; the result page shows
- * the four criteria and plays the learner's own recording.
+ * recording can be played back and is sent with its length. Parts 1 and 3 ask one
+ * question at a time and send one recording per question. The result page shows the
+ * four criteria and plays the learner's own recordings.
  */
 
 vi.mock('../api/speakingApi', () => ({
-  default: { getPrompts: vi.fn(), grade: vi.fn(), getSubmission: vi.fn(), getRecording: vi.fn() },
+  default: {
+    getPrompts: vi.fn(), grade: vi.fn(), getSubmission: vi.fn(), getRecording: vi.fn(), getAnswerRecording: vi.fn(),
+  },
 }));
 import speakingApi from '../api/speakingApi';
 
 const cueCard = {
   promptId: 8, part: 2, topic: 'A memorable journey', questions: ['Describe a journey you remember well.'],
   cuePoints: ['where you went', 'who you went with'], prepSeconds: 60, maxSpeakSeconds: 120,
+};
+const hometown = {
+  promptId: 1, part: 1, topic: 'Hometown', questions: ['Where is your hometown?', 'Do you like it?'],
+  cuePoints: [], prepSeconds: 0, maxSpeakSeconds: 40,
 };
 const ok = (data) => Promise.resolve({ data: { success: true, data } });
 
@@ -88,20 +95,74 @@ describe('SpeakingPracticePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Submit for grading' }));
 
     await waitFor(() => expect(speakingApi.grade).toHaveBeenCalledTimes(1));
-    const [promptId, blob, seconds] = speakingApi.grade.mock.calls[0];
+    const [promptId, recordings] = speakingApi.grade.mock.calls[0];
     expect(promptId).toBe(8);
-    expect(blob).toBeInstanceOf(Blob);
-    expect(seconds).toBeGreaterThanOrEqual(11);
+    expect(recordings).toHaveLength(1);
+    expect(recordings[0].blob).toBeInstanceOf(Blob);
+    expect(recordings[0].duration).toBeGreaterThanOrEqual(11);
   });
 
   it('explains a blocked microphone instead of failing silently', async () => {
     navigator.mediaDevices.getUserMedia.mockImplementation(() => Promise.reject(Object.assign(new Error('no'), { name: 'NotAllowedError' })));
-    speakingApi.getPrompts.mockImplementation(() => ok([{ ...cueCard, part: 1, prepSeconds: 0 }]));
-    renderAt('/speaking/practice/8');
+    speakingApi.getPrompts.mockImplementation(() => ok([hometown]));
+    renderAt('/speaking/practice/1');
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Start recording' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Start the questions' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/Microphone access was blocked/);
+  });
+
+  const answerFor = async (seconds) => {
+    expect(await screen.findByRole('button', { name: 'Stop answer' })).toBeInTheDocument();
+    await act(async () => { vi.advanceTimersByTime(seconds * 1000); });
+    fireEvent.click(screen.getByRole('button', { name: 'Stop answer' }));
+  };
+
+  it('asks Part 1 questions one at a time and sends one recording per question', async () => {
+    speakingApi.getPrompts.mockImplementation(() => ok([hometown]));
+    speakingApi.grade.mockImplementation(() => ok({ submissionId: 32 }));
+    speakingApi.getSubmission.mockImplementation(() => new Promise(() => {}));
+    renderAt('/speaking/practice/1');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Start the questions' }));
+    expect(screen.getByText('Question 1 of 2')).toBeInTheDocument();
+    expect(screen.getByText('Where is your hometown?')).toBeInTheDocument();
+    expect(screen.queryByText('Do you like it?')).not.toBeInTheDocument();
+
+    await answerFor(8);
+    expect(await screen.findByLabelText('Your answer to question 1')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Next question' }));
+
+    expect(await screen.findByText('Question 2 of 2')).toBeInTheDocument();
+    expect(screen.getByText('Do you like it?')).toBeInTheDocument();
+    await answerFor(5);
+    fireEvent.click(await screen.findByRole('button', { name: 'Review answers' }));
+
+    // The review plays every answer; one can be recorded again without redoing the rest.
+    expect(await screen.findByLabelText('Your answer to question 2')).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Record again' })[0]);
+    expect(await screen.findByText('Question 1 of 2')).toBeInTheDocument();
+    await answerFor(12);
+    fireEvent.click(await screen.findByRole('button', { name: 'Review answers' }));
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Submit for grading' }));
+    await waitFor(() => expect(speakingApi.grade).toHaveBeenCalledTimes(1));
+    const [promptId, recordings] = speakingApi.grade.mock.calls[0];
+    expect(promptId).toBe(1);
+    expect(recordings).toHaveLength(2);
+    expect(recordings[0].duration).toBeGreaterThanOrEqual(11);
+    expect(recordings[1].duration).toBeLessThan(11);
+  });
+
+  it('will not keep an answer under three seconds', async () => {
+    speakingApi.getPrompts.mockImplementation(() => ok([hometown]));
+    renderAt('/speaking/practice/1');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Start the questions' }));
+    await answerFor(1);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/under 3 seconds/);
+    expect(screen.getByRole('button', { name: 'Next question' })).toBeDisabled();
   });
 });
 
@@ -129,5 +190,28 @@ describe('SpeakingResultPage', () => {
     expect(screen.getByText('Link ideas')).toBeInTheDocument();
     expect(screen.getByText('I went to Da Lat.')).toBeInTheDocument();
     expect(await screen.findByLabelText('Your recording')).toHaveAttribute('src', 'blob:mine');
+  });
+
+  it('shows each Part 1 answer with its question, transcript, comment and recording', async () => {
+    speakingApi.getSubmission.mockImplementation(() => ok({
+      submissionId: 32, prompt: hometown, durationSeconds: 30, transcript: null,
+      overallBand: 6, fluencyBand: 6, lexicalBand: 6, grammarBand: 6, pronunciationBand: 6,
+      summary: 'Fine.', strengths: [], improvements: [], criteriaComments: {},
+      answers: [
+        { questionIndex: 0, question: 'Where is your hometown?', durationSeconds: 20, transcript: 'Hue.', comment: 'Say more about it.' },
+        { questionIndex: 1, question: 'Do you like it?', durationSeconds: 10, transcript: 'Yes.', comment: '' },
+      ],
+      submittedAt: '2026-10-05T09:00:00',
+    }));
+    speakingApi.getAnswerRecording.mockImplementation(() => Promise.resolve({ data: new Blob(['x']) }));
+    renderAt('/speaking/result/32');
+
+    expect(await screen.findByText('Your answers')).toBeInTheDocument();
+    expect(screen.getByText('Do you like it?')).toBeInTheDocument();
+    expect(screen.getByText('Hue.')).toBeInTheDocument();
+    expect(screen.getByText('Say more about it.')).toBeInTheDocument();
+    expect(await screen.findByLabelText('Your answer to question 2')).toHaveAttribute('src', 'blob:mine');
+    expect(speakingApi.getAnswerRecording).toHaveBeenCalledWith('32', 1);
+    expect(speakingApi.getRecording).not.toHaveBeenCalled();
   });
 });

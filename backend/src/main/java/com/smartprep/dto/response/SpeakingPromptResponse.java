@@ -18,6 +18,6 @@ public class SpeakingPromptResponse {
     private List<String> cuePoints;
     /** Thinking time before recording starts (Part 2: 60 s, else 0). */
     private int prepSeconds;
-    /** Longest recording accepted for this part. */
+    /** Longest recording accepted: the Part 2 answer, or each Part 1/3 answer. */
     private int maxSpeakSeconds;
 }

@@ -18,6 +18,7 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -82,20 +83,31 @@ public class GeminiClient {
     }
 
     /**
-     * Grade a recording: the prompt plus the audio itself, sent inline, sampled at
-     * temperature 0 like {@link #gradeAndParse}. Gemini listens to the audio, so
-     * pronunciation and fluency are judged from the speech, not from a transcript.
+     * One recording sent to {@link #gradeAudioAndParse}.
      *
-     * @param audio    the recording; inline data is limited to about 20 MB per request
+     * @param label    text placed just before the audio (e.g. which question it answers), or null
+     * @param audio    the recording; inline data is limited to about 20 MB per request in all
      * @param mimeType e.g. "audio/webm"
      */
+    public record AudioClip(String label, byte[] audio, String mimeType) {}
+
+    /**
+     * Grade recordings: the prompt plus the audio itself, sent inline, sampled at
+     * temperature 0 like {@link #gradeAndParse}. Gemini listens to the audio, so
+     * pronunciation and fluency are judged from the speech, not from a transcript.
+     * Several clips go in one request, each after its label, so they are graded together.
+     */
     @CircuitBreaker(name = "gemini")
-    public <T> T gradeAudioAndParse(String systemPrompt, String userPrompt, byte[] audio, String mimeType,
+    public <T> T gradeAudioAndParse(String systemPrompt, String userPrompt, List<AudioClip> clips,
                                     CheckedFunction<String, T> parser) {
-        Map<String, Object> audioPart = Map.of("inline_data", Map.of(
-                "mime_type", mimeType,
-                "data", java.util.Base64.getEncoder().encodeToString(audio)));
-        List<Map<String, Object>> parts = List.of(Map.of("text", userPrompt), audioPart);
+        List<Map<String, Object>> parts = new ArrayList<>();
+        parts.add(Map.of("text", userPrompt));
+        for (AudioClip clip : clips) {
+            if (clip.label() != null) parts.add(Map.of("text", clip.label()));
+            parts.add(Map.of("inline_data", Map.of(
+                    "mime_type", clip.mimeType(),
+                    "data", java.util.Base64.getEncoder().encodeToString(clip.audio()))));
+        }
         return retry.executeSupplier(() -> {
             String rawResponse = postGenerate(buildRequestBody(systemPrompt, parts, GRADING_TEMPERATURE));
             try {

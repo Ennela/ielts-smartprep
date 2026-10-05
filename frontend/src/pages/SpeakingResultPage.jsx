@@ -21,23 +21,39 @@ export default function SpeakingResultPage() {
   });
   const result = resultQuery.data;
 
-  // The recording needs the bearer token, so it is fetched as a Blob rather than linked.
+  // Recordings need the bearer token, so they are fetched as Blobs rather than linked:
+  // the one Part 2 take, or one per Part 1/3 answer.
   const [audioUrl, setAudioUrl] = useState(null);
   const [audioError, setAudioError] = useState(false);
+  const [answerUrls, setAnswerUrls] = useState({});
   useEffect(() => {
     if (!result) return undefined;
-    let url = null;
+    const urls = [];
     let cancelled = false;
-    speakingApi.getRecording(submissionId)
-      .then((res) => {
-        if (cancelled) return;
-        url = URL.createObjectURL(res.data);
-        setAudioUrl(url);
-      })
-      .catch(() => { if (!cancelled) setAudioError(true); });
+    if (result.answers?.length) {
+      result.answers.forEach(({ questionIndex }) => {
+        speakingApi.getAnswerRecording(submissionId, questionIndex)
+          .then((res) => {
+            if (cancelled) return;
+            const url = URL.createObjectURL(res.data);
+            urls.push(url);
+            setAnswerUrls((prev) => ({ ...prev, [questionIndex]: url }));
+          })
+          .catch(() => { if (!cancelled) setAnswerUrls((prev) => ({ ...prev, [questionIndex]: 'error' })); });
+      });
+    } else {
+      speakingApi.getRecording(submissionId)
+        .then((res) => {
+          if (cancelled) return;
+          const url = URL.createObjectURL(res.data);
+          urls.push(url);
+          setAudioUrl(url);
+        })
+        .catch(() => { if (!cancelled) setAudioError(true); });
+    }
     return () => {
       cancelled = true;
-      if (url) URL.revokeObjectURL(url);
+      urls.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [result, submissionId]);
 
@@ -113,22 +129,45 @@ export default function SpeakingResultPage() {
         </div>
       </div>
 
-      <section className={styles.section} aria-labelledby="speaking-recording">
-        <h2 id="speaking-recording" className={styles.sectionTitle}>Your answer</h2>
-        {audioUrl ? (
-          <audio className={styles.player} controls src={audioUrl} aria-label="Your recording" />
-        ) : audioError ? (
-          <p className={styles.hint}>The recording could not be loaded.</p>
-        ) : (
-          <p className={styles.hint}>Loading the recording…</p>
-        )}
-        {result.transcript && (
-          <>
-            <h3 className={styles.sectionTitle} style={{ fontSize: '1rem', marginTop: 16 }}>Transcript</h3>
-            <p className={styles.transcript}>{result.transcript}</p>
-          </>
-        )}
-      </section>
+      {result.answers?.length > 0 ? (
+        <section className={styles.section} aria-labelledby="speaking-recording">
+          <h2 id="speaking-recording" className={styles.sectionTitle}>Your answers</h2>
+          <ol className={styles.answerList}>
+            {result.answers.map((answer) => {
+              const url = answerUrls[answer.questionIndex];
+              return (
+                <li key={answer.questionIndex} className={styles.answerItem}>
+                  <p className={styles.answerQuestion}>{answer.question}</p>
+                  {url && url !== 'error' ? (
+                    <audio className={styles.player} controls src={url} aria-label={`Your answer to question ${answer.questionIndex + 1}`} />
+                  ) : (
+                    <p className={styles.hint}>{url === 'error' ? 'The recording could not be loaded.' : 'Loading the recording…'}</p>
+                  )}
+                  {answer.transcript && <p className={styles.transcript}>{answer.transcript}</p>}
+                  {answer.comment && <p className={styles.answerComment}>{answer.comment}</p>}
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      ) : (
+        <section className={styles.section} aria-labelledby="speaking-recording">
+          <h2 id="speaking-recording" className={styles.sectionTitle}>Your answer</h2>
+          {audioUrl ? (
+            <audio className={styles.player} controls src={audioUrl} aria-label="Your recording" />
+          ) : audioError ? (
+            <p className={styles.hint}>The recording could not be loaded.</p>
+          ) : (
+            <p className={styles.hint}>Loading the recording…</p>
+          )}
+          {result.transcript && (
+            <>
+              <h3 className={styles.sectionTitle} style={{ fontSize: '1rem', marginTop: 16 }}>Transcript</h3>
+              <p className={styles.transcript}>{result.transcript}</p>
+            </>
+          )}
+        </section>
+      )}
 
       <div className={`${styles.actions} ${styles.section}`}>
         <Link className="btn btn-primary" to={`/speaking/practice/${prompt.promptId}`}>Try this question again</Link>

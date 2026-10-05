@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -37,16 +38,26 @@ public class SpeakingController {
     /**
      * Grade a recorded answer. Its own path, not POST /submissions, so the AI rate limit
      * (WebMvcConfig) meters grading without also metering the history list.
+     *
+     * Part 2 sends one {@code audio} and one {@code durationSeconds}; Part 1 and Part 3 send
+     * one of each per question, in question order.
      */
     @PostMapping(value = "/grade", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Grade a recorded Speaking answer", description = "webm/ogg/mp4/mp3/wav up to 5 MB")
+    @Operation(summary = "Grade a recorded Speaking answer",
+            description = "webm/ogg/mp4/mp3/wav, 5 MB in all; Part 1/3: one recording per question")
     public ResponseEntity<ApiResponse<SpeakingSubmissionResponse>> grade(
             @AuthenticationPrincipal User user,
             @RequestParam("promptId") Long promptId,
-            @RequestParam("durationSeconds") int durationSeconds,
-            @RequestParam("audio") MultipartFile audio) throws IOException {
-        SpeakingSubmissionResponse result = speakingService.grade(
-                user.getUserId(), promptId, audio.getBytes(), audio.getContentType(), durationSeconds);
+            @RequestParam("durationSeconds") List<Integer> durationSeconds,
+            @RequestParam("audio") List<MultipartFile> audio) throws IOException {
+        if (durationSeconds.size() != audio.size()) {
+            throw new IllegalArgumentException("Send one durationSeconds per recording");
+        }
+        List<SpeakingService.Upload> uploads = new ArrayList<>();
+        for (int i = 0; i < audio.size(); i++) {
+            uploads.add(new SpeakingService.Upload(audio.get(i).getBytes(), audio.get(i).getContentType(), durationSeconds.get(i)));
+        }
+        SpeakingSubmissionResponse result = speakingService.grade(user.getUserId(), promptId, uploads);
         return ResponseEntity.ok(ApiResponse.ok(result, "Answer graded"));
     }
 
@@ -70,7 +81,18 @@ public class SpeakingController {
     @GetMapping("/submissions/{submissionId}/audio")
     @Operation(summary = "Play back the current user's recording")
     public ResponseEntity<byte[]> audio(@AuthenticationPrincipal User user, @PathVariable Long submissionId) {
-        Map.Entry<byte[], String> recording = speakingService.recording(user.getUserId(), submissionId);
+        return play(speakingService.recording(user.getUserId(), submissionId));
+    }
+
+    /** One Part 1/3 answer's recording, to its owner only. */
+    @GetMapping("/submissions/{submissionId}/answers/{questionIndex}/audio")
+    @Operation(summary = "Play back the current user's answer to one question")
+    public ResponseEntity<byte[]> answerAudio(@AuthenticationPrincipal User user, @PathVariable Long submissionId,
+                                              @PathVariable int questionIndex) {
+        return play(speakingService.answerRecording(user.getUserId(), submissionId, questionIndex));
+    }
+
+    private static ResponseEntity<byte[]> play(Map.Entry<byte[], String> recording) {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(recording.getValue()))
                 .cacheControl(CacheControl.noStore())

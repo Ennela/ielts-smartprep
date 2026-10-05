@@ -63,6 +63,16 @@
 .player { width: 100%; }
 .hint { font-size: 0.85rem; color: var(--on-surface-variant); }
 
+/* Part 1/3: one question at a time, then every answer */
+.questionStep { display: flex; flex-direction: column; gap: 6px; }
+.questionText { font-family: var(--font-heading); font-size: 1.3rem; font-weight: 700; color: var(--on-surface); line-height: 1.4; }
+.answerList { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 20px; color: var(--on-surface); }
+.answerItem { display: flex; flex-direction: column; gap: 8px; }
+.answerItem::marker { font-weight: 700; }
+.answerQuestion { font-weight: 600; line-height: 1.5; }
+.answerMeta { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.answerComment { font-size: 0.9rem; line-height: 1.5; color: var(--on-surface); border-left: 3px solid var(--primary); padding-left: 12px; }
+
 /* Result */
 .scoreRow { display: grid; grid-template-columns: 160px 1fr; gap: 24px; align-items: center; }
 .overall {
