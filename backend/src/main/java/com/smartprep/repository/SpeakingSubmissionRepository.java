@@ -13,7 +13,7 @@ public interface SpeakingSubmissionRepository extends JpaRepository<SpeakingSubm
     @EntityGraph(attributePaths = "prompt")
     Page<SpeakingSubmission> findByUserUserIdOrderBySubmittedAtDesc(Long userId, Pageable pageable);
 
-    /** Scoped to the owner, so another user's id reads as "not found". */
-    @EntityGraph(attributePaths = "prompt")
+    /** Scoped to the owner, so another user's id reads as "not found". Loads the answers too. */
+    @EntityGraph(attributePaths = {"prompt", "answers"})
     Optional<SpeakingSubmission> findBySubmissionIdAndUserUserId(Long submissionId, Long userId);
 }

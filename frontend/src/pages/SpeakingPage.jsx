@@ -73,7 +73,11 @@ export default function SpeakingPage() {
               </p>
               <div className={styles.promptMeta}>
                 {prompt.prepSeconds > 0 && <span>{prompt.prepSeconds / 60} min prep</span>}
-                <span>Up to {prompt.maxSpeakSeconds / 60} min speaking</span>
+                <span>
+                  {prompt.part === 2
+                    ? `Up to ${prompt.maxSpeakSeconds / 60} min speaking`
+                    : `Up to ${prompt.maxSpeakSeconds} s per answer`}
+                </span>
               </div>
               <Link className="btn btn-primary btn-sm" to={`/speaking/practice/${prompt.promptId}`}>
                 Practise

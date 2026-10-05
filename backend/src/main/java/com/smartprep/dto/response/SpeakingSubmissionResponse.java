@@ -15,6 +15,7 @@ public class SpeakingSubmissionResponse {
     private Long submissionId;
     private SpeakingPromptResponse prompt;
     private int durationSeconds;
+    /** Part 2 only; Part 1/3 transcripts are per answer. */
     private String transcript;
     private BigDecimal overallBand;
     private BigDecimal fluencyBand;
@@ -26,5 +27,7 @@ public class SpeakingSubmissionResponse {
     private List<String> improvements;
     /** One comment per criterion, keyed fluencyCoherence / lexicalResource / grammaticalRange / pronunciation. */
     private Map<String, String> criteriaComments;
+    /** Part 1 and Part 3: one per question, in order. Empty for Part 2. */
+    private List<SpeakingAnswerResponse> answers;
     private LocalDateTime submittedAt;
 }

@@ -4,14 +4,16 @@ import { useQuery } from '@tanstack/react-query';
 import speakingApi from '../api/speakingApi';
 import useAudioRecorder, { recordingSupported } from '../hooks/useAudioRecorder';
 import { useConfirm } from '../context/ConfirmContext';
+import QuestionsPractice from '../components/speaking/QuestionsPractice';
 import styles from '../styles/Speaking.module.css';
 
 const MIN_SECONDS = 5;
 const clock = (seconds) => `${Math.floor(seconds / 60)}:${String(Math.max(0, seconds) % 60).padStart(2, '0')}`;
 
 /**
- * One Speaking task: read it, prepare (Part 2 only), record, listen back, submit.
+ * One Speaking task. Part 2: read the cue card, prepare, record, listen back, submit.
  * phase: 'intro' | 'prep' | 'record' (the recorder's own status says where it is) | 'grading'
+ * Parts 1 and 3 are answered one question at a time (QuestionsPractice).
  */
 export default function SpeakingPracticePage() {
   const { promptId } = useParams();
@@ -95,7 +97,7 @@ export default function SpeakingPracticePage() {
     setPhase('grading');
     setGradeError(null);
     try {
-      const res = await speakingApi.grade(prompt.promptId, recorder.blob, recorder.duration);
+      const res = await speakingApi.grade(prompt.promptId, [{ blob: recorder.blob, duration: recorder.duration }]);
       navigate(`/speaking/result/${res.data.data.submissionId}`, { replace: true });
     } catch (err) {
       setGradeError(err.response?.data?.message || err.message || 'Grading failed. Your recording is still here; try again.');
@@ -117,6 +119,8 @@ export default function SpeakingPracticePage() {
     );
   }
 
+  if (prompt.part !== 2) return <QuestionsPractice prompt={prompt} />;
+
   const tooShort = recorder.status === 'stopped' && recorder.duration < MIN_SECONDS;
   const announcement = phase === 'prep'
     ? 'Preparation time has started.'
@@ -137,38 +141,29 @@ export default function SpeakingPracticePage() {
       <section className={styles.stage}>
         <span className={styles.partBadge}>Part {prompt.part}</span>
 
-        {prompt.part === 2 ? (
-          <div className={styles.cueCard}>
-            <p className={styles.cueTask}>{prompt.questions[0]}</p>
-            {prompt.cuePoints.length > 0 && (
-              <>
-                <p className={styles.cueLabel}>You should say:</p>
-                <ul className={styles.questionList}>
-                  {prompt.cuePoints.map((point) => <li key={point}>{point}</li>)}
-                </ul>
-              </>
-            )}
-          </div>
-        ) : (
-          <ol className={styles.questionList}>
-            {prompt.questions.map((q) => <li key={q}>{q}</li>)}
-          </ol>
-        )}
+        <div className={styles.cueCard}>
+          <p className={styles.cueTask}>{prompt.questions[0]}</p>
+          {prompt.cuePoints.length > 0 && (
+            <>
+              <p className={styles.cueLabel}>You should say:</p>
+              <ul className={styles.questionList}>
+                {prompt.cuePoints.map((point) => <li key={point}>{point}</li>)}
+              </ul>
+            </>
+          )}
+        </div>
 
         {phase === 'intro' && (
           <>
             <p className={styles.hint}>
-              {prompt.part === 2
-                ? 'You will have one minute to prepare. Recording starts when it ends, or earlier if you choose.'
-                : 'Answer the questions in order, as you would to an examiner. Recording stops by itself after '
-                  + `${prompt.maxSpeakSeconds / 60} minutes.`}
+              You will have one minute to prepare. Recording starts when it ends, or earlier if you choose.
             </p>
             {!recordingSupported() && (
               <div className="error-msg" role="alert">This browser cannot record audio. Use a recent Chrome, Edge, Firefox or Safari.</div>
             )}
             <div className={styles.actions}>
               <button type="button" className="btn btn-primary" onClick={begin} disabled={!recordingSupported()}>
-                {prompt.part === 2 ? 'Start preparation' : 'Start recording'}
+                Start preparation
               </button>
             </div>
           </>

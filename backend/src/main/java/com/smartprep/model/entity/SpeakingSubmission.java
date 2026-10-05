@@ -5,6 +5,8 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /** One recorded Speaking answer and its grade (V58). */
 @Entity
@@ -27,13 +29,16 @@ public class SpeakingSubmission {
     @JoinColumn(name = "prompt_id", nullable = false)
     private SpeakingPrompt prompt;
 
-    /** Object-storage key of the recording; served only to its owner. */
-    @Column(nullable = false)
+    /**
+     * Object-storage key of the recording; served only to its owner. Part 2 only: a Part 1
+     * or Part 3 submission keeps one recording per question in {@link #answers}.
+     */
     private String audioKey;
 
-    @Column(nullable = false, length = 50)
+    @Column(length = 50)
     private String audioMimeType;
 
+    /** Total speaking time; for Part 1 and Part 3, the sum of the answers. */
     @Column(nullable = false)
     private Integer durationSeconds;
 
@@ -61,6 +66,14 @@ public class SpeakingSubmission {
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime submittedAt;
+
+    /** Part 1 and Part 3: one answer per question, in order (V59). Empty for Part 2. */
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    @OneToMany(mappedBy = "submission", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("questionIndex ASC")
+    @Builder.Default
+    private List<SpeakingAnswer> answers = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
