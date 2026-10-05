@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
@@ -21,6 +22,8 @@ public class ListeningSourceResolver implements VocabSourceResolver {
     }
 
     @Override
+    /** Read-only transaction: the test's parts and their transcripts are lazy, and open-in-view is off. */
+    @Transactional(readOnly = true)
     public String resolveSourceText(Long userId, Long sourceId) {
         ListeningTest test = listeningTestRepository.findByTestIdAndUserUserId(sourceId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Listening test not found with ID: " + sourceId));

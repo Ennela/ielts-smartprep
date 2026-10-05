@@ -66,21 +66,21 @@ spring:
     hibernate:
       ddl-auto: none
     show-sql: false
-    # Explicit, and load-bearing rather than merely inherited.
+    # Off (issue #17). No request keeps an EntityManager open for its whole length: every
+    # lazy association is read inside a transaction, and each response is built there.
     #
     # The AI endpoints are deliberately not @Transactional, because a transaction there held
-    # a pooled connection for the whole Gemini round trip. Several of them still walk lazy
-    # associations afterwards -- cloning a template quiz in the Reading fallback, gathering
-    # transcripts across a mock test in suggestVocabulary -- and it is open-in-view that
-    # keeps an EntityManager available for those, now that no transaction does.
+    # a pooled connection for the whole Gemini round trip. What they read from lazy
+    # associations -- a stored quiz or part to fall back on, the text of a mock test for
+    # vocabulary -- is read by a separate bean in its own short read-only transaction
+    # (ReadingFallbackSource, ListeningFallbackSource, MockTestVocabSource) or fetched with
+    # an entity graph, and comes back as data the AI step can use without a session.
     #
-    # Turning this off is therefore not a free tidy-up: it would break those paths with
-    # LazyInitializationException. It also silences Spring Boot's warning about relying on
-    # the default, which is how this was configured before: by accident.
-    #
-    # open-in-view keeps the EntityManager open, not a connection -- but only with the
-    # handling mode set below. See the comment there.
-    open-in-view: true
+    # With this on, a lazy load after such a transaction quietly took a connection again for
+    # the rest of the request. Now it throws LazyInitializationException instead, which is
+    # the point: OpenInViewOffIntegrationTest drives every such request with Gemini stubbed
+    # and fails on the 500 that exception produces.
+    open-in-view: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
@@ -91,12 +91,13 @@ spring:
           # Hibernate's own default for JDBC transactions is exactly this, but Spring's
           # HibernateJpaVendorAdapter overrides it with DELAYED_ACQUISITION_AND_HOLD so it can
           # prepare the connection (isolation level, read-only flag) for a transaction. HOLD
-          # means "release on session close", and with open-in-view the session is the whole
-          # web request. So the read-only transaction behind the first findById in an AI
+          # means "release on session close", and with open-in-view on, the session was the
+          # whole web request. So the read-only transaction behind the first findById in an AI
           # entry point checked out a pooled connection that stayed out across the Gemini
           # round trip -- HikariCP's leak detector fired on a real full-writing submission
           # (issue #13) -- and dropping @Transactional from those methods had removed the
-          # transaction but not the hold.
+          # transaction but not the hold. Open-in-view is off now, but this stays: it is what
+          # keeps any longer-lived session from holding a connection between transactions.
           #
           # Setting the mode here wins over the vendor adapter's value. Transactions still
           # hold their connection until they commit or roll back (AFTER_STATEMENT would not:

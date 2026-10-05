@@ -45,8 +45,9 @@ public class ReadingGenerationService {
     private final org.springframework.data.redis.core.StringRedisTemplate redisTemplate;
     private final AdaptiveService adaptiveService;
     private final ReadingQueryService readingQueryService;
+    private final ReadingFallbackSource fallbackSource;
 
-    private static final Map<Difficulty, Integer> TIME_LIMITS = Map.of(
+    static final Map<Difficulty, Integer> TIME_LIMITS = Map.of(
             Difficulty.PASSAGE_1, 900,
             Difficulty.PASSAGE_2, 1200,
             Difficulty.PASSAGE_3, 1500
@@ -65,13 +66,12 @@ public class ReadingGenerationService {
      * own, and none is held across the network wait --
      * {@code ConnectionHoldingIntegrationTest} asserts exactly that property.
      *
-     * <p>Two consequences worth knowing. Lazy associations still resolve in the fallback
-     * path, which clones a template quiz, because {@code spring.jpa.open-in-view} keeps an
-     * EntityManager open for the request; that setting is now explicit in application.yml
-     * rather than an accidental default. And the three-passage path now commits each quiz
-     * as it is saved instead of all three together -- these are independent artifacts with
-     * no invariant between them, so a partial result is stray content rather than
-     * inconsistent data.
+     * <p>Two consequences worth knowing. The fallback path, which copies a stored quiz with
+     * its lazy questions and options, does that read in {@link ReadingFallbackSource}'s own
+     * short transaction: with open-in-view off, nothing else keeps a session open for it.
+     * And the three-passage path commits each quiz as it is saved instead of all three
+     * together -- these are independent artifacts with no invariant between them, so a
+     * partial result is stray content rather than inconsistent data.
      */
     public ReadingQuizResponse generateQuiz(Long userId, ReadingGenerateRequest request) {
         User user = userRepository.findById(userId)
@@ -187,79 +187,7 @@ public class ReadingGenerationService {
 
     private ReadingQuiz handleFallbackQuiz(User user, Topic topic, Difficulty difficulty, String moduleType, Exception originalException) {
         log.warn("Gemini generation failed or quota exceeded. Falling back to pre-generated content for topic: {} and difficulty: {}", topic, difficulty);
-
-        List<ReadingQuiz> templates = quizRepository.findQuizzesForAdmin(topic, difficulty, null, org.springframework.data.domain.PageRequest.of(0, 10)).getContent();
-
-        if (templates.isEmpty()) {
-            templates = quizRepository.findQuizzesForAdmin(null, difficulty, null, org.springframework.data.domain.PageRequest.of(0, 10)).getContent();
-        }
-
-        if (templates.isEmpty()) {
-            templates = quizRepository.findAll(org.springframework.data.domain.PageRequest.of(0, 10)).getContent();
-        }
-
-        if (templates.isEmpty()) {
-            log.error("No fallback quizzes found in the database. Failing request.");
-            if (originalException instanceof RuntimeException) {
-                throw (RuntimeException) originalException;
-            }
-            throw new RuntimeException("AI Content generation failed and no fallback content was available in the system.", originalException);
-        }
-
-        ReadingQuiz selected = templates.get(new java.util.Random().nextInt(templates.size()));
-        log.info("Selected fallback ReadingQuiz ID: {} for user: {}", selected.getQuizId(), user.getUserId());
-
-        ReadingQuiz fallbackQuiz = ReadingQuiz.builder()
-                .user(user)
-                .topic(selected.getTopic())
-                .difficulty(selected.getDifficulty())
-                .moduleType(moduleType)
-                .passageText(selected.getPassageText())
-                .timeLimitSeconds(selected.getTimeLimitSeconds() != null ? selected.getTimeLimitSeconds() : TIME_LIMITS.get(selected.getDifficulty()))
-                .totalQuestions(selected.getTotalQuestions())
-                .isTemplate(false)
-                .parentTemplateId(selected.getQuizId())
-                .build();
-
-        List<ReadingQuestion> clonedQuestions = new ArrayList<>();
-        for (ReadingQuestion q : selected.getQuestions()) {
-            ReadingQuestion clonedQ = ReadingQuestion.builder()
-                    .quiz(fallbackQuiz)
-                    .questionType(q.getQuestionType())
-                    .questionText(q.getQuestionText())
-                    .correctAnswer(q.getCorrectAnswer())
-                    .explanation(q.getExplanation())
-                    .orderIndex(q.getOrderIndex())
-                    .groupLabel(q.getGroupLabel())
-                    .selectCount(q.getSelectCount())
-                    .imageUrl(q.getImageUrl())
-                    .groupId(q.getGroupId())
-                    .groupContext(q.getGroupContext())
-                    .wordLimit(q.getWordLimit())
-                    .optionsJson(q.getOptionsJson())
-                    .evidenceText(q.getEvidenceText())
-                    .evidenceOffset(q.getEvidenceOffset())
-                    .evidenceLength(q.getEvidenceLength())
-                    .build();
-
-            if (q.getOptions() != null) {
-                List<QuestionOption> clonedOptions = new ArrayList<>();
-                for (QuestionOption opt : q.getOptions()) {
-                    clonedOptions.add(QuestionOption.builder()
-                            .readingQuestion(clonedQ)
-                            .label(opt.getLabel())
-                            .content(opt.getContent())
-                            .isCorrect(opt.getIsCorrect())
-                            .orderIndex(opt.getOrderIndex())
-                            .build());
-                }
-                clonedQ.setOptions(clonedOptions);
-            }
-            clonedQuestions.add(clonedQ);
-        }
-        fallbackQuiz.setQuestions(clonedQuestions);
-
-        return quizRepository.save(fallbackQuiz);
+        return quizRepository.save(fallbackSource.copyTemplate(user, topic, difficulty, moduleType, originalException));
     }
 
     private List<ReadingQuiz> generateFullQuizEntities(User user, Topic topic, String moduleType) {

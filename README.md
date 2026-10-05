@@ -440,16 +440,21 @@ breaks no behaviour, it just quietly reinstates the outage under load:
   a non-transactional read returns its connection to the pool immediately, while a
   transactional block holds one until it commits.
 
-`spring.jpa.open-in-view` is now **explicitly** `true` rather than inherited from Spring
-Boot's default. Several of these methods walk lazy associations after their AI call — the
-Reading fallback clones a template quiz, `suggestVocabulary` gathers transcripts across a
-mock test — and with no transaction it is open-in-view that keeps an EntityManager available
-for them. Turning it off would break those paths with `LazyInitializationException`. It keeps
-an EntityManager open, not a connection — **provided** Hibernate releases connections when a
-transaction ends. Spring's `HibernateJpaVendorAdapter` sets Hibernate's handling mode to
-*hold until the session closes*, which under open-in-view is the whole request, so the
-read-only transaction behind the first repository read in an AI method kept its connection
-across the Gemini call. `application.yml` overrides the mode with
+`spring.jpa.open-in-view` is **off** (issue #17): no request keeps an EntityManager open
+for its whole length. What an AI method needs from lazy associations is read before the AI
+call, in a separate bean's own short read-only transaction — the stored quiz or part a
+failed generation falls back on (`ReadingFallbackSource`, `ListeningFallbackSource`), the
+text of a mock test for vocabulary suggestions (`MockTestVocabSource`) — or fetched with an
+entity graph, and it comes back as data that needs no session. With open-in-view on, those
+reads went through the request's EntityManager instead, outside any transaction, and quietly
+took a connection again for the rest of the request. Now a lazy load outside a transaction
+throws `LazyInitializationException`; `OpenInViewOffIntegrationTest` drives every request
+that used to rely on it, with Gemini stubbed, and fails on the 500 that produces.
+
+Hibernate's connection handling mode stays overridden as well. Spring's
+`HibernateJpaVendorAdapter` sets it to *hold until the session closes*, which under
+open-in-view was the whole request, so the read-only transaction behind the first repository
+read in an AI method kept its connection across the Gemini call. `application.yml` sets
 `hibernate.connection.handling_mode=DELAYED_ACQUISITION_AND_RELEASE_AFTER_TRANSACTION`, and
 `AiCallConnectionHoldingIntegrationTest` drives a real request into a blocked Gemini stub and
 asserts the pool has nothing checked out.

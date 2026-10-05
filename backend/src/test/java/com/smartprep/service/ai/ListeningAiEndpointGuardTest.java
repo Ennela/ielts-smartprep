@@ -63,7 +63,7 @@ class ListeningAiEndpointGuardTest {
     @Test
     @DisplayName("analyzeQuestion refuses when the user has not submitted a test with that part")
     void analyzeQuestion_notSubmitted_refusedBeforeCallingAi() {
-        when(questionRepository.findById(QUESTION_ID)).thenReturn(Optional.of(questionOnPart()));
+        when(questionRepository.findWithPartByQuestionId(QUESTION_ID)).thenReturn(Optional.of(questionOnPart()));
         when(testRepository.existsSubmittedPart(USER_ID, PART_ID)).thenReturn(false);
 
         assertThatThrownBy(() -> service.analyzeQuestion(USER_ID, QUESTION_ID))

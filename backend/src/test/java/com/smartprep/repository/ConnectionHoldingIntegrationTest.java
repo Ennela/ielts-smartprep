@@ -28,11 +28,11 @@ import static org.assertj.core.api.Assertions.assertThat;
  * would still be exhausted by concurrent generation.
  *
  * <p>It is asserted rather than assumed because the answer is not obvious from the code:
- * Hibernate's connection handling mode decides it, {@code spring.jpa.open-in-view} keeps an
- * EntityManager open for the whole web request regardless, and neither is visible at the
- * call site. If a future Hibernate or Spring Boot upgrade changes the acquisition mode to
- * hold connections for the session, this test fails and says so — rather than the
- * application quietly returning to exhausting its pool under load.
+ * Hibernate's connection handling mode decides it, and it is not visible at the call site.
+ * This class measures it outside any web request; AiCallConnectionHoldingIntegrationTest
+ * measures it inside one. If a future Hibernate or Spring Boot upgrade changes the
+ * acquisition mode to hold connections for the session, this test fails and says so —
+ * rather than the application quietly returning to exhausting its pool under load.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

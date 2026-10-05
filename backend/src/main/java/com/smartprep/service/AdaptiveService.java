@@ -17,6 +17,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +34,8 @@ public class AdaptiveService {
         public String reason;
     }
 
+    /** Read-only transaction: the recent results' answers are lazy, and open-in-view is off. */
+    @Transactional(readOnly = true)
     public AdaptiveConfig suggestNextConfig(Long userId, SkillType skillType) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));

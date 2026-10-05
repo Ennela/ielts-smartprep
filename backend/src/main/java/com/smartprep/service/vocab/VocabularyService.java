@@ -11,7 +11,6 @@ import com.smartprep.model.entity.*;
 import com.smartprep.model.enums.SkillType;
 import com.smartprep.repository.UserRepository;
 import com.smartprep.repository.VocabularyRepository;
-import com.smartprep.repository.MockTestSubmissionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -37,11 +36,11 @@ public class VocabularyService {
 
     private final VocabularyRepository vocabularyRepository;
     private final UserRepository userRepository;
-    private final MockTestSubmissionRepository mockTestSubmissionRepository;
     private final Sm2Service sm2Service;
     private final VocabAiService vocabAiService;
     private final List<VocabSourceResolver> resolvers;
     private final ObjectMapper objectMapper;
+    private final MockTestVocabSource mockTestVocabSource;
 
     @Transactional
     public VocabResponse addVocabulary(Long userId, VocabCreateRequest request) {
@@ -146,10 +145,10 @@ public class VocabularyService {
      * Not transactional. Every branch below gathers source text and then hands it to Gemini,
      * so a read-only transaction here held a pooled connection for the whole AI round trip.
      *
-     * <p>The lazy walks through the mock test -- reading quizzes, listening parts, writing
-     * submissions -- still resolve, through the open-in-view EntityManager rather than
-     * through this transaction. They cost one connection acquisition each instead of
-     * sharing one, which is the right trade against pinning a connection for 65 seconds.
+     * <p>The source text is gathered first, in the source bean's own short read-only
+     * transaction ({@link MockTestVocabSource}, or the skill's resolver), and comes back as
+     * plain strings: the lazy walks through the sitting need a session, and with
+     * open-in-view off only that transaction provides one.
      */
     public List<VocabAiService.SuggestedVocab> suggestVocabulary(Long userId, String skillTypeStr, Long sourceId) {
         Set<String> existingWords = vocabularyRepository.findByUserUserIdOrderByCreatedAtDesc(userId)
@@ -158,52 +157,8 @@ public class VocabularyService {
                 .collect(Collectors.toSet());
 
         if (skillTypeStr.equalsIgnoreCase("MOCK_TEST")) {
-            MockTestSubmission submission = mockTestSubmissionRepository.findById(sourceId)
-                    .filter(s -> s.getUser() != null && s.getUser().getUserId().equals(userId))
-                    .orElseThrow(() -> new ResourceNotFoundException("Mock test submission not found with ID: " + sourceId));
-            
-            List<String> sectionsTexts = new java.util.ArrayList<>();
-            
-            // 1. Reading
-            MockTest mockTest = submission.getMockTest();
-            if (mockTest != null && mockTest.getReadingQuizzes() != null) {
-                for (ReadingQuiz quiz : mockTest.getReadingQuizzes()) {
-                    if (quiz.getPassageText() != null && !quiz.getPassageText().isBlank()) {
-                        sectionsTexts.add(quiz.getPassageText());
-                    }
-                }
-            }
-            
-            // 2. Listening
-            ListeningTest listeningTest = submission.getListeningTest();
-            if (listeningTest != null && listeningTest.getTestParts() != null && !listeningTest.getTestParts().isEmpty()) {
-                for (ListeningTestPart tp : listeningTest.getTestParts()) {
-                    if (tp.getPart() != null && tp.getPart().getTranscriptText() != null && !tp.getPart().getTranscriptText().isBlank()) {
-                        sectionsTexts.add(tp.getPart().getTranscriptText());
-                    }
-                }
-            } else if (mockTest != null && mockTest.getListeningParts() != null) {
-                for (ListeningPart part : mockTest.getListeningParts()) {
-                    if (part.getTranscriptText() != null && !part.getTranscriptText().isBlank()) {
-                        sectionsTexts.add(part.getTranscriptText());
-                    }
-                }
-            }
-            
-            // 3. Writing
-            WritingSubmission w1 = submission.getWritingTask1Submission();
-            if (w1 != null) {
-                String promptText = (w1.getPrompt() != null) ? w1.getPrompt().getPromptText() : "";
-                String essayText = (w1.getEssayText() != null) ? w1.getEssayText() : "";
-                sectionsTexts.add("Prompt:\n" + promptText + "\n\nStudent Essay:\n" + essayText);
-            }
-            WritingSubmission w2 = submission.getWritingTask2Submission();
-            if (w2 != null) {
-                String promptText = (w2.getPrompt() != null) ? w2.getPrompt().getPromptText() : "";
-                String essayText = (w2.getEssayText() != null) ? w2.getEssayText() : "";
-                sectionsTexts.add("Prompt:\n" + promptText + "\n\nStudent Essay:\n" + essayText);
-            }
-            
+            List<String> sectionsTexts = mockTestVocabSource.sectionTexts(userId, sourceId);
+
             List<VocabAiService.SuggestedVocab> aggregated = new java.util.ArrayList<>();
             for (String sectionText : sectionsTexts) {
                 try {

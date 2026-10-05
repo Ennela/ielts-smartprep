@@ -49,6 +49,7 @@ public class ListeningGenerationService {
     private final AudioGenerationService audioGenerationService;
     private final ListeningQueryService listeningQueryService;
     private final java.util.concurrent.Executor ttsExecutor;
+    private final ListeningFallbackSource fallbackSource;
 
     // ========== AI Generation ==========
 
@@ -151,7 +152,7 @@ public class ListeningGenerationService {
             } catch (Exception e) {
                 log.error("Parallel generation of part {} failed, falling back", i + 1, e);
                 int pNum = i + 1;
-                ListeningPart fallback = getFallbackEntity(pNum, topic);
+                ListeningPart fallback = fallbackSource.copyOfPublishedPart(pNum, topic);
                 generatedParts.add(fallback);
             }
         }
@@ -171,60 +172,6 @@ public class ListeningGenerationService {
         return responses;
     }
 
-    private ListeningPart getFallbackEntity(int partNumber, String topic) {
-        List<ListeningPart> existingParts = partRepository.findPublishedByPartNumber(partNumber);
-        if (existingParts.isEmpty()) {
-            existingParts = partRepository.findPublishedOrderByPartNumber();
-        }
-        if (existingParts.isEmpty()) {
-            throw new RuntimeException("No fallback parts found in database");
-        }
-        ListeningPart selected = null;
-        if (topic != null && !topic.isBlank()) {
-            String cleanTopic = topic.toLowerCase();
-            selected = existingParts.stream()
-                    .filter(p -> p.getTopic() != null && p.getTopic().toLowerCase().contains(cleanTopic))
-                    .findFirst()
-                    .orElse(null);
-        }
-        if (selected == null) {
-            selected = existingParts.get(new java.util.Random().nextInt(existingParts.size()));
-        }
-
-        ListeningPart clone = ListeningPart.builder()
-                .partNumber(selected.getPartNumber())
-                .title(selected.getTitle() + " (AI Fallback)")
-                .topic(selected.getTopic())
-                .audioUrl(selected.getAudioUrl())
-                .audioStatus(selected.getAudioStatus())
-                .transcriptText(selected.getTranscriptText())
-                .durationSeconds(selected.getDurationSeconds())
-                .build();
-        List<ListeningQuestion> clonedQuestions = new ArrayList<>();
-        for (ListeningQuestion q : selected.getQuestions()) {
-            ListeningQuestion cq = ListeningQuestion.builder()
-                    .part(clone)
-                    .questionType(q.getQuestionType())
-                    .questionText(q.getQuestionText())
-                    .correctAnswer(q.getCorrectAnswer())
-                    .orderIndex(q.getOrderIndex())
-                    .build();
-            List<QuestionOption> clonedOptions = new ArrayList<>();
-            for (QuestionOption opt : q.getOptions()) {
-                clonedOptions.add(QuestionOption.builder()
-                        .listeningQuestion(cq)
-                        .label(opt.getLabel())
-                        .content(opt.getContent())
-                        .isCorrect(opt.getIsCorrect())
-                        .orderIndex(opt.getOrderIndex())
-                        .build());
-            }
-            cq.setOptions(clonedOptions);
-            clonedQuestions.add(cq);
-        }
-        clone.setQuestions(clonedQuestions);
-        return clone;
-    }
 
     /** Not transactional: {@code generatePartInternal} calls Gemini. See {@link #generateFullTest}. */
     public ListeningPartResponse generatePart(Long userId, com.smartprep.dto.request.ListeningGenerateRequest request) {
@@ -332,36 +279,7 @@ public class ListeningGenerationService {
 
     private ListeningPartResponse handleFallback(int partNumber, String topic, Exception originalException) {
         log.warn("Gemini generation failed or quota exceeded. Falling back to pre-generated ListeningPart for partNumber: {} and topic: {}", partNumber, topic);
-
-        List<ListeningPart> existingParts = partRepository.findPublishedByPartNumber(partNumber);
-
-        if (existingParts.isEmpty()) {
-            existingParts = partRepository.findPublishedOrderByPartNumber();
-        }
-
-        if (existingParts.isEmpty()) {
-            log.error("No fallback listening parts found in the database. Failing request.");
-            if (originalException instanceof RuntimeException) {
-                throw (RuntimeException) originalException;
-            }
-            throw new RuntimeException("AI Content generation failed and no fallback content was available in the system.", originalException);
-        }
-
-        ListeningPart selected = null;
-        if (topic != null && !topic.isBlank()) {
-            String cleanTopic = topic.toLowerCase();
-            selected = existingParts.stream()
-                    .filter(p -> p.getTopic() != null && p.getTopic().toLowerCase().contains(cleanTopic))
-                    .findFirst()
-                    .orElse(null);
-        }
-
-        if (selected == null) {
-            selected = existingParts.get(new java.util.Random().nextInt(existingParts.size()));
-        }
-
-        log.info("Selected fallback ListeningPart ID: {}", selected.getPartId());
-        return listeningQueryService.toPartResponse(selected);
+        return fallbackSource.publishedPart(partNumber, topic, originalException);
     }
 
     // ========== AI Post-Analysis ==========
@@ -372,11 +290,11 @@ public class ListeningGenerationService {
      * read-only transaction still checks a connection out of the pool.
      *
      * <p>The ownership guard still runs before the AI call, in the same order as before.
-     * Lazy access to {@code question.getPart()} resolves through the open-in-view
-     * EntityManager.
+     * The question is read with its part, whose transcript the prompt quotes: with
+     * open-in-view off a lazy part could not be loaded afterwards.
      */
     public Map<String, Object> analyzeQuestion(Long userId, Long questionId) {
-        ListeningQuestion question = questionRepository.findById(questionId)
+        ListeningQuestion question = questionRepository.findWithPartByQuestionId(questionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Question not found"));
 
         ListeningPart part = question.getPart();

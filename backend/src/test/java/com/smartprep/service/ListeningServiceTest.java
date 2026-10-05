@@ -43,6 +43,7 @@ class ListeningServiceTest {
     @Mock private org.springframework.data.redis.core.ValueOperations<String, String> valueOps;
     @Mock private AdaptiveService adaptiveService;
     @Mock private ListeningQueryService listeningQueryService;
+    @Mock private com.smartprep.service.ai.ListeningFallbackSource fallbackSource;
 
     @Spy private ObjectMapper objectMapper = new ObjectMapper();
 
@@ -327,6 +328,9 @@ class ListeningServiceTest {
         
         when(partRepository.findPublishedByPartNumber(1))
                 .thenReturn(List.of(templatePart));
+        // The fallback itself, over the mocked repository and query service.
+        when(fallbackSource.publishedPart(anyInt(), any(), any())).thenAnswer(org.mockito.AdditionalAnswers.delegatesTo(
+                new com.smartprep.service.ai.ListeningFallbackSource(partRepository, listeningQueryService)));
         when(listeningQueryService.toPartResponse(any(ListeningPart.class))).thenAnswer(inv -> {
             ListeningPart part = inv.getArgument(0);
             return ListeningPartResponse.builder()

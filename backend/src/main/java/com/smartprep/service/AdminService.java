@@ -256,6 +256,8 @@ public class AdminService {
 
     // ===== Reading Quizzes CRUD =====
 
+    /** Read-only transaction: each quiz's questions, options and author are lazy, and open-in-view is off. */
+    @Transactional(readOnly = true)
     public Page<AdminReadingQuizResponse> listReadingQuizzes(String topicStr, String difficultyStr, String source, boolean archived, int page, int size, String sort) {
         size = Math.min(size, MAX_PAGE_SIZE);
         PageRequest pageRequest = PageRequest.of(page, size, parseSort(sort, "createdAt"));
@@ -450,6 +452,8 @@ public class AdminService {
 
     // ===== Mock Tests CRUD =====
 
+    /** Read-only transaction: each test's sections are lazy, and open-in-view is off. */
+    @Transactional(readOnly = true)
     public Page<MockTestResponse> listMockTests(boolean archived, int page, int size, String sort) {
         size = Math.min(size, MAX_PAGE_SIZE);
         PageRequest pageRequest = PageRequest.of(page, size, parseSort(sort, "createdAt"));

@@ -44,6 +44,7 @@ class ReadingServiceTest {
     @Mock private org.springframework.data.redis.core.ValueOperations<String, String> valueOps;
     @Mock private AdaptiveService adaptiveService;
     @Mock private ReadingQueryService readingQueryService;
+    @Mock private com.smartprep.service.ai.ReadingFallbackSource fallbackSource;
 
     @Spy private ObjectMapper objectMapper = new ObjectMapper();
 
@@ -286,6 +287,9 @@ class ReadingServiceTest {
         
         when(quizRepository.findQuizzesForAdmin(any(Topic.class), any(Difficulty.class), eq(null), any(org.springframework.data.domain.Pageable.class)))
                 .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(templateQuiz)));
+        // The copy itself, over the mocked repository.
+        when(fallbackSource.copyTemplate(any(), any(), any(), any(), any())).thenAnswer(
+                org.mockito.AdditionalAnswers.delegatesTo(new com.smartprep.service.ai.ReadingFallbackSource(quizRepository)));
         when(quizRepository.save(any(ReadingQuiz.class))).thenAnswer(inv -> inv.getArgument(0));
         when(readingQueryService.mapToQuizResponse(any(ReadingQuiz.class))).thenAnswer(inv -> 
                 ReadingQuizResponse.builder()
