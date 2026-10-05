@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.AdditionalAnswers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
@@ -53,6 +54,9 @@ class VocabularyServiceTest {
 
     @Mock
     private MockTestSubmissionRepository mockTestSubmissionRepository;
+
+    @Mock
+    private MockTestVocabSource mockTestVocabSource;
 
     @Mock
     private Sm2Service sm2Service;
@@ -366,6 +370,8 @@ class VocabularyServiceTest {
                     .mockTest(mockTest)
                     .build();
             when(mockTestSubmissionRepository.findById(500L)).thenReturn(Optional.of(submission));
+            when(mockTestVocabSource.sectionTexts(anyLong(), anyLong()))
+                    .thenAnswer(AdditionalAnswers.delegatesTo(new MockTestVocabSource(mockTestSubmissionRepository)));
 
             VocabAiService.SuggestedVocab s1 = new VocabAiService.SuggestedVocab(
                     "pristine", "/ˈprɪstiːn/", "adjective", "nguyên sơ", "A pristine beach", "pristine environment", "C1");
@@ -391,6 +397,8 @@ class VocabularyServiceTest {
                     .user(otherUser)
                     .build();
             when(mockTestSubmissionRepository.findById(500L)).thenReturn(Optional.of(submission));
+            when(mockTestVocabSource.sectionTexts(anyLong(), anyLong()))
+                    .thenAnswer(AdditionalAnswers.delegatesTo(new MockTestVocabSource(mockTestSubmissionRepository)));
 
             assertThatThrownBy(() -> vocabularyService.suggestVocabulary(1L, "MOCK_TEST", 500L))
                     .isInstanceOf(ResourceNotFoundException.class)

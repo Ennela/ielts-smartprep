@@ -53,19 +53,18 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 /**
  * The property the AI entry points depend on, measured where it matters: inside a real web
- * request, with {@code spring.jpa.open-in-view} keeping the EntityManager open for its
- * whole duration.
+ * request.
  *
  * <p>{@link com.smartprep.repository.ConnectionHoldingIntegrationTest} shows that a
  * non-transactional read releases its connection at once -- but it runs as a
- * {@code @DataJpaTest}, with no request and no OpenEntityManagerInViewInterceptor, so its
- * session ends when the read does. In the application the session lives until the
- * response is written, and Spring's HibernateJpaVendorAdapter sets Hibernate's handling
- * mode to DELAYED_ACQUISITION_AND_HOLD -- release on session close. So the read-only
- * transaction behind {@code submitFullWriting}'s first {@code findById} checked out a
- * pooled connection that stayed out across both Gemini calls, and HikariCP's leak
- * detector said so on a real sitting. application.yml now sets
- * DELAYED_ACQUISITION_AND_RELEASE_AFTER_TRANSACTION; this class asserts the effect.
+ * {@code @DataJpaTest}, with no request around it. When {@code spring.jpa.open-in-view} was
+ * on, the session lived until the response was written, and Spring's
+ * HibernateJpaVendorAdapter sets Hibernate's handling mode to DELAYED_ACQUISITION_AND_HOLD
+ * -- release on session close. So the read-only transaction behind
+ * {@code submitFullWriting}'s first {@code findById} checked out a pooled connection that
+ * stayed out across both Gemini calls, and HikariCP's leak detector said so on a real
+ * sitting. application.yml now sets DELAYED_ACQUISITION_AND_RELEASE_AFTER_TRANSACTION and
+ * open-in-view is off (issue #17); this class asserts the effect through a request.
  *
  * <p>Not {@code @Transactional}: a transactional test would itself hold the connection
  * it is trying to prove nobody holds.

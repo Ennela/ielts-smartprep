@@ -6,6 +6,7 @@ import com.smartprep.model.enums.SkillType;
 import com.smartprep.repository.WritingSubmissionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
@@ -19,6 +20,8 @@ public class WritingSourceResolver implements VocabSourceResolver {
     }
 
     @Override
+    /** Read-only transaction: the submission's prompt is lazy, and open-in-view is off. */
+    @Transactional(readOnly = true)
     public String resolveSourceText(Long userId, Long sourceId) {
         WritingSubmission submission = writingSubmissionRepository.findBySubmissionIdAndUserUserId(sourceId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Writing submission not found with ID: " + sourceId));
