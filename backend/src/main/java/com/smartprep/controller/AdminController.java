@@ -3,6 +3,8 @@ package com.smartprep.controller;
 import com.smartprep.dto.request.AdminWritingPromptRequest;
 import com.smartprep.dto.request.AdminReadingQuizRequest;
 import com.smartprep.dto.request.AdminMockTestRequest;
+import com.smartprep.dto.request.AdminUserUpdateRequest;
+import com.smartprep.model.entity.User;
 import com.smartprep.dto.response.*;
 import com.smartprep.model.entity.WritingPrompt;
 import com.smartprep.service.AdminService;
@@ -14,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -40,6 +43,8 @@ public class AdminController {
     public ResponseEntity<ApiResponse<Page<AdminUserResponse>>> listUsers(
             @Parameter(description = "Search by username or email (optional)")
             @RequestParam(required = false) String search,
+            @Parameter(description = "Only this role: STUDENT or ADMIN (optional)")
+            @RequestParam(required = false) String role,
             @Parameter(description = "Zero-based page number", example = "0")
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size (max 100)", example = "20")
@@ -47,8 +52,18 @@ public class AdminController {
             @Parameter(description = "Sort field and direction, e.g. 'createdAt,desc'", example = "createdAt,desc")
             @RequestParam(defaultValue = "createdAt,desc") String sort) {
         size = Math.min(size, MAX_PAGE_SIZE);
-        Page<AdminUserResponse> result = adminService.listUsers(search, page, size, sort);
+        Page<AdminUserResponse> result = adminService.listUsers(search, role, page, size, sort);
         return ResponseEntity.ok(ApiResponse.ok(result));
+    }
+
+    @Operation(summary = "Change a user's role or suspend / reactivate the account")
+    @PatchMapping("/users/{userId}")
+    public ResponseEntity<ApiResponse<AdminUserResponse>> updateUser(
+            @AuthenticationPrincipal User admin,
+            @PathVariable Long userId,
+            @RequestBody AdminUserUpdateRequest request) {
+        AdminUserResponse updated = adminService.updateUser(admin != null ? admin.getUserId() : null, userId, request);
+        return ResponseEntity.ok(ApiResponse.ok(updated, "User updated"));
     }
 
     @GetMapping("/users/{userId}")

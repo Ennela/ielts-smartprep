@@ -10,11 +10,13 @@ import useElapsedSeconds, { formatElapsed } from '../hooks/useElapsedSeconds';
 import { useToast } from '../context/ToastContext';
 import { mayHaveGradedAnyway, latestSubmissionId, findNewSubmission } from '../utils/gradingRecovery';
 import { formatEssayType } from '../constants/examTypes';
+import { useConfirm } from '../context/ConfirmContext';
 
 const SESSION_KEY = 'writing_full_attemptId';
 
 export default function WritingFullExamPage() {
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [searchParams] = useSearchParams();
   const { warning: triggerWarningToast, error: showErrorToast } = useToast();
 
@@ -255,14 +257,19 @@ export default function WritingFullExamPage() {
   const minWords = activeTab === 1 ? 150 : 250;
 
   // Same check the mock test makes before its Writing section is handed in.
-  const confirmWritingSubmit = () => {
+  const confirmWritingSubmit = async () => {
     const count = (text) => (text.trim() ? text.trim().split(/\s+/).length : 0);
     const words1 = count(task1Text);
     const words2 = count(task2Text);
-    const message = words1 < 150 || words2 < 250
-      ? `Your essays are below the minimum length (Task 1: ${words1}/150 words, Task 2: ${words2}/250 words). Submit anyway?`
-      : 'Submit both tasks for grading? You cannot edit them afterwards.';
-    if (window.confirm(message)) handleSubmit();
+    const short = words1 < 150 || words2 < 250;
+    const ok = await confirm({
+      title: 'Submit both tasks for grading?',
+      message: short
+        ? `Your essays are below the minimum length (Task 1: ${words1}/150 words, Task 2: ${words2}/250 words). You cannot edit them afterwards.`
+        : 'You cannot edit them afterwards.',
+      confirmLabel: short ? 'Submit anyway' : 'Submit',
+    });
+    if (ok) handleSubmit();
   };
 
   // Timer styles

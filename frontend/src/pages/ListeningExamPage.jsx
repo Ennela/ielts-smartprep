@@ -12,7 +12,8 @@ import { usesGroupedLayout, questionOffset } from '../components/listening/group
 import useExamTimer from '../hooks/useExamTimer';
 import useExamWarnings from '../hooks/useExamWarnings';
 import { useToast } from '../context/ToastContext';
-import { confirmSubmitAnswers } from '../utils/confirmSubmit';
+import { submitAnswersPrompt } from '../utils/confirmSubmit';
+import { useConfirm } from '../context/ConfirmContext';
 
 const SESSION_KEY = 'listening_attemptId';
 // Answers are drafted per attempt so a reload or a dropped connection does not lose
@@ -34,6 +35,7 @@ const audioFailureMessage = (parts) => {
 export default function ListeningExamPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const { user } = useAuth();
   const mode = searchParams.get('mode') || 'practice';
   const { warning: triggerWarningToast, error: showErrorToast } = useToast();
@@ -559,7 +561,7 @@ export default function ListeningExamPage() {
         </button>
         <button
           className="btn btn-primary btn-lg"
-          onClick={() => confirmSubmitAnswers(totalQuestions - answeredCount) && handleSubmit()}
+          onClick={async () => { if (await confirm(submitAnswersPrompt(totalQuestions - answeredCount))) handleSubmit(); }}
           disabled={isPreview || submitting || answeredCount === 0}
           title={isPreview ? "Submitting is disabled in preview" : undefined}
           id="submit-listening-btn"

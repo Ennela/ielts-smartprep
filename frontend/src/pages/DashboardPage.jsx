@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback, lazy, Suspense } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import statsApi from '../api/statsApi';
 import analyticsApi from '../api/analyticsApi';
@@ -143,6 +143,8 @@ export default function DashboardPage() {
         return { label: 'Writing', border: 'border-t-tertiary-container', text: 'text-tertiary', icon: 'edit_note', progressBg: 'bg-tertiary-container' };
       case 'LISTENING':
         return { label: 'Listening', border: 'border-t-primary-container', text: 'text-primary', icon: 'headset', progressBg: 'bg-primary-container' };
+      case 'SPEAKING':
+        return { label: 'Speaking', border: 'border-t-primary', text: 'text-primary', icon: 'record_voice_over', progressBg: 'bg-primary' };
       default:
         return { label: skillName, border: 'border-t-primary', text: 'text-primary', icon: 'school', progressBg: 'bg-primary' };
     }
@@ -199,10 +201,10 @@ export default function DashboardPage() {
             const gap = parseFloat(skillItem.gap) || 0;
 
             return (
-              <div 
+              <Link
                 key={skillItem.skill}
-                onClick={() => navigate(`/${skillItem.skill.toLowerCase()}`)}
-                className={`bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/20 border-t-[4px] ${config.border} overflow-hidden flex flex-col hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer`}
+                to={`/${skillItem.skill.toLowerCase()}`}
+                className={`text-on-surface hover:text-on-surface bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/20 border-t-[4px] ${config.border} overflow-hidden flex flex-col hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer`}
               >
                 <div className="p-md border-b border-outline-variant/30 flex justify-between items-center bg-surface-bright">
                   <div className="flex items-center gap-sm">
@@ -232,7 +234,7 @@ export default function DashboardPage() {
                     {gap > 0 ? `Need ${gap.toFixed(1)} more` : 'Target met!'}
                   </p>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
@@ -380,6 +382,7 @@ export default function DashboardPage() {
             <option value="READING">Reading</option>
             <option value="WRITING">Writing</option>
             <option value="LISTENING">Listening</option>
+            <option value="SPEAKING">Speaking</option>
           </select>
         </div>
 
@@ -402,12 +405,14 @@ export default function DashboardPage() {
                   // Rows a full mock test wrote have their review on the mock test report;
                   // the per-answer review is empty for the ones backfilled by V48.
                   const isMockTest = Boolean(item.mockTestSubmissionId);
+                  // A Speaking answer has no per-question review; its results live on /speaking.
+                  const isSpeaking = item.skillType === 'SPEAKING';
                   return (
                     <tr 
                       key={item.historyId || index}
                       onClick={() => navigate(isMockTest
                         ? `/mock-tests/result/${item.mockTestSubmissionId}`
-                        : `/history/${item.historyId}/review`)}
+                        : isSpeaking ? '/speaking' : `/history/${item.historyId}/review`)}
                       className="hover:bg-surface-container-low/30 cursor-pointer transition-colors duration-150 group"
                     >
                       <td className="py-4 px-md">
@@ -427,7 +432,7 @@ export default function DashboardPage() {
                       </td>
                       <td className="py-4 px-md text-right">
                         <button className="text-primary hover:text-surface-tint font-bold text-sm flex items-center gap-xs ml-auto group-hover:underline">
-                          {isMockTest ? 'View Report' : 'Review Answers'}
+                          {isMockTest ? 'View Report' : isSpeaking ? 'View Results' : 'Review Answers'}
                           <span aria-hidden="true" className="material-symbols-outlined text-[16px]">arrow_forward</span>
                         </button>
                       </td>

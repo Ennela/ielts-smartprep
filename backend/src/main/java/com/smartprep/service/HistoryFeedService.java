@@ -35,7 +35,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class HistoryFeedService {
 
-    public static final Set<String> SKILLS = Set.of("READING", "LISTENING", "WRITING", "MOCK_TEST");
+    public static final Set<String> SKILLS = Set.of("READING", "LISTENING", "WRITING", "SPEAKING", "MOCK_TEST");
 
     // The text columns are collated explicitly: the older tables are utf8mb4_unicode_ci and
     // the newer ones utf8mb4_0900_ai_ci, and MySQL refuses to UNION the two ("Illegal mix of
@@ -80,6 +80,13 @@ public class HistoryFeedService {
             FROM writing_submissions w JOIN writing_prompts p ON p.prompt_id = w.prompt_id
             """ + historyMatch("WRITING", "w.submitted_at") + """
             WHERE w.user_id = :userId
+            UNION ALL
+            SELECT 'SPEAKING', sp.submission_id,
+                   CONCAT('Part ', p.part, ': ', p.topic) COLLATE utf8mb4_0900_ai_ci, sp.overall_band,
+                   NULL, sp.submitted_at, hs.history_id, sp.duration_seconds
+            FROM speaking_submissions sp JOIN speaking_prompts p ON p.prompt_id = sp.prompt_id
+            """ + historyMatch("SPEAKING", "sp.submitted_at") + """
+            WHERE sp.user_id = :userId
             UNION ALL
             SELECT 'MOCK_TEST', s.submission_id, m.title COLLATE utf8mb4_0900_ai_ci, s.overall_band,
                    s.status COLLATE utf8mb4_0900_ai_ci, s.submitted_at,

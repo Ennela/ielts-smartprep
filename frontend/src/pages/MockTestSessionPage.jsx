@@ -1,18 +1,21 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMockTest } from '../context/MockTestContext';
 import AudioPlayer from '../components/listening/AudioPlayer';
 import McqQuestion from '../components/listening/McqQuestion';
 import FillBlankQuestion from '../components/listening/FillBlankQuestion';
-import QuestionPanel from '../components/questions/QuestionPanel';
+import QuestionPanel, { FlagButton } from '../components/questions/QuestionPanel';
+import QuestionNavigator from '../components/mocktest/QuestionNavigator';
 import { usesGroupedLayout, questionOffset } from '../components/listening/groupedLayout';
 import PassageViewer from '../components/reading/PassageViewer';
 import MockTestQuestionPanel from '../components/mocktest/MockTestQuestionPanel';
 import { useToast } from '../context/ToastContext';
 import { isTask1Type } from '../constants/examTypes';
+import { useConfirm } from '../context/ConfirmContext';
 
 export default function MockTestSessionPage() {
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const { error: showErrorToast } = useToast();
   const { sessionId } = useParams();
   const {
@@ -38,6 +41,31 @@ export default function MockTestSessionPage() {
   const [activeReadingQuiz, setActiveReadingQuiz] = useState(0);
   const [activeWritingTask, setActiveWritingTask] = useState(0); // 0 for Task 1, 1 for Task 2
   const [submitting, setSubmitting] = useState(false);
+
+  // Questions flagged for review, kept per sitting so a reload does not clear them.
+  const flagKey = activeSession?.sessionId ? `mock_flags_${activeSession.sessionId}` : null;
+  const [flagged, setFlagged] = useState(() => new Set());
+  useEffect(() => {
+    if (!flagKey) return;
+    try {
+      setFlagged(new Set(JSON.parse(localStorage.getItem(flagKey) || '[]')));
+    } catch {
+      setFlagged(new Set());
+    }
+  }, [flagKey]);
+
+  // `value` forces the state, for a group of questions flagged together.
+  const toggleFlag = useCallback((questionId, value) => {
+    setFlagged((prev) => {
+      const next = new Set(prev);
+      const on = value ?? !next.has(questionId);
+      if (on) next.add(questionId); else next.delete(questionId);
+      if (flagKey) {
+        try { localStorage.setItem(flagKey, JSON.stringify([...next])); } catch { /* storage full or blocked */ }
+      }
+      return next;
+    });
+  }, [flagKey]);
 
   useEffect(() => {
     // Ensure active session is loaded on mount. Mount only: after submitExam() clears the
@@ -75,8 +103,13 @@ export default function MockTestSessionPage() {
     };
   }, []);
 
-  const handleExitLobby = () => {
-    if (window.confirm('Are you sure you want to exit to the lobby? The exam timer will NOT pause, and the test will continue running on the server.')) {
+  const handleExitLobby = async () => {
+    const ok = await confirm({
+      title: 'Leave for the lobby?',
+      message: 'The timer does not pause: the test keeps running on the server while you are away.',
+      confirmLabel: 'Go to lobby',
+    });
+    if (ok) {
       navigate('/mock-tests');
     }
   };
@@ -163,6 +196,74 @@ export default function MockTestSessionPage() {
     return activeSession.readingQuizzes.reduce((acc, q) => acc + (q.questions?.length || 0), 0);
   }, [activeSession]);
 
+  // The navigator strip: one group per part or passage, numbered as the questions are shown.
+  const navGroups = useMemo(() => {
+    const answeredOf = (id) => !!String(answers[id] ?? '').trim();
+    const sorted = (qs) => [...(qs || [])].sort((a, b) => a.orderIndex - b.orderIndex);
+    if (currentSection === 'LISTENING') {
+      return listeningParts.map((part, i) => {
+        const offset = questionOffset(listeningParts, i);
+        const grouped = usesGroupedLayout(part.questions);
+        return {
+          index: i,
+          label: `Part ${i + 1}`,
+          items: sorted(part.questions).map((q, idx) => ({
+            questionId: q.questionId,
+            number: offset + (grouped ? (q.orderIndex || idx + 1) : idx + 1),
+            answered: answeredOf(q.questionId),
+            flagged: flagged.has(q.questionId),
+          })),
+        };
+      });
+    }
+    if (currentSection === 'READING') {
+      return readingQuizzes.map((quiz, i) => ({
+        index: i,
+        label: `Passage ${i + 1}`,
+        items: sorted(quiz.questions).map((q, idx) => ({
+          questionId: q.questionId,
+          number: q.orderIndex || idx + 1,
+          answered: answeredOf(q.questionId),
+          flagged: flagged.has(q.questionId),
+        })),
+      }));
+    }
+    return [];
+  }, [currentSection, listeningParts, readingQuizzes, answers, flagged]);
+
+  // A jump is kept in state and carried out by the effect below, after the part or
+  // passage it targets has rendered; reaching for the element straight away found the
+  // previous part's DOM when the jump crossed parts.
+  const [jumpRequest, setJumpRequest] = useState(null);
+  const jumpToQuestion = (index, questionId) => {
+    if (currentSection === 'LISTENING') setActiveListeningPart(index);
+    else setActiveReadingQuiz(index);
+    setJumpRequest({ questionId, at: Date.now() });
+  };
+
+  useEffect(() => {
+    if (!jumpRequest) return undefined;
+    const { questionId } = jumpRequest;
+    const target = document.querySelector(`[data-question-id="${questionId}"]`)
+      || document.querySelector(`[data-question-ids~="${questionId}"]`);
+    if (!target) return undefined;
+    target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    const field = target.matches('input, select, textarea')
+      ? target
+      : target.querySelector('input, select, textarea, button:not(.question-flag)');
+    field?.focus({ preventScroll: true });
+    target.classList.add('question-jump-target');
+    const timer = setTimeout(() => target.classList.remove('question-jump-target'), 1200);
+    return () => clearTimeout(timer);
+  }, [jumpRequest]);
+
+  // "Part 1: 3, 7; Part 3: 22", for the review before a section is closed.
+  const listNumbers = (pick) => navGroups
+    .map((g) => ({ label: g.label, nums: g.items.filter(pick).map((it) => it.number) }))
+    .filter((g) => g.nums.length)
+    .map((g) => (navGroups.length > 1 ? `${g.label}: ${g.nums.join(', ')}` : g.nums.join(', ')))
+    .join('; ');
+
   // Handle section switch / submission
   const handleNextSection = async () => {
     const currentName = currentSection === 'LISTENING' ? 'Listening' : 'Reading';
@@ -171,23 +272,34 @@ export default function MockTestSessionPage() {
     const unanswered = currentSection === 'LISTENING'
       ? totalListeningQuestions - answeredListeningCount
       : totalReadingQuestions - answeredReadingCount;
-    const blanks = unanswered > 0 ? ` ${unanswered} question${unanswered === 1 ? ' is' : 's are'} still unanswered.` : '';
-    if (window.confirm(`Are you sure you want to complete the ${currentName} section and move to the ${nextName} section?${blanks} You will not be able to return.`)) {
+    const flaggedCount = navGroups.reduce((n, g) => n + g.items.filter((it) => it.flagged).length, 0);
+    const review = [
+      unanswered > 0 ? `Unanswered (${unanswered}): ${listNumbers((it) => !it.answered)}` : null,
+      flaggedCount > 0 ? `Flagged for review (${flaggedCount}): ${listNumbers((it) => it.flagged)}` : null,
+    ].filter(Boolean).join('\n');
+    const ok = await confirm({
+      title: `Finish ${currentName}?`,
+      message: `You will move on to ${nextName} and cannot come back to ${currentName}.${review ? `\n\n${review}` : ''}`,
+      confirmLabel: unanswered > 0 ? `Start ${nextName} anyway` : `Start ${nextName}`,
+      cancelLabel: 'Keep reviewing',
+    });
+    if (ok) {
       await advanceSection();
     }
   };
 
   const handleSubmitTest = async () => {
     if (wordCountTask1 < 150 || wordCountTask2 < 250) {
-      const confirmStr = `Your essays do not meet the minimum length (Task 1: ${wordCountTask1}/150 words, Task 2: ${wordCountTask2}/250 words).\nAre you sure you want to submit the exam anyway?`;
-      if (!window.confirm(confirmStr)) return;
+      const confirmStr = `Your essays are below the minimum length (Task 1: ${wordCountTask1}/150 words, Task 2: ${wordCountTask2}/250 words).`;
+      if (!(await confirm({ title: 'Submit the mock test?', message: confirmStr, confirmLabel: 'Submit anyway' }))) return;
     } else {
-      if (!window.confirm('Are you sure you want to submit your mock test for AI grading? This will close the test.')) return;
+      if (!(await confirm({ title: 'Submit the mock test?', message: 'Your answers go to AI grading and the test closes.', confirmLabel: 'Submit' }))) return;
     }
 
     try {
       setSubmitting(true);
       const submission = await submitExam();
+      if (flagKey) localStorage.removeItem(flagKey);
       if (submission) {
         navigate(`/mock-tests/result/${submission.submissionId}`);
       }
@@ -311,7 +423,7 @@ export default function MockTestSessionPage() {
             className={`part-tab ${index === activeListeningPart ? 'active' : ''}`}
             onClick={() => setActiveListeningPart(index)}
           >
-            Part {part.partNumber}
+            Part {index + 1}
           </button>
         ))}
         
@@ -351,7 +463,7 @@ export default function MockTestSessionPage() {
               }}>
                 <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.05rem', fontWeight: 600, marginBottom: '12px' }}>
                   <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>headphones</span>
-                  Part {currentListeningPart.partNumber}: {currentListeningPart.title}
+                  Part {activeListeningPart + 1}: {currentListeningPart.title}
                 </h3>
                 <AudioPlayer
                   src={`${audioBaseUrl}${currentListeningPart.audioUrl}`}
@@ -367,6 +479,8 @@ export default function MockTestSessionPage() {
                   answers={answers}
                   setAnswer={setAnswer}
                   numberOffset={questionOffset(listeningParts, activeListeningPart)}
+                  flaggedIds={flagged}
+                  onToggleFlag={toggleFlag}
                 />
               ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -378,12 +492,19 @@ export default function MockTestSessionPage() {
                       globalNum += (listeningParts[i].questions?.length || 0);
                     }
                     return (
-                      <div key={q.questionId} style={{
+                      <div key={q.questionId} data-question-id={q.questionId} style={{
                         background: 'var(--surface-container-lowest)',
                         border: '1px solid var(--outline-variant)',
                         borderRadius: 'var(--radius-xl)', padding: 20
                       }}>
-                        <div className="question-number" style={{ marginBottom: '8px' }}>Question {globalNum}</div>
+                        <div className="question-number-row" style={{ marginBottom: '8px' }}>
+                          <div className="question-number">Question {globalNum}</div>
+                          <FlagButton
+                            flagged={flagged.has(q.questionId)}
+                            onClick={() => toggleFlag(q.questionId)}
+                            label={`question ${globalNum}`}
+                          />
+                        </div>
                         {q.questionType === 'MCQ' ? (
                           <McqQuestion question={q} value={answers[q.questionId] || ''} onChange={v => setAnswer(q.questionId, v)} />
                         ) : (
@@ -406,7 +527,7 @@ export default function MockTestSessionPage() {
               <PassageViewer passage={currentReadingQuiz.passageText} moduleType={currentReadingQuiz.moduleType} />
             </div>
             <div className="exam-right">
-              <MockTestQuestionPanel questions={currentReadingQuiz.questions} />
+              <MockTestQuestionPanel questions={currentReadingQuiz.questions} flaggedIds={flagged} onToggleFlag={toggleFlag} />
             </div>
           </div>
         )}
@@ -493,6 +614,14 @@ export default function MockTestSessionPage() {
           </div>
         )}
       </div>
+
+      {(currentSection === 'LISTENING' || currentSection === 'READING') && (
+        <QuestionNavigator
+          groups={navGroups}
+          activeIndex={currentSection === 'LISTENING' ? activeListeningPart : activeReadingQuiz}
+          onJump={jumpToQuestion}
+        />
+      )}
 
       {/* ── Sticky Footer ── */}
       <footer className="exam-action-bar">

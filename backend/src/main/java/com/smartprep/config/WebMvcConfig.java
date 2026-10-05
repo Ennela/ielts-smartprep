@@ -42,6 +42,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/api/v1/listening/generate-mock",
                         "/api/v1/listening/*/generate-audio",
                         "/api/v1/writing/grade",
+                        // One Gemini call per recorded answer, with the audio attached.
+                        "/api/v1/speaking/grade",
                         "/api/v1/listening/ai-analyze/**",
                         "/api/v1/listening/vocabulary/**",
                         "/api/v1/vocab/ai-suggest",

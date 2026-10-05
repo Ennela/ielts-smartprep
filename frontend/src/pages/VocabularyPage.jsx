@@ -5,10 +5,12 @@ import useDebouncedValue from '../hooks/useDebouncedValue';
 import vocabApi from '../api/vocabApi';
 import VocabInsightPanel from '../components/vocab/VocabInsightPanel';
 import insightStyles from '../styles/VocabInsight.module.css';
+import { useConfirm } from '../context/ConfirmContext';
 
 const WORDS_PAGE_SIZE = 12;
 
 export default function VocabularyPage() {
+  const confirm = useConfirm();
   const [dueList, setDueList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -159,7 +161,13 @@ export default function VocabularyPage() {
   };
 
   const handleDeleteWord = async (vocabId) => {
-    if (!window.confirm('Are you sure you want to remove this word from your builder?')) return;
+    const ok = await confirm({
+      title: 'Remove this word?',
+      message: 'It leaves your word bank and its review schedule.',
+      confirmLabel: 'Remove',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       await vocabApi.deleteVocab(vocabId);
       loadVocabulary();

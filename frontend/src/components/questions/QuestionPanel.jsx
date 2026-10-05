@@ -13,7 +13,10 @@ import { memo, useCallback, useMemo, useState } from 'react';
  * its questions 1-40 across four parts while orderIndex restarts in each part, so
  * numberOffset is added to every number shown.
  */
-export default function QuestionPanel({ questions, answers, setAnswer, disabled = false, showCorrectAnswers = false, numberOffset = 0 }) {
+export default function QuestionPanel({
+  questions, answers, setAnswer, disabled = false, showCorrectAnswers = false, numberOffset = 0,
+  flaggedIds = null, onToggleFlag = null,
+}) {
   // Grouped before the empty check: an early return above a hook is a conditional
   // hook call, which React only tolerates while the component never flips between
   // the two paths.
@@ -54,6 +57,8 @@ export default function QuestionPanel({ questions, answers, setAnswer, disabled 
           disabled={disabled}
           showCorrectAnswers={showCorrectAnswers}
           numberOffset={numberOffset}
+          flaggedIds={flaggedIds}
+          onToggleFlag={onToggleFlag}
         />
       ))}
     </div>
@@ -61,9 +66,28 @@ export default function QuestionPanel({ questions, answers, setAnswer, disabled 
 }
 
 // ============================================================
+// FlagButton — marks a question for review in the mock test. Only shown when the
+// caller passes onToggleFlag, so practice pages look as they did.
+// ============================================================
+export function FlagButton({ flagged, onClick, label }) {
+  return (
+    <button
+      type="button"
+      className={`question-flag ${flagged ? 'is-flagged' : ''}`}
+      aria-pressed={flagged}
+      aria-label={`Flag ${label} for review`}
+      onClick={onClick}
+    >
+      <span aria-hidden="true" className="material-symbols-outlined">flag</span>
+      {flagged ? 'Flagged' : 'Flag'}
+    </button>
+  );
+}
+
+// ============================================================
 // QuestionGroup — renders a group label + context + questions
 // ============================================================
-function QuestionGroup({ group, answers, setAnswer, disabled, showCorrectAnswers, numberOffset }) {
+function QuestionGroup({ group, answers, setAnswer, disabled, showCorrectAnswers, numberOffset, flaggedIds, onToggleFlag }) {
   // Parse group-level options once
   const groupOptions = useMemo(() => {
     if (!group.optionsJson) return null;
@@ -97,6 +121,13 @@ function QuestionGroup({ group, answers, setAnswer, disabled, showCorrectAnswers
       {/* Summary/Note context block with inline blanks */}
       {group.groupContext && group.groupType === 'SUMMARY_COMPLETION' && (
         <>
+          {onToggleFlag && (
+            <FlagButton
+              flagged={group.questions.every(q => flaggedIds?.has(q.questionId))}
+              onClick={() => group.questions.forEach(q => onToggleFlag(q.questionId, !group.questions.every(g => flaggedIds?.has(g.questionId))))}
+              label="these questions"
+            />
+          )}
           <SummaryBlock
             context={group.groupContext}
             questions={group.questions}
@@ -138,6 +169,8 @@ function QuestionGroup({ group, answers, setAnswer, disabled, showCorrectAnswers
           disabled={disabled}
           numberOffset={numberOffset}
           showCorrectAnswers={showCorrectAnswers}
+          flaggedIds={flaggedIds}
+          onToggleFlag={onToggleFlag}
         />
       )}
 
@@ -158,6 +191,8 @@ function QuestionGroup({ group, answers, setAnswer, disabled, showCorrectAnswers
             disabled={disabled}
             groupOptions={groupOptions}
             showCorrectAnswers={showCorrectAnswers}
+            flagged={!!flaggedIds?.has(q.questionId)}
+            onToggleFlag={onToggleFlag}
           />
         );
       })}
@@ -177,7 +212,7 @@ function isMultiSelectGroup(group) {
   return !!first && first.questionType === 'MCQ' && (first.selectCount || 1) > 1;
 }
 
-function MultiSelectTask({ questions, answers, setAnswer, disabled, numberOffset, showCorrectAnswers }) {
+function MultiSelectTask({ questions, answers, setAnswer, disabled, numberOffset, showCorrectAnswers, flaggedIds, onToggleFlag }) {
   const first = questions[0];
   const limit = first.selectCount;
   const options = (first.options && first.options.length > 0)
@@ -202,8 +237,17 @@ function MultiSelectTask({ questions, answers, setAnswer, disabled, numberOffset
   const lastNumber = firstNumber + questions.length - 1;
 
   return (
-    <div className="question-item">
-      <div className="question-number">Questions {firstNumber}–{lastNumber}</div>
+    <div className="question-item" data-question-ids={questions.map(q => q.questionId).join(' ')}>
+      <div className="question-number-row">
+        <div className="question-number">Questions {firstNumber}–{lastNumber}</div>
+        {onToggleFlag && (
+          <FlagButton
+            flagged={questions.every(q => flaggedIds?.has(q.questionId))}
+            onClick={() => questions.forEach(q => onToggleFlag(q.questionId, !questions.every(g => flaggedIds?.has(g.questionId))))}
+            label={`questions ${firstNumber}–${lastNumber}`}
+          />
+        )}
+      </div>
       <p className="question-text">{first.questionText}</p>
       <p className="text-muted" style={{ fontSize: '0.85rem', margin: '4px 0 8px' }}>
         Choose {limit} letters ({chosen.length}/{limit} chosen)
@@ -256,13 +300,18 @@ const ANSWER_KEY_STYLE = {
 };
 
 const QuestionItem = memo(function QuestionItem({
-  question, number, value, setAnswer, disabled, groupOptions, showCorrectAnswers,
+  question, number, value, setAnswer, disabled, groupOptions, showCorrectAnswers, flagged, onToggleFlag,
 }) {
   const onChange = useCallback((val) => setAnswer(question.questionId, val), [setAnswer, question.questionId]);
 
   return (
-    <div className="question-item">
-      <div className="question-number">Question {number}</div>
+    <div className="question-item" data-question-id={question.questionId}>
+      <div className="question-number-row">
+        <div className="question-number">Question {number}</div>
+        {onToggleFlag && (
+          <FlagButton flagged={flagged} onClick={() => onToggleFlag(question.questionId)} label={`question ${number}`} />
+        )}
+      </div>
       <p className="question-text">{question.questionText}</p>
 
       <QuestionInput
@@ -590,6 +639,8 @@ function SummaryBlock({ context, questions, answers, setAnswer, disabled, groupO
               return (
                 <select
                   key={idx}
+                  data-question-id={question.questionId}
+                  aria-label={`Question ${blankNum}`}
                   className="summary-blank summary-blank-select"
                   value={answers[question.questionId] || ''}
                   onChange={(e) => setAnswer(question.questionId, e.target.value)}
@@ -607,6 +658,8 @@ function SummaryBlock({ context, questions, answers, setAnswer, disabled, groupO
             return (
               <input
                 key={idx}
+                data-question-id={question.questionId}
+                aria-label={`Question ${blankNum}`}
                 type="text"
                 className="summary-blank"
                 placeholder={`(${blankNum})`}

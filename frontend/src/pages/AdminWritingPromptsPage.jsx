@@ -6,7 +6,7 @@ import ImageUploadField from '../components/admin/ImageUploadField';
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
 import ArchivedToggle from '../components/admin/ArchivedToggle';
-import useEscapeKey from '../hooks/useEscapeKey';
+import Modal from '../components/common/Modal';
 
 import {
   TASK1_TYPES, TASK2_TYPES, ALL_ESSAY_TYPES as ALL_TYPES,
@@ -133,9 +133,6 @@ export default function AdminWritingPromptsPage() {
 
   const isTask1 = isTask1Type;
 
-  useEscapeKey(modalOpen, closeModal);
-  useEscapeKey(!!deleteId, () => setDeleteId(null));
-
   return (
     <div className="admin-dashboard-content">
       {/* Header */}
@@ -260,87 +257,83 @@ export default function AdminWritingPromptsPage() {
 
       {/* Create/Edit Modal */}
       {modalOpen && (
-        <div className="admin-modal-overlay" onClick={closeModal}>
-          <div className="admin-modal admin-modal-wide" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
-            <button className="admin-modal-close" onClick={closeModal} aria-label="Close" id="close-prompt-modal">
-              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
+        <Modal ariaLabel="Writing prompt form" onClose={closeModal} className="admin-modal admin-modal-wide">
+          <button className="admin-modal-close" onClick={closeModal} aria-label="Close" id="close-prompt-modal">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
 
-            <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.2rem', fontWeight: 700, marginBottom: 24 }}>
-              {editing ? 'Edit Writing Prompt' : 'Create New Writing Prompt'}
-            </h2>
+          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.2rem', fontWeight: 700, marginBottom: 24 }}>
+            {editing ? 'Edit Writing Prompt' : 'Create New Writing Prompt'}
+          </h2>
 
-            {error && <div className="error-msg">{error}</div>}
+          {error && <div className="error-msg">{error}</div>}
 
+          <div className="admin-form-group">
+            <label className="admin-form-label">Prompt Type</label>
+            <select
+              className="matching-select"
+              value={form.essayType}
+              onChange={e => setForm(f => ({ ...f, essayType: e.target.value }))}
+              style={{ maxWidth: '100%' }}
+            >
+              <optgroup label="Task 2">
+                {TASK2_TYPES.map(t => <option key={t} value={t}>{TYPE_LABELS[t]}</option>)}
+              </optgroup>
+              <optgroup label="Task 1">
+                {TASK1_TYPES.map(t => <option key={t} value={t}>{TYPE_LABELS[t]}</option>)}
+              </optgroup>
+            </select>
+          </div>
+
+          <div className="admin-form-group">
+            <label className="admin-form-label">Prompt Content</label>
+            <textarea
+              className="editor-textarea"
+              value={form.promptText}
+              onChange={e => setForm(f => ({ ...f, promptText: e.target.value }))}
+              placeholder="Enter prompt content..."
+              style={{ minHeight: 160 }}
+            />
+          </div>
+
+          {isTask1(form.essayType) && (
             <div className="admin-form-group">
-              <label className="admin-form-label">Prompt Type</label>
-              <select
-                className="matching-select"
-                value={form.essayType}
-                onChange={e => setForm(f => ({ ...f, essayType: e.target.value }))}
-                style={{ maxWidth: '100%' }}
-              >
-                <optgroup label="Task 2">
-                  {TASK2_TYPES.map(t => <option key={t} value={t}>{TYPE_LABELS[t]}</option>)}
-                </optgroup>
-                <optgroup label="Task 1">
-                  {TASK1_TYPES.map(t => <option key={t} value={t}>{TYPE_LABELS[t]}</option>)}
-                </optgroup>
-              </select>
-            </div>
-
-            <div className="admin-form-group">
-              <label className="admin-form-label">Prompt Content</label>
-              <textarea
-                className="editor-textarea"
-                value={form.promptText}
-                onChange={e => setForm(f => ({ ...f, promptText: e.target.value }))}
-                placeholder="Enter prompt content..."
-                style={{ minHeight: 160 }}
+              <ImageUploadField
+                id="writing-prompt-image"
+                label="Chart / diagram (Task 1)"
+                value={form.imageUrl}
+                onChange={url => setForm(f => ({ ...f, imageUrl: url }))}
               />
             </div>
+          )}
 
-            {isTask1(form.essayType) && (
-              <div className="admin-form-group">
-                <ImageUploadField
-                  id="writing-prompt-image"
-                  label="Chart / diagram (Task 1)"
-                  value={form.imageUrl}
-                  onChange={url => setForm(f => ({ ...f, imageUrl: url }))}
-                />
-              </div>
-            )}
-
-            <div className="admin-form-actions">
-              <button className="btn btn-outline" onClick={closeModal}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-                {saving && <span className="spinner" />}
-                {editing ? 'Update' : 'Create Prompt'}
-              </button>
-            </div>
+          <div className="admin-form-actions">
+            <button className="btn btn-outline" onClick={closeModal}>Cancel</button>
+            <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+              {saving && <span className="spinner" />}
+              {editing ? 'Update' : 'Create Prompt'}
+            </button>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* Delete Confirm Modal */}
       {deleteId && (
-        <div className="admin-modal-overlay" onClick={() => setDeleteId(null)}>
-          <div className="admin-modal" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
-            <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 700, marginBottom: 12 }}>
-              Confirm Archive
-            </h2>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', marginBottom: 24, lineHeight: 1.6 }}>
-              Archive this writing prompt? It will disappear from active lists, while linked student submissions remain intact and the prompt can be restored.
-            </p>
-            <div className="admin-form-actions">
-              <button className="btn btn-outline" onClick={() => setDeleteId(null)}>Cancel</button>
-              <button className="btn admin-btn-danger-fill" onClick={handleDelete} disabled={deleting}>
-                {deleting && <span className="spinner" />}
-                Archive Prompt
-              </button>
-            </div>
+        <Modal ariaLabel="Delete writing prompt" onClose={() => setDeleteId(null)} className="admin-modal" style={{ maxWidth: 420 }}>
+          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.1rem', fontWeight: 700, marginBottom: 12 }}>
+            Confirm Archive
+          </h2>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem', marginBottom: 24, lineHeight: 1.6 }}>
+            Archive this writing prompt? It will disappear from active lists, while linked student submissions remain intact and the prompt can be restored.
+          </p>
+          <div className="admin-form-actions">
+            <button className="btn btn-outline" onClick={() => setDeleteId(null)}>Cancel</button>
+            <button className="btn admin-btn-danger-fill" onClick={handleDelete} disabled={deleting}>
+              {deleting && <span className="spinner" />}
+              Archive Prompt
+            </button>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

@@ -1,0 +1,91 @@
+/* Speaking practice: prompt list, recorder and result. Colours come from tokens.css. */
+
+.page { max-width: 960px; margin: 0 auto; width: 100%; }
+
+.header { margin-bottom: 24px; }
+.title { font-family: var(--font-heading); font-size: 1.8rem; font-weight: 700; color: var(--on-surface); }
+.subtitle { color: var(--on-surface-variant); margin-top: 4px; }
+
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--outline-variant); margin-bottom: 20px; overflow-x: auto; }
+.tab {
+  padding: 10px 18px; background: none; border: none; border-bottom: 2px solid transparent;
+  color: var(--on-surface-variant); font-weight: 600; font-size: 0.92rem; cursor: pointer; white-space: nowrap;
+}
+.tab:hover { color: var(--on-surface); }
+.tabActive { color: var(--primary); border-bottom-color: var(--primary); }
+
+.partNote { font-size: 0.88rem; color: var(--on-surface-variant); margin-bottom: 16px; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); gap: 16px; }
+.promptCard {
+  display: flex; flex-direction: column; gap: 10px; padding: 20px;
+  background: var(--surface-container-lowest); border: 1px solid var(--outline-variant); border-radius: var(--radius-lg);
+}
+.promptTopic { font-family: var(--font-heading); font-weight: 700; font-size: 1.05rem; color: var(--on-surface); }
+.promptPreview { color: var(--on-surface-variant); font-size: 0.9rem; line-height: 1.5; flex: 1; }
+.promptMeta { display: flex; gap: 12px; font-size: 0.8rem; color: var(--on-surface-variant); }
+
+.section { margin-top: 40px; }
+.sectionTitle { font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700; margin-bottom: 12px; color: var(--on-surface); }
+
+.historyRow {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px;
+  border-bottom: 1px solid var(--outline-variant); color: var(--on-surface);
+}
+.historyRow:last-child { border-bottom: none; }
+.historyList { background: var(--surface-container-lowest); border: 1px solid var(--outline-variant); border-radius: var(--radius-lg); }
+.historyMeta { font-size: 0.82rem; color: var(--on-surface-variant); }
+.band { font-family: var(--font-heading); font-weight: 700; color: var(--primary); white-space: nowrap; }
+
+/* Recorder */
+.stage {
+  background: var(--surface-container-lowest); border: 1px solid var(--outline-variant); border-radius: var(--radius-xl);
+  padding: 28px; display: flex; flex-direction: column; gap: 20px;
+}
+.partBadge {
+  align-self: flex-start; padding: 4px 12px; border-radius: var(--radius-full);
+  background: var(--color-primary-08); color: var(--primary); font-size: 0.78rem; font-weight: 700;
+}
+.questionList { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 8px; color: var(--on-surface); line-height: 1.55; }
+.cueCard { border-left: 4px solid var(--primary); background: var(--surface-container-low); padding: 16px 20px; border-radius: var(--radius-md); }
+.cueTask { font-weight: 700; color: var(--on-surface); margin-bottom: 8px; }
+.cueLabel { font-size: 0.85rem; color: var(--on-surface-variant); margin-bottom: 6px; }
+
+.controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.clock { font-family: var(--font-mono); font-size: 2rem; font-weight: 700; color: var(--on-surface); min-width: 6ch; }
+.clockLabel { font-size: 0.8rem; color: var(--on-surface-variant); }
+.progress { flex: 1; min-width: 160px; height: 6px; border-radius: var(--radius-full); background: var(--surface-container-high); overflow: hidden; }
+.progressFill { height: 100%; background: var(--primary); transition: width 0.25s linear; }
+.recDot { width: 12px; height: 12px; border-radius: 50%; background: var(--error); animation: recPulse 1.2s ease-in-out infinite; }
+@keyframes recPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) { .recDot { animation: none; } }
+.statusLine { display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--on-surface); }
+.player { width: 100%; }
+.hint { font-size: 0.85rem; color: var(--on-surface-variant); }
+
+/* Result */
+.scoreRow { display: grid; grid-template-columns: 160px 1fr; gap: 24px; align-items: center; }
+.overall {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  width: 140px; height: 140px; border-radius: 50%; border: 8px solid var(--color-primary-15);
+}
+.overallValue { font-family: var(--font-heading); font-size: 2.6rem; font-weight: 800; color: var(--primary); line-height: 1; }
+.overallLabel { font-size: 0.75rem; color: var(--on-surface-variant); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.criteria { display: flex; flex-direction: column; gap: 14px; }
+.criterionHead { display: flex; justify-content: space-between; font-weight: 600; font-size: 0.92rem; color: var(--on-surface); }
+.criterionBar { height: 6px; border-radius: var(--radius-full); background: var(--surface-container-high); overflow: hidden; margin: 6px 0; }
+.criterionFill { height: 100%; background: var(--primary); }
+.criterionNote { font-size: 0.85rem; color: var(--on-surface-variant); line-height: 1.5; }
+.columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.listCard { background: var(--surface-container-low); border-radius: var(--radius-lg); padding: 16px 20px; }
+.listCard h3 { font-family: var(--font-heading); font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; color: var(--on-surface); }
+.listCard ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; color: var(--on-surface); font-size: 0.9rem; line-height: 1.5; }
+.transcript { white-space: pre-wrap; line-height: 1.7; color: var(--on-surface); background: var(--surface-container-low); padding: 16px 20px; border-radius: var(--radius-lg); }
+.actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+@media (max-width: 640px) {
+  .stage { padding: 20px 16px; }
+  .scoreRow { grid-template-columns: 1fr; justify-items: center; }
+  .columns { grid-template-columns: 1fr; }
+  .clock { font-size: 1.6rem; }
+}

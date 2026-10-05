@@ -6,6 +6,7 @@ const getThemeColors = () => {
     READING: style.getPropertyValue('--secondary').trim() || '#005faf',
     WRITING: style.getPropertyValue('--tertiary').trim() || '#853100',
     LISTENING: style.getPropertyValue('--primary').trim() || '#003178',
+    TARGET: style.getPropertyValue('--error').trim() || '#ba1a1a',
   };
 };
 
@@ -63,13 +64,14 @@ export default function ScoreTrendChart({ dataPoints = [], targetScore, skill = 
         {targetScore && (
           <ReferenceLine
             y={parseFloat(targetScore)}
-            stroke="#ba1a1a"
+            stroke={themeColors.TARGET}
             strokeDasharray="8 4"
             strokeWidth={2}
             label={{
               value: `Target ${parseFloat(targetScore).toFixed(1)}`,
-              position: 'right',
-              fill: '#ba1a1a',
+              // 'right' drew the label past the plot and the card clipped it to "Targ".
+              position: 'insideTopRight',
+              fill: themeColors.TARGET,
               fontSize: 12,
               fontWeight: 600
             }}

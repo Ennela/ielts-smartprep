@@ -56,7 +56,9 @@
   --on-error-container: #93000a;
 
   /* Outlines */
-  --outline: #737783;
+  /* Muted text as well as a border colour: #737783 was 4.47:1 on white and under 4:1 on
+     the grey containers, so it is a step darker. */
+  --outline: #5f6370;
   --outline-variant: #c3c6d4;
 
   /* Spacing */
@@ -212,7 +214,7 @@
   --on-error-container: #ffdad6;
 
   /* Outlines */
-  --outline: #8a8e98;
+  --outline: #a0a4ae; /* muted text must clear 4.5:1 on the raised dark surfaces too */
   --outline-variant: #3d4250;
 
   /* Shadows (darker, more pronounced for dark UI) */

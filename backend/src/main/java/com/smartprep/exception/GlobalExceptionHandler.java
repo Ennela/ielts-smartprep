@@ -48,6 +48,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ex.getMessage(), "ACCOUNT_LOCKED"));
     }
 
+    @ExceptionHandler(AccountSuspendedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAccountSuspended(AccountSuspendedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error(ex.getMessage(), "ACCOUNT_SUSPENDED"));
+    }
+
     @ExceptionHandler(InvalidTokenException.class)
     public ResponseEntity<ApiResponse<Void>> handleInvalidToken(InvalidTokenException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)

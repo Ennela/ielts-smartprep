@@ -76,6 +76,17 @@ public class StorageService {
     }
 
     /**
+     * Upload a learner's Speaking recording. Unlike {@link #uploadAudio} it keeps the
+     * browser's content type (webm/ogg/mp4) and returns no public URL: recordings are
+     * served only to their owner, through the Speaking controller.
+     */
+    public void uploadRecording(String key, byte[] data, String contentType) {
+        s3Client.putObject(PutObjectRequest.builder().bucket(bucket).key(key).contentType(contentType).build(),
+                RequestBody.fromBytes(data));
+        log.info("Uploaded speaking recording to MinIO: bucket={}, key={}, size={}KB", bucket, key, data.length / 1024);
+    }
+
+    /**
      * Download audio bytes from MinIO.
      *
      * @param key the object key

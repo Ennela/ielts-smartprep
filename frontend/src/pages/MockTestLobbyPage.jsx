@@ -6,6 +6,7 @@ import mockTestApi from '../api/mockTestApi';
 import { useToast } from '../context/ToastContext';
 import Pagination from '../components/Pagination';
 import styles from '../styles/MockTest.module.css';
+import { useConfirm } from '../context/ConfirmContext';
 
 const HISTORY_PAGE_SIZE = 10;
 
@@ -14,6 +15,7 @@ const formatBand = (band) => (band === null || band === undefined ? '—' : Numb
 
 export default function MockTestLobbyPage() {
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const { activeSession, startOrResumeTest, loadActiveSession, abandonSession } = useMockTest();
   const { error: showErrorToast } = useToast();
   const [historyPage, setHistoryPage] = useState(0);
@@ -25,6 +27,35 @@ export default function MockTestLobbyPage() {
   const [audioTesting, setAudioTesting] = useState(false);
   const [isTermsChecked, setIsTermsChecked] = useState(false);
   const audioRef = useRef(null);
+  // Step 2 used to print a hard-coded "Excellent (Latency < 50ms)" whatever the network did.
+  const [serverCheck, setServerCheck] = useState({ ok: null, text: 'Checking…' });
+  const audioSupported = typeof document !== 'undefined'
+    && !!document.createElement('audio').canPlayType('audio/mpeg');
+  const checks = {
+    audio: audioSupported
+      ? { ok: true, text: 'Supported by this browser' }
+      : { ok: false, text: 'This browser cannot play the test audio' },
+    server: serverCheck,
+  };
+
+  useEffect(() => {
+    if (setupStep !== 2) return undefined;
+    let cancelled = false;
+    setServerCheck({ ok: null, text: 'Checking…' });
+    const started = performance.now();
+    mockTestApi.getAllMockTests()
+      .then(() => {
+        if (cancelled) return;
+        const ms = Math.round(performance.now() - started);
+        setServerCheck(ms < 1500
+          ? { ok: true, text: `Online · ${ms} ms` }
+          : { ok: false, text: `Slow · ${ms} ms, audio may stall` });
+      })
+      .catch(() => {
+        if (!cancelled) setServerCheck({ ok: false, text: 'Could not reach the server' });
+      });
+    return () => { cancelled = true; };
+  }, [setupStep]);
 
   const testsQuery = useQuery({
     queryKey: ['mock-tests', 'catalogue'],
@@ -92,7 +123,13 @@ export default function MockTestLobbyPage() {
   };
 
   const handleCancelActive = async () => {
-    if (!window.confirm('Are you sure you want to abandon this mock test? Your progress will be lost.')) return;
+    const ok = await confirm({
+      title: 'Abandon this mock test?',
+      message: 'Your answers will be lost and the session cannot be resumed.',
+      confirmLabel: 'Abandon test',
+      tone: 'danger',
+    });
+    if (!ok) return;
     try {
       await abandonSession();
     } catch (err) {
@@ -383,20 +420,20 @@ export default function MockTestLobbyPage() {
                   <h3 className={styles['info-title']}>System & Browser Compatibility</h3>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', borderBottom: '1px solid var(--outline-variant)', pb: '8px', paddingBottom: '8px' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--on-surface-variant)' }}>
-                      <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--color-success)', fontSize: '18px' }}>check_circle</span>
-                      Browser check
-                    </span>
-                    <span style={{ fontWeight: 600 }}>Google Chrome / Edge Compatible</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', borderBottom: '1px solid var(--outline-variant)', pb: '8px', paddingBottom: '8px' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--on-surface-variant)' }}>
-                      <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--color-success)', fontSize: '18px' }}>check_circle</span>
-                      Network check
-                    </span>
-                    <span style={{ fontWeight: 600 }}>Excellent (Latency &lt; 50ms)</span>
-                  </div>
+                  {[
+                    { label: 'Audio playback', ...checks.audio },
+                    { label: 'Connection to the server', ...checks.server },
+                  ].map((row) => (
+                    <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', fontSize: '0.85rem', borderBottom: '1px solid var(--outline-variant)', paddingBottom: '8px' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--on-surface-variant)' }}>
+                        <span aria-hidden="true" className="material-symbols-outlined" style={{ color: row.ok === null ? 'var(--outline)' : row.ok ? 'var(--color-success)' : 'var(--error)', fontSize: '18px' }}>
+                          {row.ok === null ? 'pending' : row.ok ? 'check_circle' : 'error'}
+                        </span>
+                        {row.label}
+                      </span>
+                      <span style={{ fontWeight: 600, textAlign: 'right' }}>{row.text}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -484,32 +521,6 @@ export default function MockTestLobbyPage() {
         <p className={styles.subtitle}>Prepare for the real exam environment. Complete all three sections continuously to get an accurate band score estimate.</p>
       </header>
 
-      {/* Stepper */}
-      <div className={styles['stepper-card']}>
-        <div className={styles['stepper-steps']}>
-          {/* Step 1 (Active/Current) */}
-          <div className={`${styles['stepper-step']} ${styles.active}`}>
-            <div className={styles['step-num']}>1</div>
-            <span className={styles['step-label']}>Setup</span>
-          </div>
-          {/* Step 2 (Upcoming) */}
-          <div className={styles['stepper-step']}>
-            <div className={styles['step-num']}>2</div>
-            <span className={styles['step-label']}>System Check</span>
-          </div>
-          {/* Step 3 (Upcoming) */}
-          <div className={styles['stepper-step']}>
-            <div className={styles['step-num']}>3</div>
-            <span className={styles['step-label']}>Test Execution</span>
-          </div>
-          {/* Step 4 (Upcoming) */}
-          <div className={styles['stepper-step']}>
-            <div className={styles['step-num']}>4</div>
-            <span className={styles['step-label']}>Results</span>
-          </div>
-        </div>
-      </div>
-
       {/* Active Session Notification */}
       {activeSession && (
         <div 
@@ -549,20 +560,6 @@ export default function MockTestLobbyPage() {
 
       {/* Journey Overview Card (Bento Grid Style) */}
       <div className={styles['skills-grid']}>
-        {/* Reading Section */}
-        <div className={styles['skill-card']}>
-          <div className={styles['skill-indicator']} style={{ backgroundColor: 'var(--secondary)' }}></div>
-          <div className={styles['skill-icon-wrapper']} style={{ backgroundColor: 'rgba(0, 95, 175, 0.1)', color: 'var(--secondary)' }}>
-            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '32px' }}>menu_book</span>
-          </div>
-          <h3 className={styles['skill-title']}>Reading</h3>
-          <p className={styles['skill-desc']}>3 Passages • 40 Questions</p>
-          <div className={styles['skill-footer']}>
-            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px' }}>schedule</span>
-            <span>60 Minutes</span>
-          </div>
-        </div>
-
         {/* Listening Section */}
         <div className={styles['skill-card']}>
           <div className={styles['skill-indicator']} style={{ backgroundColor: 'var(--primary)' }}></div>
@@ -574,6 +571,20 @@ export default function MockTestLobbyPage() {
           <div className={styles['skill-footer']}>
             <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px' }}>schedule</span>
             <span>30 Minutes</span>
+          </div>
+        </div>
+
+        {/* Reading Section */}
+        <div className={styles['skill-card']}>
+          <div className={styles['skill-indicator']} style={{ backgroundColor: 'var(--secondary)' }}></div>
+          <div className={styles['skill-icon-wrapper']} style={{ backgroundColor: 'rgba(0, 95, 175, 0.1)', color: 'var(--secondary)' }}>
+            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '32px' }}>menu_book</span>
+          </div>
+          <h3 className={styles['skill-title']}>Reading</h3>
+          <p className={styles['skill-desc']}>3 Passages • 40 Questions</p>
+          <div className={styles['skill-footer']}>
+            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px' }}>schedule</span>
+            <span>60 Minutes</span>
           </div>
         </div>
 

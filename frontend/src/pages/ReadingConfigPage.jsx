@@ -11,9 +11,9 @@ const TOPICS = [
 ];
 
 const DIFFICULTIES = [
-  { value: 'PASSAGE_1', label: 'Passage 1 (Easy)', time: '10 mins', desc: 'Simple vocabulary, basic reading comprehension' },
-  { value: 'PASSAGE_2', label: 'Passage 2 (Medium)', time: '15 mins', desc: 'Academic vocabulary, inference skills' },
-  { value: 'PASSAGE_3', label: 'Passage 3 (Hard)', time: '20 mins', desc: 'Advanced vocabulary, critical analysis' },
+  { value: 'PASSAGE_1', label: 'Passage 1 (Easy)', time: '15 mins', desc: 'Simple vocabulary, basic reading comprehension' },
+  { value: 'PASSAGE_2', label: 'Passage 2 (Medium)', time: '20 mins', desc: 'Academic vocabulary, inference skills' },
+  { value: 'PASSAGE_3', label: 'Passage 3 (Hard)', time: '25 mins', desc: 'Advanced vocabulary, critical analysis' },
 ];
 
 const topicLabels = {

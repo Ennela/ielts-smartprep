@@ -6,9 +6,9 @@ import { TASK1_TYPES, formatEssayType } from '../constants/examTypes';
 import Pagination from '../components/Pagination';
 
 const PAGE_SIZE = 8;
-const SKILL_PARAM = { 'Reading': 'READING', 'Writing': 'WRITING', 'Listening': 'LISTENING', 'Mock Tests': 'MOCK_TEST' };
+const SKILL_PARAM = { 'Reading': 'READING', 'Writing': 'WRITING', 'Listening': 'LISTENING', 'Speaking': 'SPEAKING', 'Mock Tests': 'MOCK_TEST' };
 const TIME_DAYS = { 'Last 30 Days': 30, 'Last 3 Months': 90 };
-const SKILL_LABEL = { READING: 'Reading', LISTENING: 'Listening', WRITING: 'Writing', MOCK_TEST: 'Mock Test' };
+const SKILL_LABEL = { READING: 'Reading', LISTENING: 'Listening', WRITING: 'Writing', SPEAKING: 'Speaking', MOCK_TEST: 'Mock Test' };
 // Time spent as recorded for the sitting; older sittings recorded none.
 const formatTimeSpent = (seconds) => {
   if (seconds === null || seconds === undefined) return '—';
@@ -31,6 +31,8 @@ const toRow = (item) => {
         title: item.title === 'MOCK_TEST' ? 'Listening Mock Test' : 'Listening Section Practice', score: band, timeSpent,
         actionUrl: item.historyId ? `/history/${item.historyId}/review` : `/listening/result/${item.refId}`,
       };
+    case 'SPEAKING':
+      return { title: `Speaking ${item.title || ''}`.trim(), score: band, timeSpent, actionUrl: `/speaking/result/${item.refId}` };
     case 'WRITING':
       return { title: `Task ${item.title?.includes('TASK1') || TASK1_TYPES.includes(item.title) ? '1' : '2'} Essay: ${(formatEssayType(item.title) || 'Writing Essay')}`, score: band, timeSpent, actionUrl: `/writing/result/${item.refId}` };
     default:
@@ -124,6 +126,11 @@ export default function HistoryPage() {
           name: 'headset',
           wrapperClass: 'bg-[#e8f5e9] text-[#2e7d32]'
         };
+      case 'Speaking':
+        return {
+          name: 'record_voice_over',
+          wrapperClass: 'bg-primary-container/20 text-primary'
+        };
       case 'Mock Test':
       default:
         return {
@@ -179,6 +186,7 @@ export default function HistoryPage() {
               <option value="Reading">Reading</option>
               <option value="Writing">Writing</option>
               <option value="Listening">Listening</option>
+              <option value="Speaking">Speaking</option>
               <option value="Mock Tests">Mock Tests</option>
             </select>
             <span aria-hidden="true" className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-outline">expand_more</span>

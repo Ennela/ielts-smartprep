@@ -213,6 +213,45 @@ a.card-clickable, a.card-clickable:hover { display: block; color: inherit; }
     border-right: none; border-bottom: 1px solid var(--outline-variant);
   }
 }
+/* Mock test: flag for review, and the question navigator above the action bar */
+.question-number-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.question-number-row .question-number { margin-bottom: 0; }
+.question-flag {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; min-height: 28px;
+  border: 1px solid var(--outline-variant); border-radius: var(--radius-full); background: transparent;
+  color: var(--on-surface-variant); font-size: 0.75rem; font-weight: 600; cursor: pointer;
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
+}
+.question-flag .material-symbols-outlined { font-size: 16px; }
+.question-flag:hover { border-color: var(--color-amber); color: var(--color-amber); }
+.question-flag.is-flagged { background: rgba(133,49,0,0.08); border-color: var(--color-amber); color: var(--color-amber); }
+.question-flag.is-flagged .material-symbols-outlined { font-variation-settings: 'FILL' 1; }
+
+.question-nav {
+  display: flex; gap: 20px; padding: 10px 24px; overflow-x: auto; flex-shrink: 0;
+  background: var(--surface-container-low); border-top: 1px solid var(--outline-variant);
+}
+.question-nav-group { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.question-nav-label { font-size: 0.75rem; font-weight: 600; color: var(--on-surface-variant); white-space: nowrap; }
+.question-nav-group.is-current .question-nav-label { color: var(--primary); }
+.question-nav-items { display: flex; gap: 4px; }
+.question-nav-btn {
+  position: relative; width: 32px; height: 32px; flex-shrink: 0; border-radius: var(--radius-sm);
+  border: 1px solid var(--outline-variant); background: var(--surface-container-lowest);
+  color: var(--on-surface); font-size: 0.8rem; font-weight: 600; cursor: pointer;
+}
+.question-nav-btn:hover { border-color: var(--primary); }
+.question-nav-btn.is-answered { background: var(--color-primary-10); border-color: var(--primary); color: var(--primary); }
+.question-nav-btn.is-flagged::after {
+  content: ''; position: absolute; top: -3px; right: -3px; width: 9px; height: 9px;
+  border-radius: 50%; background: var(--color-amber); border: 2px solid var(--surface-container-low);
+}
+@media (max-width: 900px) {
+  .question-nav { padding: 8px 16px; }
+}
+/* Briefly marks the question the navigator jumped to. */
+.question-jump-target { outline: 2px solid var(--primary); outline-offset: 4px; border-radius: var(--radius-sm); }
+
 /* Bottom action bar */
 .exam-action-bar {
   display: flex; align-items: center; justify-content: space-between;
@@ -227,7 +266,7 @@ a.card-clickable, a.card-clickable:hover { display: block; color: inherit; }
 .passage-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
 .passage-header h3 { font-family: var(--font-heading); font-size: 1.1rem; font-weight: 700; }
 .passage-badge { font-size: 0.72rem; font-weight: 600; padding: 3px 10px; background: var(--color-primary-08); color: var(--color-primary); border-radius: 999px; }
-.passage-paragraph { font-size: 1rem; line-height: 1.85; color: var(--color-text-secondary); margin-bottom: 16px; text-align: justify; }
+.passage-paragraph { font-size: 1rem; line-height: 1.85; color: var(--color-text-secondary); margin-bottom: 16px; }
 .passage-paragraph::selection { background: var(--color-primary-15); }
 
 /* Questions */
@@ -438,7 +477,7 @@ a.card-clickable, a.card-clickable:hover { display: block; color: inherit; }
 .empty-state p { font-size: 1rem; margin-bottom: 20px; }
 .history-table-wrapper { overflow-x: auto; margin-top: 24px; }
 .history-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-.history-table th { font-family: var(--font-heading); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--color-border); }
+.history-table th { font-family: var(--font-heading); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--color-border); white-space: nowrap; }
 .history-table td { padding: 14px 16px; font-size: 0.9rem; border-bottom: 1px solid var(--color-border); color: var(--color-text); }
 .history-table tbody tr { transition: background var(--transition); }
 .history-table tbody tr:hover { background: var(--color-bg-secondary); }
@@ -857,7 +896,7 @@ select.profile-input { cursor: pointer; }
   margin-bottom: 20px;
 }
 .admin-quick-grid {
-  display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 20px;
 }
 .admin-quick-grid .card h3 {
   font-family: var(--font-heading); font-size: 1.1rem; font-weight: 700;
@@ -965,12 +1004,14 @@ select.profile-input { cursor: pointer; }
   font-size: 0.88rem; color: var(--color-text-secondary); line-height: 1.4;
 }
 .admin-action-btns { display: flex; gap: 6px; }
+.admin-action-btns .btn { white-space: nowrap; }
+/* Quiet in every row; it only fills on hover, and the delete itself is confirmed in a dialog. */
 .admin-btn-danger {
-  background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2);
+  background: transparent; border: 1px solid var(--color-border);
   color: var(--color-error); font-family: var(--font-heading); font-weight: 600;
   cursor: pointer; transition: all var(--transition);
 }
-.admin-btn-danger:hover { background: rgba(239,68,68,0.12); border-color: var(--color-error); }
+.admin-btn-danger:hover { background: rgba(186,26,26,0.08); border-color: var(--color-error); }
 .admin-btn-danger-fill {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   padding: 10px 24px; border: none; border-radius: var(--radius-sm);
@@ -1082,7 +1123,6 @@ select.profile-input { cursor: pointer; }
   .dash-target-card { grid-column: 1; min-height: 160px; }
   .dash-welcome-card h1 { font-size: 1.75rem; }
   .skill-cards, .skill-progress-row { grid-template-columns: 1fr; }
-  .admin-quick-grid { grid-template-columns: 1fr; }
   .admin-dashboard-content { padding: 24px 16px; }
   .admin-dash-header { flex-direction: column; }
   .target-scores-grid { grid-template-columns: 1fr; }
@@ -1240,7 +1280,7 @@ html:not([data-theme]) {
     --on-surface-variant: #434652;
     --primary: #003178;
     --on-primary: #ffffff;
-    --outline: #737783;
+    --outline: #5f6370;
     --outline-variant: #c3c6d4;
     --error: #ba1a1a;
     --on-error: #ffffff;
@@ -1248,7 +1288,7 @@ html:not([data-theme]) {
     --color-surface-solid: #ffffff;
     --color-text: #191c1e;
     --color-text-secondary: #434652;
-    --color-text-muted: #737783;
+    --color-text-muted: #5f6370;
     --color-border: #c3c6d4;
     --color-border-subtle: rgba(25,28,30,0.06);
     --color-primary: #003178;

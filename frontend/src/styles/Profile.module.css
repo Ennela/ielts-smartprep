@@ -90,6 +90,18 @@
   object-cover: cover;
 }
 
+.avatar-initial {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-container);
+  color: #ffffff;
+  font-family: var(--font-heading);
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+
 .avatar-overlay {
   position: absolute;
   inset: 0;

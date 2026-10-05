@@ -62,4 +62,32 @@ class UserRepositoryTest extends AbstractMySQLContainerTest {
         assertThat(userRepository.existsByEmail("exists@example.com")).isTrue();
         assertThat(userRepository.existsByEmail("other@example.com")).isFalse();
     }
+
+    @Test
+    @DisplayName("filters by role with an optional search, and stores suspension (V57)")
+    void roleFilterSearchAndSuspension() {
+        long studentsBefore = userRepository.countByRole(Role.STUDENT);
+        userRepository.save(User.builder().username("zz_role_student").passwordHash("x")
+                .email("zz_role_student@example.com").role(Role.STUDENT).build());
+        User admin = userRepository.save(User.builder().username("zz_role_admin").passwordHash("x")
+                .email("zz_role_admin@example.com").role(Role.ADMIN).build());
+
+        assertThat(userRepository.countByRole(Role.STUDENT)).isEqualTo(studentsBefore + 1);
+
+        var pageable = org.springframework.data.domain.PageRequest.of(0, 20);
+        assertThat(userRepository.findByRoleAndSearch(Role.ADMIN, "zz_role", pageable).getContent())
+                .extracting(User::getUsername).containsExactly("zz_role_admin");
+        // Search is case-insensitive and also matches the email.
+        assertThat(userRepository.findByRoleAndSearch(Role.STUDENT, "ZZ_ROLE_STUDENT@", pageable).getContent())
+                .extracting(User::getUsername).containsExactly("zz_role_student");
+        // A null search keeps the whole role.
+        assertThat(userRepository.findByRoleAndSearch(Role.ADMIN, null, pageable).getContent())
+                .extracting(User::getUsername).contains("zz_role_admin");
+
+        assertThat(admin.getSuspended()).isFalse();
+        admin.setSuspended(true);
+        userRepository.saveAndFlush(admin);
+        assertThat(userRepository.findByUsername("zz_role_admin")).get()
+                .extracting(User::getSuspended).isEqualTo(true);
+    }
 }

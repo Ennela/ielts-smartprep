@@ -6,6 +6,7 @@ import com.smartprep.dto.request.UpdateProfileRequest;
 import com.smartprep.dto.request.ChangePasswordRequest;
 import com.smartprep.dto.response.AuthResponse;
 import com.smartprep.exception.AccountLockedException;
+import com.smartprep.exception.AccountSuspendedException;
 import com.smartprep.exception.ResourceNotFoundException;
 import com.smartprep.model.entity.User;
 import com.smartprep.repository.UserRepository;
@@ -109,6 +110,11 @@ public class UserService {
 
         User user = account.get();
 
+        // Checked after the password, so a wrong guess does not learn the account is suspended.
+        if (Boolean.TRUE.equals(user.getSuspended())) {
+            throw new AccountSuspendedException();
+        }
+
         // Successful login — clear fail counter
         loginLockoutService.resetAttempts(request.getUsername());
 
@@ -137,6 +143,11 @@ public class UserService {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        // The old refresh token is already revoked above, so a suspended user's session ends here.
+        if (Boolean.TRUE.equals(user.getSuspended())) {
+            throw new AccountSuspendedException();
+        }
 
         // Generate new pair
         String newAccessToken = jwtTokenProvider.generateAccessToken(

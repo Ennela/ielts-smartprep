@@ -137,13 +137,14 @@ describe('Personal info tab', () => {
     vi.useRealTimers();
   });
 
-  it('falls back to the bundled avatar when the image cannot load', () => {
+  it('shows the initial instead of a broken image when the picture cannot load', () => {
     renderAt('personal');
     const img = screen.getByAltText('User avatar');
 
     fireEvent.error(img);
 
-    expect(img.getAttribute('src')).toContain('/assets/avatars/avatar_sarah.png');
+    expect(screen.queryByAltText('User avatar')).not.toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'User avatar' }).textContent).toMatch(/^[A-Z?]$/);
   });
 
   it('does not commit unsaved name edits when a picture is uploaded', async () => {
