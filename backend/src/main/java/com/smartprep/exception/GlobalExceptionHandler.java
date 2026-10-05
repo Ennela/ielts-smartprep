@@ -6,9 +6,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @Slf4j
 @RestControllerAdvice
@@ -114,8 +116,27 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("Access denied", "ACCESS_DENIED"));
     }
 
+    /**
+     * The catch-all. Spring MVC's own request errors -- an unknown path, a method the path
+     * does not take, a missing parameter, an unsupported content type -- also arrive here,
+     * because this handler is broader than Spring's defaults. They carry their own 4xx
+     * status (they implement {@link ErrorResponse}), so they keep it instead of becoming a
+     * 500 that pages Sentry for a client mistake. A 405 keeps its Allow header.
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception ex) {
+        if (ex instanceof ErrorResponse error && error.getStatusCode().is4xxClientError()) {
+            HttpStatus status = HttpStatus.valueOf(error.getStatusCode().value());
+            log.debug("Client error {}: {}", status.value(), ex.getMessage());
+            // NoResourceFoundException's detail says "No static resource ...", which reads as
+            // a file lookup; for an API path it is just "not found".
+            String message = ex instanceof NoResourceFoundException || error.getBody().getDetail() == null
+                    ? status.getReasonPhrase()
+                    : error.getBody().getDetail();
+            return ResponseEntity.status(status)
+                    .headers(error.getHeaders())
+                    .body(ApiResponse.error(message, status.name()));
+        }
         log.error("Unhandled exception", ex);
         Sentry.captureException(ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

@@ -5,8 +5,15 @@ import com.smartprep.dto.response.ApiResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -77,5 +84,47 @@ class GlobalExceptionHandlerTest {
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
         assertFalse(response.getBody().getMessage().contains(internalDetail));
         assertEquals("Cannot complete operation due to a data constraint.", response.getBody().getMessage());
+    }
+
+    @Test
+    @DisplayName("an unknown path is a 404, not a 500")
+    void unknownPath_returns404() {
+        ResponseEntity<ApiResponse<Void>> response =
+                handler.handleGeneral(new NoResourceFoundException(HttpMethod.GET, "api/v1/nope"));
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertEquals("NOT_FOUND", response.getBody().getErrorCode());
+        assertFalse(response.getBody().getMessage().contains("static resource"));
+    }
+
+    @Test
+    @DisplayName("a wrong HTTP method is a 405 that says which methods are allowed")
+    void wrongMethod_returns405WithAllow() {
+        ResponseEntity<ApiResponse<Void>> response =
+                handler.handleGeneral(new HttpRequestMethodNotSupportedException("GET", List.of("POST", "PUT")));
+
+        assertEquals(HttpStatus.METHOD_NOT_ALLOWED, response.getStatusCode());
+        assertEquals("METHOD_NOT_ALLOWED", response.getBody().getErrorCode());
+        assertTrue(response.getHeaders().getFirst(HttpHeaders.ALLOW).contains("POST"));
+    }
+
+    @Test
+    @DisplayName("a missing query parameter is a 400 naming the parameter")
+    void missingParameter_returns400() {
+        ResponseEntity<ApiResponse<Void>> response =
+                handler.handleGeneral(new MissingServletRequestParameterException("skill", "String"));
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertTrue(response.getBody().getMessage().contains("skill"));
+    }
+
+    @Test
+    @DisplayName("anything else is still a 500 that hides its message")
+    void otherErrors_stay500() {
+        ResponseEntity<ApiResponse<Void>> response =
+                handler.handleGeneral(new IllegalStateException("internal detail"));
+
+        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
+        assertEquals("Internal server error", response.getBody().getMessage());
     }
 }
