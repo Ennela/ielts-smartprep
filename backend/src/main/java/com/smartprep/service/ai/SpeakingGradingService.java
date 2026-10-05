@@ -193,7 +193,8 @@ public class SpeakingGradingService {
               answers. Grade the set as a whole: one set of bands for all the answers. Part 1 answers are
               naturally short (two to four sentences); do not mark down brevity there if the answer is
               relevant and a little extended. Part 3 answers should develop an opinion with reasons and examples.
-            - Write feedback in clear, simple English addressed to the candidate ("you").
+            - Write feedback in clear, simple English addressed to the candidate as "you" -- in the summary,
+              the criteria, the strengths, the improvements and every answer comment. Never write "the candidate".
             - Transcripts are your best verbatim transcription of what was said, including obvious errors.
               Part 2: put it in "transcript" and return "answers" as []. Part 1 and Part 3: leave
               "transcript" empty and give one "answers" entry per recording, in the same order.
