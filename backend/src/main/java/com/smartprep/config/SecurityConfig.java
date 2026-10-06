@@ -1,11 +1,14 @@
 package com.smartprep.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.smartprep.dto.response.ApiResponse;
 import com.smartprep.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -24,6 +27,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CorsConfigurationSource corsConfigurationSource;
+    private final ObjectMapper objectMapper;
 
     @Value("${app.security.csp-policy:default-src 'self'}")
     private String cspPolicy;
@@ -42,8 +46,19 @@ public class SecurityConfig {
             // only refreshes on 401, so an expired access token never triggered a refresh
             // and every session went dark after 15 minutes. Anonymous -> 401; an authenticated
             // user hitting a role they lack still gets 403 from the access-denied handler.
-            .exceptionHandling(ex -> ex.authenticationEntryPoint(
-                    new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+            //
+            // That handler writes the 403 itself. Spring's default calls sendError(403), and
+            // the container then forwards to /error -- a dispatch the JWT filter does not run
+            // on -- so /error saw an anonymous request and the entry point turned the 403 into
+            // a bodiless 401, which also told the frontend to refresh a perfectly good token.
+            .exceptionHandling(ex -> ex
+                    .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                    .accessDeniedHandler((request, response, denied) -> {
+                        response.setStatus(HttpStatus.FORBIDDEN.value());
+                        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                        objectMapper.writeValue(response.getOutputStream(),
+                                ApiResponse.error("Access denied", "ACCESS_DENIED"));
+                    }))
             .headers(headers -> headers
                 .contentSecurityPolicy(csp -> csp.policyDirectives(cspPolicy))
             )
