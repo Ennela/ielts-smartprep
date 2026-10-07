@@ -8,6 +8,7 @@ import { useToast } from '../context/ToastContext';
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
 import Modal from '../components/common/Modal';
+import errorMessage from '../utils/errorMessage';
 
 export default function AdminUsersPage() {
   const navigate = useNavigate();
@@ -56,7 +57,7 @@ export default function AdminUsersPage() {
     setDetail(null);
     adminApi.getUserDetail(userId)
       .then(res => setDetail(res.data?.data))
-      .catch(err => setError(err.message))
+      .catch(err => setError(errorMessage(err, 'Could not load this user.')))
       .finally(() => setDetailLoading(false));
   };
 
@@ -78,7 +79,7 @@ export default function AdminUsersPage() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
       showSuccess('Account updated');
     } catch (err) {
-      showError(err.response?.data?.message || err.message || 'Could not update the account');
+      showError(errorMessage(err, 'Could not update the account'));
     } finally {
       setUpdating(false);
     }

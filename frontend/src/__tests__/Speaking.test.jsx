@@ -164,6 +164,61 @@ describe('SpeakingPracticePage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/under 3 seconds/);
     expect(screen.getByRole('button', { name: 'Next question' })).toBeDisabled();
   });
+
+  // The error axiosClient rejects with: its message, status, the server's response and,
+  // when there is one, the text meant for the user.
+  const failure = (status, data, userMessage) => Promise.reject(Object.assign(new Error(data?.message || 'Network Error'), {
+    status, response: status ? { status, data } : undefined, userMessage,
+  }));
+
+  const recordCueCardAndSubmit = async () => {
+    renderAt('/speaking/practice/8');
+    fireEvent.click(await screen.findByRole('button', { name: 'Start preparation' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start speaking now' }));
+    expect(await screen.findByRole('button', { name: 'Stop recording' })).toBeInTheDocument();
+    await act(async () => { vi.advanceTimersByTime(12000); });
+    fireEvent.click(screen.getByRole('button', { name: 'Stop recording' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Submit for grading' }));
+  };
+
+  it.each([
+    ['a framework error', 415, { message: "Content-Type 'application/json' is not supported.", errorCode: 'UNSUPPORTED_MEDIA_TYPE' }, /Grading failed\. Try again; your recording is still here/],
+    ['a server failure', 500, { message: 'Internal server error', errorCode: 'INTERNAL_SERVER_ERROR' }, /Grading failed\. Try again/],
+    ['the AI being down', 503, { message: 'AI service is unavailable', errorCode: 'AI_SERVICE_ERROR' }, /Grading is not available right now/],
+    ['no connection', undefined, undefined, /Could not reach the server/, 'Could not reach the server. Check your internet connection and try again.'],
+  ])('turns %s into words the learner understands', async (_, status, data, expected, userMessage) => {
+    speakingApi.grade.mockImplementation(() => failure(status, data, userMessage));
+    await recordCueCardAndSubmit();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(expected);
+    expect(alert).not.toHaveTextContent(/Content-Type|Internal server error|AI service|Network Error/);
+    expect(screen.getByRole('button', { name: 'Submit for grading' })).toBeEnabled();
+  });
+
+  it('passes on what the grading checks say', async () => {
+    speakingApi.grade.mockImplementation(() => failure(400, { message: 'The recording is too short to grade (at least 5 seconds)', errorCode: 'BAD_REQUEST' }, 'The recording is too short to grade (at least 5 seconds)'));
+    await recordCueCardAndSubmit();
+    expect(await screen.findByRole('alert')).toHaveTextContent('The recording is too short to grade (at least 5 seconds)');
+  });
+
+  it('keeps Part 1 answers and explains a failed grading in plain words', async () => {
+    speakingApi.getPrompts.mockImplementation(() => ok([hometown]));
+    speakingApi.grade.mockImplementation(() => failure(415, { message: "Content-Type 'application/json' is not supported.", errorCode: 'UNSUPPORTED_MEDIA_TYPE' }));
+    renderAt('/speaking/practice/1');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Start the questions' }));
+    await answerFor(5);
+    fireEvent.click(await screen.findByRole('button', { name: 'Next question' }));
+    await answerFor(5);
+    fireEvent.click(await screen.findByRole('button', { name: 'Review answers' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Submit for grading' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Grading failed. Try again; your answers are still here.');
+    expect(alert).not.toHaveTextContent(/Content-Type/);
+    expect(screen.getByLabelText('Your answer to question 2')).toBeInTheDocument();
+  });
 });
 
 describe('SpeakingResultPage', () => {

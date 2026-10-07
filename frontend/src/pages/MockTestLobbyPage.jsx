@@ -7,6 +7,7 @@ import { useToast } from '../context/ToastContext';
 import Pagination from '../components/Pagination';
 import styles from '../styles/MockTest.module.css';
 import { useConfirm } from '../context/ConfirmContext';
+import errorMessage from '../utils/errorMessage';
 
 const HISTORY_PAGE_SIZE = 10;
 
@@ -65,7 +66,7 @@ export default function MockTestLobbyPage() {
   const tests = testsQuery.data || [];
   const loading = testsQuery.isLoading;
   const testsError = testsQuery.isError
-    ? (testsQuery.error?.response?.data?.message || testsQuery.error?.message || 'Failed to load mock tests')
+    ? errorMessage(testsQuery.error, 'Failed to load mock tests')
     : '';
   const loadTests = testsQuery.refetch;
 
@@ -88,7 +89,7 @@ export default function MockTestLobbyPage() {
   };
   const historyLoading = historyQuery.isLoading;
   const historyError = historyQuery.isError
-    ? (historyQuery.error?.response?.data?.message || historyQuery.error?.message || 'Failed to load your exam history')
+    ? errorMessage(historyQuery.error, 'Failed to load your exam history')
     : '';
   const loadHistory = historyQuery.refetch;
 
@@ -110,7 +111,7 @@ export default function MockTestLobbyPage() {
         navigate(`/mock-tests/take/${session.sessionId}`);
       }
     } catch (err) {
-      showErrorToast(err.response?.data?.message || err.message || 'Failed to start test');
+      showErrorToast(errorMessage(err, 'Failed to start test'));
     } finally {
       setActionLoading(false);
     }
@@ -133,7 +134,7 @@ export default function MockTestLobbyPage() {
     try {
       await abandonSession();
     } catch (err) {
-      showErrorToast(err.response?.data?.message || err.message || 'Failed to abandon the test');
+      showErrorToast(errorMessage(err, 'Failed to abandon the test'));
     }
   };
 

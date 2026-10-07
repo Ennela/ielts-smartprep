@@ -145,9 +145,14 @@ public class GlobalExceptionHandler {
             String message = ex instanceof NoResourceFoundException || error.getBody().getDetail() == null
                     ? status.getReasonPhrase()
                     : error.getBody().getDetail();
+            // BAD_REQUEST is the code of handleBadRequest, whose messages are written for the
+            // person using the app, and the frontend shows them. Spring's own 400s name a
+            // parameter or a request part -- a client bug, not something they can fix -- so
+            // they get a code of their own that the frontend does not show.
+            String code = status == HttpStatus.BAD_REQUEST ? "INVALID_REQUEST" : status.name();
             return ResponseEntity.status(status)
                     .headers(error.getHeaders())
-                    .body(ApiResponse.error(message, status.name()));
+                    .body(ApiResponse.error(message, code));
         }
         log.error("Unhandled exception", ex);
         Sentry.captureException(ex);

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import vocabApi from '../../api/vocabApi';
+import errorMessage from '../../utils/errorMessage';
 
 export default function AiVocabularyButton({ skillType, sourceId }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -28,7 +29,7 @@ export default function AiVocabularyButton({ skillType, sourceId }) {
       });
       setSelectedWords(defaultSelected);
     } catch (err) {
-      setError(err.message || 'Failed to generate vocabulary suggestions.');
+      setError(errorMessage(err, 'Failed to generate vocabulary suggestions.'));
     } finally {
       setLoading(false);
     }
@@ -79,7 +80,7 @@ export default function AiVocabularyButton({ skillType, sourceId }) {
         setSaveSuccess('');
       }, 2000);
     } catch (err) {
-      setError(err.message || 'Failed to save vocabulary.');
+      setError(errorMessage(err, 'Failed to save vocabulary.'));
     } finally {
       setSaveLoading(false);
     }

@@ -6,6 +6,7 @@ import analyticsApi from '../api/analyticsApi';
 import { formatBand } from '../utils/formatBand';
 import { formatQuestionType } from '../constants/examTypes';
 import Pagination from '../components/Pagination';
+import errorMessage from '../utils/errorMessage';
 // recharts is the largest chunk in the build (336 kB) and the dashboard is the
 // first page after login; the trend card is one of eight and often has no data to
 // draw, so the library is fetched only when a chart is actually rendered.
@@ -34,7 +35,7 @@ export default function DashboardPage() {
   const [sectionErrors, setSectionErrors] = useState({});
   const setSectionError = (key, err) => setSectionErrors(prev => ({
     ...prev,
-    [key]: err ? (err.response?.data?.message || err.message || 'Failed to load') : null,
+    [key]: err ? errorMessage(err, 'Failed to load') : null,
   }));
 
   // Per-section request counters: a response only lands if it is the latest one
@@ -80,7 +81,7 @@ export default function DashboardPage() {
       setOverview(overviewRes.data?.data);
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.message || err.message || 'Failed to load dashboard data. Please try again.');
+      setError(errorMessage(err, 'Failed to load dashboard data. Please try again.'));
     } finally {
       setLoading(false);
     }

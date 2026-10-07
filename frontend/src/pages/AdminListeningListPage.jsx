@@ -6,6 +6,7 @@ import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
 import ArchivedToggle from '../components/admin/ArchivedToggle';
 import Modal from '../components/common/Modal';
+import errorMessage from '../utils/errorMessage';
 
 const TOPICS = [
   { value: 'ACCOMMODATION', label: 'Accommodation / Booking' },
@@ -87,7 +88,7 @@ export default function AdminListeningListPage() {
       invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to restore');
+      setError(errorMessage(err, 'Failed to restore'));
     }
   };
 
@@ -101,7 +102,7 @@ export default function AdminListeningListPage() {
       invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to archive listening part');
+      setError(errorMessage(err, 'Failed to archive listening part'));
     } finally {
       setDeleting(false);
     }
@@ -114,7 +115,7 @@ export default function AdminListeningListPage() {
       invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to regenerate audio');
+      setError(errorMessage(err, 'Failed to regenerate audio'));
     }
   };
 
@@ -125,7 +126,7 @@ export default function AdminListeningListPage() {
       invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to retry audio generation');
+      setError(errorMessage(err, 'Failed to retry audio generation'));
     }
   };
 

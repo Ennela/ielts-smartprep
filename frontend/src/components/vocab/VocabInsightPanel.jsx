@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import vocabApi from '../../api/vocabApi';
 import styles from '../../styles/VocabInsight.module.css';
+import errorMessage from '../../utils/errorMessage';
 
 /*
  * The context-aware explanation for one word, as a side panel.
@@ -324,7 +325,7 @@ export default function VocabInsightPanel({ vocab, onClose }) {
         if (!cancelled) setResponse(res.data?.data || null);
       })
       .catch((err) => {
-        if (!cancelled) setError(err.message || 'Không tải được giải thích.');
+        if (!cancelled) setError(errorMessage(err, 'Không tải được giải thích.'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -349,7 +350,7 @@ export default function VocabInsightPanel({ vocab, onClose }) {
       const res = await vocabApi.generateInsight(vocab.vocabId, refresh);
       setResponse(res.data?.data || null);
     } catch (err) {
-      setError(err.message || 'Không tạo được giải thích. Bạn hãy thử lại sau.');
+      setError(errorMessage(err, 'Không tạo được giải thích. Bạn hãy thử lại sau.'));
     } finally {
       setGenerating(false);
     }

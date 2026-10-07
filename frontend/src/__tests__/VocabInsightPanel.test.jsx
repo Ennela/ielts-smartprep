@@ -167,7 +167,9 @@ describe('VocabInsightPanel', () => {
 
     renderPanel();
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Service Unavailable');
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Không tải được giải thích.');
+    expect(alert).not.toHaveTextContent('Service Unavailable');
     expect(screen.getByText('trust')).toBeInTheDocument();
   });
 

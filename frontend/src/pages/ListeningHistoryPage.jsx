@@ -3,6 +3,7 @@ import listeningApi from '../api/listeningApi';
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
 import styles from '../styles/History.module.css';
+import errorMessage from '../utils/errorMessage';
 
 const PAGE_SIZE = 12;
 
@@ -47,7 +48,7 @@ export default function ListeningHistoryPage() {
         </div>
       ) : isError ? (
         <div className="error-msg" role="alert">
-          <span>{error?.response?.data?.message || error?.message || 'Unable to load listening history'}</span>
+          <span>{errorMessage(error, 'Unable to load listening history')}</span>
           <button className="btn btn-outline" onClick={loadHistory}>Retry</button>
         </div>
       ) : history.length === 0 ? (

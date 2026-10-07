@@ -72,6 +72,7 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertEquals("Invalid input", response.getBody().getMessage());
+        assertEquals("BAD_REQUEST", response.getBody().getErrorCode());
     }
 
     @Test
@@ -116,6 +117,8 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertTrue(response.getBody().getMessage().contains("skill"));
+        // Not BAD_REQUEST: the frontend shows BAD_REQUEST messages to the user.
+        assertEquals("INVALID_REQUEST", response.getBody().getErrorCode());
     }
 
     @Test
