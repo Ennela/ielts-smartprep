@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -123,6 +124,17 @@ public class GlobalExceptionHandler {
      * status (they implement {@link ErrorResponse}), so they keep it instead of becoming a
      * 500 that pages Sentry for a client mistake. A 405 keeps its Allow header.
      */
+    /**
+     * A role check made by {@code @PreAuthorize} inside a controller (the URL rules are
+     * answered by SecurityConfig's access-denied handler instead). Without this it reached
+     * the catch-all below as a 500.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.error("Access denied", "ACCESS_DENIED"));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception ex) {
         if (ex instanceof ErrorResponse error && error.getStatusCode().is4xxClientError()) {

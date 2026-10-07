@@ -67,7 +67,9 @@ class SecurityConfigTest {
     @Import({SecurityConfig.class, CorsConfig.class,
             org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration.class,
             org.springframework.boot.autoconfigure.web.servlet.DispatcherServletAutoConfiguration.class,
-            org.springframework.boot.autoconfigure.http.HttpMessageConvertersAutoConfiguration.class})
+            org.springframework.boot.autoconfigure.http.HttpMessageConvertersAutoConfiguration.class,
+            // SecurityConfig writes the 403 body with the application's ObjectMapper.
+            org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration.class})
     static class TestConfig {
 
         @Bean
