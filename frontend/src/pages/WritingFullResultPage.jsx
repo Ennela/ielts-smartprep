@@ -4,6 +4,7 @@ import writingApi from '../api/writingApi';
 import { formatBand } from '../utils/formatBand';
 import AiVocabularyButton from '../components/vocab/AiVocabularyButton';
 import VisualDataRenderer from '../components/writing/VisualDataRenderer';
+import errorMessage from '../utils/errorMessage';
 
 const CRITERIA_EXPLANATIONS = [
   {
@@ -42,7 +43,7 @@ export default function WritingFullResultPage() {
     let cancelled = false;
     writingApi.getFullSubmission(id)
       .then(res => { if (!cancelled) setResult(res.data?.data || null); })
-      .catch(err => { if (!cancelled) setLoadError(err.response?.data?.message || err.message || 'Could not load this result.'); })
+      .catch(err => { if (!cancelled) setLoadError(errorMessage(err, 'Could not load this result.')); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [id, result]);

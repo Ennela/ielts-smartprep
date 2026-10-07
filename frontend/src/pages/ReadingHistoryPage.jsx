@@ -3,6 +3,7 @@ import readingApi from '../api/readingApi';
 import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
 import { formatBand } from '../utils/formatBand';
+import errorMessage from '../utils/errorMessage';
 
 const PAGE_SIZE = 10;
 
@@ -38,7 +39,7 @@ export default function ReadingHistoryPage() {
 
         {isError && (
           <div className="error-msg" role="alert">
-            <span>{error?.response?.data?.message || error?.message || 'Unable to load history'}</span>
+            <span>{errorMessage(error, 'Unable to load history')}</span>
             <button className="btn btn-outline" onClick={refetch}>Retry</button>
           </div>
         )}

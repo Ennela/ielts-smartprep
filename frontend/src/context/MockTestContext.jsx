@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import mockTestApi from '../api/mockTestApi';
+import errorMessage from '../utils/errorMessage';
 
 const MockTestContext = createContext(null);
 
@@ -45,7 +46,7 @@ export function MockTestProvider({ children }) {
       const sessionData = res.data.data;
       initializeSession(sessionData);
     } catch (err) {
-      setError(err.message || 'Failed to start mock test');
+      setError(errorMessage(err, 'Failed to start mock test'));
       setLoading(false);
       // The lobby shows the failure; swallowing it here left the Begin Exam button
       // doing nothing at all.
@@ -276,7 +277,7 @@ export function MockTestProvider({ children }) {
       }));
 
     } catch (err) {
-      setError(err.message || 'Failed to advance to next section. Please check internet connection.');
+      setError(errorMessage(err, 'Failed to advance to next section. Please check internet connection.'));
     } finally {
       setLoading(false);
     }
@@ -302,7 +303,7 @@ export function MockTestProvider({ children }) {
 
       return submissionData;
     } catch (err) {
-      setError(err.message || 'Failed to submit exam. Please try again.');
+      setError(errorMessage(err, 'Failed to submit exam. Please try again.'));
       setLoading(false);
       throw err;
     } finally {

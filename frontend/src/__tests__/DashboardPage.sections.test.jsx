@@ -51,7 +51,8 @@ describe('DashboardPage sections', () => {
 
     renderDashboard();
 
-    expect(await screen.findByText('Trend service down')).toBeInTheDocument();
+    expect(await screen.findByText('Failed to load')).toBeInTheDocument();
+    expect(screen.queryByText('Trend service down')).not.toBeInTheDocument();
     // The rest of the dashboard is still there.
     expect(screen.getByText('Matching')).toBeInTheDocument();
     expect(screen.queryByText('Something went wrong')).not.toBeInTheDocument();
@@ -88,6 +89,7 @@ describe('DashboardPage sections', () => {
     renderDashboard();
 
     expect(await screen.findByText('Something went wrong')).toBeInTheDocument();
-    expect(screen.getByText('Overview down')).toBeInTheDocument();
+    expect(screen.getByText('Failed to load dashboard data. Please try again.')).toBeInTheDocument();
+    expect(screen.queryByText('Overview down')).not.toBeInTheDocument();
   });
 });

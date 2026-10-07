@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import authService from '../api/authService';
 import { useToast } from '../context/ToastContext';
+import errorMessage from '../utils/errorMessage';
 
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -46,7 +47,7 @@ export default function ResetPasswordPage() {
       setSuccessState(true);
       setTimeout(() => navigate('/login', { replace: true }), 3000);
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Failed to reset password';
+      const msg = errorMessage(err, 'Failed to reset password');
       error(msg);
     } finally {
       setLoading(false);

@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import FullPageLoader from './FullPageLoader';
+import errorMessage from '../../utils/errorMessage';
 
 export default function ProtectedRoute({ children }) {
   const { isAuthenticated, loading, profileError, retryProfile } = useAuth();
@@ -16,7 +17,7 @@ export default function ProtectedRoute({ children }) {
     return (
       <div className="min-h-screen flex flex-col justify-center items-center bg-background">
         <p className="text-on-surface font-medium">Could not verify your session.</p>
-        <p className="mt-sm text-on-surface-variant text-sm">{profileError.message}</p>
+        <p className="mt-sm text-on-surface-variant text-sm">{errorMessage(profileError, 'Check your internet connection and try again.')}</p>
         <button type="button" className="btn btn-primary mt-md" onClick={retryProfile}>
           Try Again
         </button>

@@ -13,6 +13,7 @@ import useExamTimer from '../hooks/useExamTimer';
 import { submitAnswersPrompt } from '../utils/confirmSubmit';
 import { formatEnumLabel } from '../constants/examTypes';
 import { useConfirm } from '../context/ConfirmContext';
+import errorMessage from '../utils/errorMessage';
 
 const SESSION_KEY_PREFIX = 'reading_single_attemptId_';
 
@@ -69,7 +70,7 @@ export default function ReadingExamPage() {
         navigate(`/reading/result/${quizId}`, { replace: true });
       })
       .catch((err) => {
-        setError(err.response?.data?.message || 'Auto-submit failed. Please try submitting manually.');
+        setError(errorMessage(err, 'Auto-submit failed. Please try submitting manually.'));
         submittingRef.current = false;
       });
   }, [attemptId, quizId, isSubmitted, submitStart, setResult, setError, navigate, isPreview]);
@@ -146,7 +147,7 @@ export default function ReadingExamPage() {
           sessionStorage.setItem(sessionKey, String(attempt.attemptId));
         }
       } catch (err) {
-        setError(err.response?.data?.message || 'Unable to load test');
+        setError(errorMessage(err, 'Unable to load test'));
       }
     };
     fetchQuiz();
@@ -172,7 +173,7 @@ export default function ReadingExamPage() {
       setResult(res.data.data);
       navigate(`/reading/result/${quizId}`, { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || 'Submission failed');
+      setError(errorMessage(err, 'Submission failed'));
       submittingRef.current = false;
     }
   }, [quizId, answers, isSubmitted, attemptId, submitStart, stopTimer, setResult, setError, navigate]);

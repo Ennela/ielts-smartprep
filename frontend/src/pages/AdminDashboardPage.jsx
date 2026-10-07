@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import adminApi from '../api/adminApi';
+import errorMessage from '../utils/errorMessage';
 
 const STAT_CARDS = [
   {
@@ -62,7 +63,7 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     adminApi.getDashboard()
       .then(res => setStats(res.data?.data))
-      .catch(err => setError(err.message))
+      .catch(err => setError(errorMessage(err, 'Could not load the dashboard.')))
       .finally(() => setLoading(false));
   }, []);
 

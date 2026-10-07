@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import readingApi from '../api/readingApi';
+import errorMessage from '../utils/errorMessage';
 
 const TOPICS = [
   { value: 'ENVIRONMENT', label: 'Environment' },
@@ -60,7 +61,7 @@ export default function ReadingConfigPage() {
       const quizIds = quizzes.map(q => q.quizId).join(',');
       navigate(`/reading/full-exam?quizIds=${quizIds}`);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to assemble mock test');
+      setError(errorMessage(err, 'Failed to assemble mock test'));
     } finally {
       setAssembling(false);
     }
@@ -80,7 +81,7 @@ export default function ReadingConfigPage() {
       setAdminQuizzes(res.data.data.content || []);
       setTotalPages(res.data.data.totalPages || 0);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Unable to load test templates from system.');
+      setError(errorMessage(err, 'Unable to load test templates from system.'));
     } finally {
       setAdminLoading(false);
     }
@@ -98,7 +99,7 @@ export default function ReadingConfigPage() {
         navigate(`/reading/exam/${data.quizId}`);
       }
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to generate quiz. Please try again.');
+      setError(errorMessage(err, 'Failed to generate quiz. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -112,7 +113,7 @@ export default function ReadingConfigPage() {
       const quizId = res.data.data.quizId;
       navigate(`/reading/exam/${quizId}`);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to start the quiz. Please try again.');
+      setError(errorMessage(err, 'Failed to start the quiz. Please try again.'));
     } finally {
       setLoading(false);
     }

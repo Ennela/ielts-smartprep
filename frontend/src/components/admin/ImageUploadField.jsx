@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import adminApi from '../../api/adminApi';
+import errorMessage from '../../utils/errorMessage';
 
 /**
  * An image an admin attaches to content: a question group's diagram or map, or a Task 1
@@ -23,7 +24,7 @@ export default function ImageUploadField({ value, onChange, label = 'Image', id 
       const res = await adminApi.uploadImage(file);
       onChange(res.data.data.url);
     } catch (err) {
-      setError(err.response?.data?.message || 'Upload failed');
+      setError(errorMessage(err, 'Upload failed'));
     } finally {
       setUploading(false);
     }

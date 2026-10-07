@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useNavigate, useLocation } from 'react-router-do
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import authService from '../../api/authService';
+import errorMessage from '../../utils/errorMessage';
 
 export default function UserLayout() {
   const { user, logout } = useAuth();
@@ -30,7 +31,7 @@ export default function UserLayout() {
       success('Verification email has been resent successfully. Please check your inbox.');
       setCooldown(60);
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Failed to resend verification email';
+      const msg = errorMessage(err, 'Failed to resend verification email');
       error(msg);
     } finally {
       setResending(false);

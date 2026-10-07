@@ -107,7 +107,7 @@ describe('WritingEditorPage grading recovery', () => {
 
   it('re-enables the button at once for a rejection the server actually sent', async () => {
     writingApi.getHistory.mockResolvedValue(page([]));
-    writingApi.gradeEssay.mockRejectedValue(Object.assign(new Error('Too many requests'), { status: 429 }));
+    writingApi.gradeEssay.mockRejectedValue(Object.assign(new Error('Too many requests'), { status: 429, userMessage: 'Too many requests' }));
 
     const button = await typeEssayAndSubmit();
 
