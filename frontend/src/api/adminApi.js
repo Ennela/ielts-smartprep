@@ -60,6 +60,15 @@ const adminApi = {
     restoreReadingQuiz: (quizId) =>
         axiosClient.post(`/admin/reading-quizzes/${quizId}/restore`),
 
+    getReadingImportPrompt: (topic, difficulty) =>
+        axiosClient.get('/admin/reading-quizzes/import-prompt', { params: { topic, difficulty } }),
+
+    importReadingQuiz: (data) =>
+        axiosClient.post('/admin/reading-quizzes/import', data),
+
+    updateContentStatus: (type, id, status) =>
+        axiosClient.put(`/admin/content/${type}/${id}/status`, { newStatus: status }),
+
     listMockTests: (page = 0, size = DEFAULT_SIZE, sort = 'createdAt,desc', archived = false) =>
         axiosClient.get('/admin/mock-tests', { params: { page, size, sort, ...(archived ? { archived: true } : {}) } }),
 
