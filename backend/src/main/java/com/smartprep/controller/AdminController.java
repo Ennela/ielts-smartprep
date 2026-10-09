@@ -1,6 +1,7 @@
 package com.smartprep.controller;
 
 import com.smartprep.dto.request.AdminWritingPromptRequest;
+import com.smartprep.dto.request.AdminReadingImportRequest;
 import com.smartprep.dto.request.AdminReadingQuizRequest;
 import com.smartprep.dto.request.AdminMockTestRequest;
 import com.smartprep.dto.request.AdminUserUpdateRequest;
@@ -18,6 +19,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/admin")
@@ -144,6 +147,22 @@ public class AdminController {
             @Valid @RequestBody AdminReadingQuizRequest request) {
         AdminReadingQuizResponse created = adminService.createReadingQuiz(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(created, "Reading quiz template created"));
+    }
+
+    @Operation(summary = "The NotebookLM source and chat message for a Reading passage to import")
+    @GetMapping("/reading-quizzes/import-prompt")
+    public ResponseEntity<ApiResponse<Map<String, String>>> readingImportPrompt(
+            @RequestParam String topic,
+            @RequestParam String difficulty) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.readingImportPrompt(topic, difficulty)));
+    }
+
+    @Operation(summary = "Add a Reading passage written in NotebookLM to the bank, awaiting review")
+    @PostMapping("/reading-quizzes/import")
+    public ResponseEntity<ApiResponse<AdminReadingQuizResponse>> importReadingQuiz(
+            @Valid @RequestBody AdminReadingImportRequest request) {
+        AdminReadingQuizResponse created = adminService.importReadingQuiz(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(created, "Reading passage imported"));
     }
 
     @PutMapping("/reading-quizzes/{quizId}")
