@@ -15,10 +15,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 
 /**
- * The stored quiz Reading generation falls back to when Gemini fails, copied for the learner.
+ * The stored quizzes Reading generation serves from: a published template the learner has
+ * not had yet before Gemini is called, and any stored quiz when Gemini fails, copied for the learner.
  *
  * <p>A bean of its own so the copy runs in a short read-only transaction: the template's
  * questions and options are lazy, and with open-in-view off nothing else keeps a session
@@ -53,7 +55,23 @@ public class ReadingFallbackSource {
 
         ReadingQuiz selected = templates.get(new Random().nextInt(templates.size()));
         log.info("Selected fallback ReadingQuiz ID: {} for user: {}", selected.getQuizId(), user.getUserId());
+        return copyFor(user, selected, moduleType);
+    }
 
+    /** An unsaved copy of a published template this user has not had yet, or empty if the bank has none left. */
+    @Transactional(readOnly = true)
+    public Optional<ReadingQuiz> copyUnseenTemplate(User user, Topic topic, Difficulty difficulty, String moduleType) {
+        List<ReadingQuiz> templates = quizRepository.findUnseenPublishedTemplates(
+                topic, difficulty, user.getUserId(), PageRequest.of(0, 20));
+        if (templates.isEmpty()) {
+            return Optional.empty();
+        }
+        ReadingQuiz selected = templates.get(new Random().nextInt(templates.size()));
+        log.info("Serving bank ReadingQuiz template ID: {} to user: {}", selected.getQuizId(), user.getUserId());
+        return Optional.of(copyFor(user, selected, moduleType));
+    }
+
+    private ReadingQuiz copyFor(User user, ReadingQuiz selected, String moduleType) {
         ReadingQuiz fallbackQuiz = ReadingQuiz.builder()
                 .user(user)
                 .topic(selected.getTopic())

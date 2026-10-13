@@ -45,6 +45,39 @@ public class ReadingPromptBuilder {
         );
     }
 
+    // NotebookLM's chat box is too short for the system prompt, so it goes into the notebook
+    // once as a source, and each passage is asked for with a short message that names it. The
+    // output comes back through the admin import.
+
+    /** The title the admin gives the format source in NotebookLM; the chat message names it. */
+    public String notebookLmSourceTitle(Difficulty difficulty) {
+        return "IELTS Reading format - " + formatDifficulty(difficulty);
+    }
+
+    /**
+     * The system prompt as a NotebookLM source. The other sources are style references only,
+     * so the passage stays original rather than a copy of a published test.
+     */
+    public String buildNotebookLmInstructions(Difficulty difficulty) {
+        return "# " + notebookLmSourceTitle(difficulty) + "\n\n"
+                + buildSystemPrompt(difficulty)
+                + "\nNOTEBOOK SOURCES:\n"
+                + "- Use the other sources in this notebook only as a reference for IELTS style, question wording and difficulty.\n"
+                + "- Do NOT copy passages or questions from the sources. Write a new, original passage.\n"
+                + "- Do NOT add citation markers such as [1] anywhere in the output.\n";
+    }
+
+    /** The short chat message asking for one passage under the instructions above. */
+    public String buildNotebookLmMessage(Topic topic, Difficulty difficulty) {
+        return String.format(
+                "Follow every rule in the source \"%s\". "
+                + "Generate a new, original IELTS Academic Reading passage about the topic: \"%s\". "
+                + "Difficulty level: %s. "
+                + "Return ONLY the JSON object, with no citation markers and no text before or after it.",
+                notebookLmSourceTitle(difficulty), formatTopic(topic), formatDifficulty(difficulty)
+        );
+    }
+
     private String formatTopic(Topic topic) {
         return switch (topic) {
             case ENVIRONMENT -> "Environment and Climate Change";

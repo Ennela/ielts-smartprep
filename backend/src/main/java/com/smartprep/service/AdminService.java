@@ -2,12 +2,14 @@ package com.smartprep.service;
 
 import com.smartprep.service.util.ImageUrls;
 import com.smartprep.dto.request.AdminMockTestRequest;
+import com.smartprep.dto.request.AdminReadingImportRequest;
 import com.smartprep.dto.request.AdminReadingQuizRequest;
 import com.smartprep.dto.request.AdminWritingPromptRequest;
 import com.smartprep.dto.request.AdminUserUpdateRequest;
 import com.smartprep.dto.response.*;
 import com.smartprep.exception.ResourceNotFoundException;
 import com.smartprep.model.entity.*;
+import com.smartprep.model.enums.ContentStatus;
 import com.smartprep.model.enums.Difficulty;
 import com.smartprep.model.enums.MockTestDifficulty;
 import com.smartprep.model.enums.QuestionType;
@@ -16,6 +18,8 @@ import com.smartprep.model.enums.Topic;
 import com.smartprep.model.enums.EssayType;
 import com.smartprep.model.enums.WritingTaskType;
 import com.smartprep.repository.*;
+import com.smartprep.service.ai.ReadingGenerationService;
+import com.smartprep.service.ai.ReadingPromptBuilder;
 import com.smartprep.service.util.QuestionOptionMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -45,6 +49,8 @@ public class AdminService {
     private final ReadingQuizRepository readingQuizRepository;
     private final MockTestRepository mockTestRepository;
     private final ListeningPartRepository listeningPartRepository;
+    private final ReadingGenerationService readingGenerationService;
+    private final ReadingPromptBuilder readingPromptBuilder;
 
     /**
      * List users with pagination, optional search, and configurable sort.
@@ -447,7 +453,38 @@ public class AdminService {
                 .questions(questionDtos)
                 .isTemplate(quiz.getIsTemplate())
                 .createdBy(Boolean.TRUE.equals(quiz.getIsTemplate()) ? "Admin" : (quiz.getUser() != null ? quiz.getUser().getUsername() : "AI"))
+                .contentStatus(quiz.getContentStatus() != null ? quiz.getContentStatus().name() : null)
                 .build();
+    }
+
+    /**
+     * What an admin pastes into NotebookLM to write a passage for the import below: the format
+     * instructions, added once as a source under sourceTitle, and the chat message for this topic.
+     */
+    public java.util.Map<String, String> readingImportPrompt(String topicStr, String difficultyStr) {
+        Topic topic = Topic.valueOf(topicStr.toUpperCase());
+        Difficulty difficulty = Difficulty.valueOf(difficultyStr.toUpperCase());
+        return java.util.Map.of(
+                "sourceTitle", readingPromptBuilder.notebookLmSourceTitle(difficulty),
+                "instructions", readingPromptBuilder.buildNotebookLmInstructions(difficulty),
+                "message", readingPromptBuilder.buildNotebookLmMessage(topic, difficulty));
+    }
+
+    /**
+     * A bank template from a passage written in NotebookLM. It lands as AI_IMPORTED, so the
+     * bank does not serve it to learners until an admin has reviewed and published it.
+     */
+    @Transactional
+    public AdminReadingQuizResponse importReadingQuiz(AdminReadingImportRequest request) {
+        Topic topic = Topic.valueOf(request.getTopic().toUpperCase());
+        Difficulty difficulty = Difficulty.valueOf(request.getDifficulty().toUpperCase());
+
+        ReadingQuiz quiz = readingGenerationService.parseImportedQuiz(request.getContent(), topic, difficulty);
+        quiz.setIsTemplate(true);
+        quiz.setContentStatus(ContentStatus.AI_IMPORTED);
+        quiz.setSource("NOTEBOOKLM");
+        quiz.setImportedAt(LocalDateTime.now());
+        return toAdminReadingQuizResponse(readingQuizRepository.save(quiz));
     }
 
     // ===== Mock Tests CRUD =====

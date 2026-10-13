@@ -74,6 +74,30 @@ class LearnerFacingContentFilterTest extends AbstractMySQLContainerTest {
     }
 
     @Test
+    @DisplayName("reading bank: only published templates the learner has not had a copy of")
+    void readingBank() {
+        ReadingQuiz seen = entityManager.persistAndFlush(quiz(ContentStatus.PUBLISHED));
+        ReadingQuiz unseen = entityManager.persistAndFlush(quiz(ContentStatus.PUBLISHED));
+        ReadingQuiz imported = entityManager.persistAndFlush(quiz(ContentStatus.AI_IMPORTED));
+        User learner = entityManager.persistAndFlush(User.builder()
+                .username("bank_learner").email("bank-learner@test.com")
+                .passwordHash("hash").role(Role.STUDENT).build());
+        entityManager.persistAndFlush(ReadingQuiz.builder().user(learner).topic(Topic.SCIENCE)
+                .difficulty(Difficulty.PASSAGE_3).passageText(MARK).isTemplate(false)
+                .parentTemplateId(seen.getQuizId()).build());
+
+        var forLearner = readingQuizRepository.findUnseenPublishedTemplates(
+                Topic.SCIENCE, Difficulty.PASSAGE_3, learner.getUserId(), PageRequest.of(0, 100));
+        var forAuthor = readingQuizRepository.findUnseenPublishedTemplates(
+                Topic.SCIENCE, Difficulty.PASSAGE_3, author.getUserId(), PageRequest.of(0, 100));
+
+        assertThat(forLearner).extracting(ReadingQuiz::getQuizId).contains(unseen.getQuizId())
+                .doesNotContain(seen.getQuizId(), imported.getQuizId());
+        assertThat(forAuthor).extracting(ReadingQuiz::getQuizId).contains(seen.getQuizId(), unseen.getQuizId())
+                .doesNotContain(imported.getQuizId());
+    }
+
+    @Test
     @DisplayName("listening: a draft part is neither listed nor used as a fallback")
     void listening() {
         ListeningPart published = entityManager.persistAndFlush(part(ContentStatus.PUBLISHED));

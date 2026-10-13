@@ -117,4 +117,15 @@ public interface ReadingQuizRepository extends JpaRepository<ReadingQuiz, Long> 
             @Param("difficulty") Difficulty difficulty,
             @Param("source") String source,
             Pageable pageable);
+
+    /** Published admin templates for this topic and difficulty the user has never been given a copy of. */
+    @Query("SELECT q FROM ReadingQuiz q WHERE q.isTemplate = true " +
+           "AND q.topic = :topic AND q.difficulty = :difficulty " +
+           "AND q.deletedAt IS NULL AND q.contentStatus = com.smartprep.model.enums.ContentStatus.PUBLISHED " +
+           "AND NOT EXISTS (SELECT c FROM ReadingQuiz c WHERE c.parentTemplateId = q.quizId AND c.user.userId = :userId)")
+    List<ReadingQuiz> findUnseenPublishedTemplates(
+            @Param("topic") Topic topic,
+            @Param("difficulty") Difficulty difficulty,
+            @Param("userId") Long userId,
+            Pageable pageable);
 }

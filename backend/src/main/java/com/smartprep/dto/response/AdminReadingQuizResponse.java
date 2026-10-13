@@ -24,6 +24,7 @@ public class AdminReadingQuizResponse {
     private List<QuestionDto> questions;
     private Boolean isTemplate;
     private String createdBy;
+    private String contentStatus;
 
     @Data
     @Builder

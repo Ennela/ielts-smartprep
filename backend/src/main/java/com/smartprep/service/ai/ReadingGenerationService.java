@@ -115,6 +115,16 @@ public class ReadingGenerationService {
     }
 
     private ReadingQuiz generateSingleQuizEntity(User user, Topic topic, Difficulty difficulty, String focusQuestionType, String moduleType) {
+        // The bank goes first so Gemini quota is spent only once the learner has used it up.
+        // An adaptive request that targets a question type still goes to Gemini: a stored
+        // passage may not practise that type.
+        if (focusQuestionType == null) {
+            java.util.Optional<ReadingQuiz> banked = fallbackSource.copyUnseenTemplate(user, topic, difficulty, moduleType);
+            if (banked.isPresent()) {
+                return quizRepository.save(banked.get());
+            }
+        }
+
         String systemPrompt = promptBuilder.buildSystemPrompt(difficulty);
         String userPrompt = promptBuilder.buildUserPrompt(topic, difficulty, focusQuestionType);
 
@@ -191,6 +201,11 @@ public class ReadingGenerationService {
     }
 
     private List<ReadingQuiz> generateFullQuizEntities(User user, Topic topic, String moduleType) {
+        List<ReadingQuiz> banked = bankedFullTest(user, topic, moduleType);
+        if (banked != null) {
+            return banked;
+        }
+
         String systemPrompt = promptBuilder.buildSystemPromptFull(moduleType);
         String userPrompt = promptBuilder.buildUserPromptFull(topic, moduleType);
 
@@ -429,6 +444,35 @@ public class ReadingGenerationService {
         }
     }
 
+    /**
+     * A full test from the bank when it holds an unseen template for each of the three passages,
+     * or null. General Training goes to Gemini: bank passages are written as Academic ones.
+     */
+    private List<ReadingQuiz> bankedFullTest(User user, Topic topic, String moduleType) {
+        if (!"ACADEMIC".equalsIgnoreCase(moduleType)) {
+            return null;
+        }
+        List<ReadingQuiz> copies = new ArrayList<>();
+        for (Difficulty difficulty : List.of(Difficulty.PASSAGE_1, Difficulty.PASSAGE_2, Difficulty.PASSAGE_3)) {
+            java.util.Optional<ReadingQuiz> copy = fallbackSource.copyUnseenTemplate(user, topic, difficulty, moduleType);
+            if (copy.isEmpty()) {
+                return null;
+            }
+            copies.add(copy.get());
+        }
+        int globalIndex = 1;
+        List<ReadingQuiz> saved = new ArrayList<>();
+        for (ReadingQuiz q : copies) {
+            q.getQuestions().sort(java.util.Comparator.comparing(ReadingQuestion::getOrderIndex,
+                    java.util.Comparator.nullsLast(Integer::compareTo)));
+            for (ReadingQuestion question : q.getQuestions()) {
+                question.setOrderIndex(globalIndex++);
+            }
+            saved.add(quizRepository.save(q));
+        }
+        return saved;
+    }
+
     private List<ReadingQuiz> handleFullFallback(User user, Topic topic, String moduleType, Exception originalException) {
         log.warn("Full Gemini test generation failed. Falling back to single-passage templates.");
         try {
@@ -449,6 +493,24 @@ public class ReadingGenerationService {
         } catch (Exception ex) {
             log.error("Failed to generate fallback for full quiz", ex);
             throw new RuntimeException("AI Content generation failed and fallback failed.", originalException);
+        }
+    }
+
+    /**
+     * An unsaved quiz parsed from a passage written elsewhere (NotebookLM) in the format the
+     * Gemini prompts ask for. Code fences around the JSON are dropped; a malformed passage is
+     * the admin's input error, so it surfaces as an IllegalArgumentException (400).
+     */
+    public ReadingQuiz parseImportedQuiz(String content, Topic topic, Difficulty difficulty) {
+        String json = content.trim()
+                .replaceFirst("^```(?:json)?\\s*", "")
+                .replaceFirst("\\s*```$", "");
+        try {
+            ReadingQuiz quiz = parseAiResponse(json, null, topic, difficulty, "ACADEMIC");
+            validateReadingQuiz(quiz);
+            return quiz;
+        } catch (InvalidAiResponseException ex) {
+            throw new IllegalArgumentException("Cannot import this passage: " + ex.getMessage(), ex);
         }
     }
 
