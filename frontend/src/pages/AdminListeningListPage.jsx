@@ -16,6 +16,14 @@ const TOPICS = [
   { value: 'ENVIRONMENT', label: 'Environment / Nature' },
 ];
 
+// The bank serves only PUBLISHED parts with audio ready; publishing passes through HUMAN_REVIEWED.
+const STATUS_BADGES = {
+  DRAFT: { label: 'Draft', className: 'badge-status-warning' },
+  AI_IMPORTED: { label: 'Imported', className: 'badge-status-warning' },
+  HUMAN_REVIEWED: { label: 'Reviewed', className: 'badge-status-info' },
+  PUBLISHED: { label: 'Published', className: 'badge-status-success' },
+};
+
 export default function AdminListeningListPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -33,6 +41,15 @@ export default function AdminListeningListPage() {
   const [deleteId, setDeleteId] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
+
+  // NotebookLM import
+  const [importOpen, setImportOpen] = useState(false);
+  const [importForm, setImportForm] = useState({ partNumber: 1, topic: 'ACCOMMODATION', content: '' });
+  const [importError, setImportError] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const [copied, setCopied] = useState(null); // 'instructions' | 'message'
+  const [sourceTitle, setSourceTitle] = useState(null);
+  const [statusBusyId, setStatusBusyId] = useState(null);
 
   // Detect if any PENDING parts exist for auto-polling
   const {
@@ -78,6 +95,75 @@ export default function AdminListeningListPage() {
   const invalidateList = () => {
     queryClient.invalidateQueries({ queryKey: ['admin', 'listening-parts'] });
     refetchStats();
+  };
+
+  const openImport = () => {
+    setImportForm(f => ({ ...f, content: '' }));
+    setImportError(null);
+    setCopied(null);
+    setSourceTitle(null);
+    setImportOpen(true);
+  };
+
+  // kind: 'instructions' (added once per part number as a NotebookLM source) or 'message' (the chat).
+  const handleCopy = async (kind) => {
+    setImportError(null);
+    try {
+      const res = await adminApi.getListeningImportPrompt(importForm.partNumber, importForm.topic);
+      await navigator.clipboard.writeText(res.data.data[kind]);
+      setSourceTitle(res.data.data.sourceTitle);
+      setCopied(kind);
+    } catch (err) {
+      setImportError(errorMessage(err, 'Failed to copy'));
+    }
+  };
+
+  const handleImport = async () => {
+    if (!importForm.content.trim()) { setImportError('Paste the JSON NotebookLM returned'); return; }
+    setImporting(true);
+    setImportError(null);
+    try {
+      await adminApi.importListeningPart(importForm);
+      setImportOpen(false);
+      setSuccessMsg('Part imported; its audio is being generated. Preview it, then Publish to add it to the question bank.');
+      invalidateList();
+      setTimeout(() => setSuccessMsg(null), 5000);
+    } catch (err) {
+      setImportError(errorMessage(err, 'Failed to import part'));
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handlePublish = async (part) => {
+    setStatusBusyId(part.partId);
+    try {
+      if (part.contentStatus !== 'HUMAN_REVIEWED') {
+        await adminApi.updateContentStatus('LISTENING', part.partId, 'HUMAN_REVIEWED');
+      }
+      await adminApi.updateContentStatus('LISTENING', part.partId, 'PUBLISHED');
+      setSuccessMsg('Part published to the question bank.');
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to publish'));
+    } finally {
+      setStatusBusyId(null);
+      invalidateList();
+    }
+  };
+
+  const handleUnpublish = async (part) => {
+    setStatusBusyId(part.partId);
+    try {
+      await adminApi.updateContentStatus('LISTENING', part.partId, 'DRAFT');
+      setSuccessMsg('Part withdrawn from the question bank.');
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err) {
+      setError(errorMessage(err, 'Failed to unpublish'));
+    } finally {
+      setStatusBusyId(null);
+      invalidateList();
+    }
   };
 
   // Archived view: put the row back in the active list.
@@ -153,12 +239,15 @@ export default function AdminListeningListPage() {
           <h1>Listening Parts Management</h1>
           <p className="subtitle">{totalElements} {showArchived ? 'archived ' : ''}listening parts in the system</p>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           {stats?.statusCounts?.FAILED > 0 && (
             <button className="btn btn-outline" onClick={handleRetryFailed} id="retry-failed-btn" style={{ borderColor: 'var(--color-danger)', color: 'var(--color-danger)' }}>
               Retry Failed Audio ({stats.statusCounts.FAILED})
             </button>
           )}
+          <button className="btn btn-outline" onClick={openImport} id="import-part-btn">
+            Import from NotebookLM
+          </button>
           <button className="btn btn-primary" onClick={() => navigate('/admin/listening/new')} id="create-part-btn">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Add New Part
@@ -237,6 +326,7 @@ export default function AdminListeningListPage() {
                     <th>Title</th>
                     <th>Topic</th>
                     <th>Audio Status</th>
+                    <th>Status</th>
                     <th>Duration</th>
                     <th>Questions</th>
                     <th>Created By</th>
@@ -265,6 +355,13 @@ export default function AdminListeningListPage() {
                             Failed
                           </span>
                         )}
+                      </td>
+                      <td>
+                        {STATUS_BADGES[part.contentStatus] ? (
+                          <span className={`essay-type-badge ${STATUS_BADGES[part.contentStatus].className}`}>
+                            {STATUS_BADGES[part.contentStatus].label}
+                          </span>
+                        ) : (part.contentStatus || '-')}
                       </td>
                       <td>{Math.floor(part.durationSeconds / 60)}:{(part.durationSeconds % 60).toString().padStart(2, '0')}</td>
                       <td>{part.questionCount} questions</td>
@@ -298,6 +395,21 @@ export default function AdminListeningListPage() {
                             className="btn btn-sm btn-outline"
                             onClick={() => navigate(`/admin/listening/edit/${part.partId}`)}
                           >Edit</button>
+                          {part.contentStatus === 'PUBLISHED' ? (
+                            <button
+                              className="btn btn-sm btn-outline"
+                              onClick={() => handleUnpublish(part)}
+                              disabled={statusBusyId === part.partId}
+                              id={`unpublish-part-${part.partId}`}
+                            >Unpublish</button>
+                          ) : (
+                            <button
+                              className="btn btn-sm btn-primary"
+                              onClick={() => handlePublish(part)}
+                              disabled={statusBusyId === part.partId}
+                              id={`publish-part-${part.partId}`}
+                            >Publish</button>
+                          )}
                           <button
                             className="btn btn-sm btn-outline"
                             onClick={() => handleRegenerate(part.partId)}
@@ -360,6 +472,87 @@ export default function AdminListeningListPage() {
             onClick={() => { setPreviewAudioUrl(null); setPreviewTitle(''); }}
           >Close</button>
         </div>
+      )}
+
+      {/* NotebookLM Import Modal */}
+      {importOpen && (
+        <Modal ariaLabel="Import listening part" onClose={() => setImportOpen(false)} className="admin-modal admin-modal-wide" style={{ maxWidth: '760px', width: '90%', maxHeight: '90vh', overflowY: 'auto' }}>
+          <button className="admin-modal-close" onClick={() => setImportOpen(false)} aria-label="Close" id="close-import-modal">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+
+          <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.25rem', fontWeight: 700, marginBottom: 12 }}>
+            Import from NotebookLM
+          </h2>
+          <ol style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.6, margin: '0 0 1.25rem 1.25rem' }}>
+            <li>Once per part number: copy the format instructions and add them to your NotebookLM notebook as a <em>Copied text</em> source.</li>
+            <li>For each part: copy the chat message and send it in the notebook chat.</li>
+            <li>Paste the JSON it returns below. The part is saved as Imported and its audio is generated; Publish it once you have checked it.</li>
+          </ol>
+
+          {importError && <div className="error-msg" style={{ marginBottom: '1rem' }}>{importError}</div>}
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1rem', alignItems: 'end' }}>
+            <div className="admin-form-group">
+              <label className="admin-form-label" htmlFor="import-part-number">Part</label>
+              <select
+                id="import-part-number"
+                className="matching-select"
+                value={importForm.partNumber}
+                onChange={e => { setImportForm(f => ({ ...f, partNumber: Number(e.target.value) })); setCopied(null); setSourceTitle(null); }}
+                style={{ width: '100%', maxWidth: '100%' }}
+              >
+                {[1, 2, 3, 4].map(n => <option key={n} value={n}>Part {n}</option>)}
+              </select>
+            </div>
+            <div className="admin-form-group">
+              <label className="admin-form-label" htmlFor="import-topic">Topic</label>
+              <select
+                id="import-topic"
+                className="matching-select"
+                value={importForm.topic}
+                onChange={e => { setImportForm(f => ({ ...f, topic: e.target.value })); setCopied(null); }}
+                style={{ width: '100%', maxWidth: '100%' }}
+              >
+                {TOPICS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+            <button type="button" className="btn btn-outline" onClick={() => handleCopy('instructions')} id="copy-import-instructions">
+              {copied === 'instructions' ? 'Instructions copied' : '1. Copy format instructions'}
+            </button>
+            <button type="button" className="btn btn-outline" onClick={() => handleCopy('message')} id="copy-import-message">
+              {copied === 'message' ? 'Message copied' : '2. Copy chat message'}
+            </button>
+          </div>
+          {sourceTitle && (
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+              The chat message refers to the source as <strong>{sourceTitle}</strong>. Give the source that title in NotebookLM.
+            </p>
+          )}
+
+          <div className="admin-form-group" style={{ marginBottom: '1.5rem' }}>
+            <label className="admin-form-label" htmlFor="import-content">JSON from NotebookLM</label>
+            <textarea
+              id="import-content"
+              className="editor-textarea"
+              value={importForm.content}
+              onChange={e => setImportForm(f => ({ ...f, content: e.target.value }))}
+              placeholder='{ "partNumber": 1, "title": "...", "script": "...", "questions": [ ... ] }'
+              style={{ minHeight: 240, width: '100%', fontFamily: 'monospace', fontSize: '0.85rem' }}
+            />
+          </div>
+
+          <div className="admin-form-actions">
+            <button className="btn btn-outline" onClick={() => setImportOpen(false)} type="button">Cancel</button>
+            <button className="btn btn-primary" onClick={handleImport} disabled={importing} type="button" id="submit-import">
+              {importing && <span className="spinner" />}
+              Import Part
+            </button>
+          </div>
+        </Modal>
       )}
 
       {/* Delete Confirm Modal */}

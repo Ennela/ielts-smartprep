@@ -72,6 +72,11 @@ public class ListeningGenerationService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        List<ListeningPartResponse> banked = bankedFullTest(userId, topic);
+        if (banked != null) {
+            return banked;
+        }
+
         log.info("Starting parallel generation of full 4-part Listening test for user {}", userId);
 
         List<java.util.concurrent.CompletableFuture<ListeningPart>> futures = new ArrayList<>();
@@ -200,6 +205,16 @@ public class ListeningGenerationService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        // The bank goes first so Gemini quota is spent only once the learner has used it up.
+        // An adaptive request that targets a question type still goes to Gemini: a stored
+        // part may not practise that type.
+        if (focusQuestionType == null) {
+            java.util.Optional<ListeningPartResponse> banked = fallbackSource.unseenPublishedPart(userId, partNumber, topic);
+            if (banked.isPresent()) {
+                return banked.get();
+            }
+        }
+
         String systemPrompt = "You are a professional IELTS Listening test designer with 15 years of experience.";
         String userPrompt = promptBuilder.buildGeneratePrompt(partNumber, topic, focusQuestionType);
 
@@ -275,6 +290,19 @@ public class ListeningGenerationService {
             log.info("TTS unavailable, part {} will use silent fallback", saved.getPartId());
         }
         return listeningQueryService.toPartResponse(saved);
+    }
+
+    /** A full test from the bank when it holds an unseen part for each of the four parts, or null. */
+    private List<ListeningPartResponse> bankedFullTest(Long userId, String topic) {
+        List<ListeningPartResponse> parts = new ArrayList<>();
+        for (int partNum = 1; partNum <= 4; partNum++) {
+            java.util.Optional<ListeningPartResponse> part = fallbackSource.unseenPublishedPart(userId, partNum, topic);
+            if (part.isEmpty()) {
+                return null;
+            }
+            parts.add(part.get());
+        }
+        return parts;
     }
 
     private ListeningPartResponse handleFallback(int partNumber, String topic, Exception originalException) {
@@ -354,6 +382,24 @@ public class ListeningGenerationService {
     // =========================================================================
     // Parsing & Validation
     // =========================================================================
+
+    /**
+     * An unsaved part parsed from one written elsewhere (NotebookLM) in the format the Gemini
+     * prompt asks for. Code fences around the JSON are dropped; a malformed part is the
+     * admin's input error, so it surfaces as an IllegalArgumentException (400).
+     */
+    public ListeningPart parseImportedPart(String content, int partNumber, String topic) {
+        String json = content.trim()
+                .replaceFirst("^```(?:json)?\\s*", "")
+                .replaceFirst("\\s*```$", "");
+        try {
+            ListeningPart part = parseListeningPart(json, partNumber, topic);
+            validateListeningPart(part);
+            return part;
+        } catch (InvalidAiResponseException ex) {
+            throw new IllegalArgumentException("Cannot import this part: " + ex.getMessage(), ex);
+        }
+    }
 
     private ListeningPart parseListeningPart(String aiResponse, int partNumber, String topic) {
         try {

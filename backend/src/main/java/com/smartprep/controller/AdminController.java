@@ -1,5 +1,6 @@
 package com.smartprep.controller;
 
+import com.smartprep.dto.request.AdminWritingImportRequest;
 import com.smartprep.dto.request.AdminWritingPromptRequest;
 import com.smartprep.dto.request.AdminReadingImportRequest;
 import com.smartprep.dto.request.AdminReadingQuizRequest;
@@ -20,6 +21,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -100,6 +102,23 @@ public class AdminController {
             @Valid @RequestBody AdminWritingPromptRequest request) {
         WritingPrompt created = adminService.createWritingPrompt(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(created, "Prompt created"));
+    }
+
+    @Operation(summary = "The NotebookLM source and chat message for Writing prompts to import")
+    @GetMapping("/writing-prompts/import-prompt")
+    public ResponseEntity<ApiResponse<Map<String, String>>> writingImportPrompt(
+            @RequestParam String topic,
+            @Parameter(description = "Ask for only the task this essay type belongs to; omit for the pair")
+            @RequestParam(required = false) String essayType) {
+        return ResponseEntity.ok(ApiResponse.ok(adminService.writingImportPrompt(topic, essayType)));
+    }
+
+    @Operation(summary = "Add Writing prompts written in NotebookLM to the bank, awaiting review")
+    @PostMapping("/writing-prompts/import")
+    public ResponseEntity<ApiResponse<List<WritingPrompt>>> importWritingPrompts(
+            @Valid @RequestBody AdminWritingImportRequest request) {
+        List<WritingPrompt> created = adminService.importWritingPrompts(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(created, "Writing prompts imported"));
     }
 
     @PutMapping("/writing-prompts/{promptId}")

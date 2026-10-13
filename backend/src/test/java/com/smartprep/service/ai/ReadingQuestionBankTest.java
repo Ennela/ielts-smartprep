@@ -171,7 +171,7 @@ class ReadingQuestionBankTest {
     @Test
     @DisplayName("an imported passage is saved as a bank template awaiting review, so learners do not get it yet")
     void import_savedAsTemplateAwaitingReview() {
-        AdminService adminService = new AdminService(null, null, null, quizRepository, null, null, service, promptBuilder);
+        AdminService adminService = new AdminService(null, null, null, quizRepository, null, null, service, promptBuilder, null);
         when(quizRepository.save(any(ReadingQuiz.class))).thenAnswer(inv -> inv.getArgument(0));
 
         AdminReadingQuizResponse response = adminService.importReadingQuiz(AdminReadingImportRequest.builder()

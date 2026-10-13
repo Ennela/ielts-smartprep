@@ -39,6 +39,12 @@ const adminApi = {
     restoreWritingPrompt: (promptId) =>
         axiosClient.post(`/admin/writing-prompts/${promptId}/restore`),
 
+    getWritingImportPrompt: (topic, essayType) =>
+        axiosClient.get('/admin/writing-prompts/import-prompt', { params: { topic, ...(essayType ? { essayType } : {}) } }),
+
+    importWritingPrompts: (data) =>
+        axiosClient.post('/admin/writing-prompts/import', data),
+
     listReadingQuizzes: (topic, difficulty, source, page = 0, size = DEFAULT_SIZE, sort = 'createdAt,desc', archived = false) => {
         const params = { page, size, sort };
         if (topic) params.topic = topic;
@@ -115,6 +121,12 @@ const adminApi = {
 
     getListeningStats: () =>
         axiosClient.get('/admin/listening/stats'),
+
+    getListeningImportPrompt: (partNumber, topic) =>
+        axiosClient.get('/admin/listening/parts/import-prompt', { params: { partNumber, topic } }),
+
+    importListeningPart: (data) =>
+        axiosClient.post('/admin/listening/parts/import', data),
 
     getReadingQuizPreview: (quizId) =>
         axiosClient.get(`/admin/reading/${quizId}/preview`),
