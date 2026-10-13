@@ -10,6 +10,7 @@ import useExamWarnings from '../hooks/useExamWarnings';
 import { useToast } from '../context/ToastContext';
 import { submitAnswersPrompt } from '../utils/confirmSubmit';
 import { useConfirm } from '../context/ConfirmContext';
+import errorMessage from '../utils/errorMessage';
 
 const SESSION_KEY = 'reading_full_attemptId';
 
@@ -46,7 +47,7 @@ export default function ReadingFullExamPage() {
         navigate(`/reading/full-result?historyId=${res.data.data.historyId ?? ''}`, { state: { result: res.data.data }, replace: true });
       })
       .catch((err) => {
-        setError(err.response?.data?.message || 'Auto-submit failed. Please try submitting manually.');
+        setError(errorMessage(err, 'Auto-submit failed. Please try submitting manually.'));
         setSubmitting(false);
         submittingRef.current = false;
       });
@@ -157,7 +158,7 @@ export default function ReadingFullExamPage() {
       try { localStorage.removeItem(`reading_full_draft_${quizIdsKey}`); } catch (_e) { /* ignore */ }
       navigate(`/reading/full-result?historyId=${res.data.data.historyId ?? ''}`, { state: { result: res.data.data }, replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || 'Submission failed');
+      setError(errorMessage(err, 'Submission failed'));
       setSubmitting(false);
       submittingRef.current = false;
     }

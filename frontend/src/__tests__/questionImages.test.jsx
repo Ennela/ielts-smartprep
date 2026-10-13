@@ -44,7 +44,10 @@ describe('ImageUploadField', () => {
 
   it('says why an upload was refused', async () => {
     adminApi.uploadImage.mockRejectedValueOnce(
-      Object.assign(new Error('Request failed'), { response: { data: { message: 'Only PNG, JPEG or WebP images are allowed' } } }));
+      Object.assign(new Error('Request failed'), {
+        response: { data: { message: 'Only PNG, JPEG or WebP images are allowed', errorCode: 'BAD_REQUEST' } },
+        userMessage: 'Only PNG, JPEG or WebP images are allowed',
+      }));
     render(<ImageUploadField id="img" label="Diagram" value="" onChange={() => {}} />);
 
     fireEvent.change(screen.getByLabelText('Diagram'), { target: { files: [new File(['x'], 'a.gif')] } });

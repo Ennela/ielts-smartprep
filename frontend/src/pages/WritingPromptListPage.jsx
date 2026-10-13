@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import writingApi from '../api/writingApi';
 import { TASK1_TYPES, TASK2_TYPES, ESSAY_TYPE_LABELS, formatEssayType } from '../constants/examTypes';
+import errorMessage from '../utils/errorMessage';
 
 const ALL_TYPES_FILTER = { value: '', label: 'All Types' };
 const toFilters = (types) => [ALL_TYPES_FILTER, ...types.map((t) => ({ value: t, label: ESSAY_TYPE_LABELS[t] }))];
@@ -38,7 +39,7 @@ export default function WritingPromptListPage() {
             setIsGenModalOpen(false);
             navigate(`/writing/full-exam?task1Id=${prompt1Id}&task2Id=${prompt2Id}`);
         } catch (err) {
-            setGenError(err.response?.data?.message || 'Failed to generate AI Writing test. Please try again.');
+            setGenError(errorMessage(err, 'Failed to generate AI Writing test. Please try again.'));
         } finally {
             setGenerating(false);
         }
@@ -53,7 +54,7 @@ export default function WritingPromptListPage() {
             const prompt2Id = res.data.data[1].promptId;
             navigate(`/writing/full-exam?task1Id=${prompt1Id}&task2Id=${prompt2Id}`);
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to assemble Writing test');
+            setError(errorMessage(err, 'Failed to assemble Writing test'));
         } finally {
             setAssembling(false);
         }

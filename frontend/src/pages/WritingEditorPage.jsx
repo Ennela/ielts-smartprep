@@ -11,6 +11,7 @@ import { useToast } from '../context/ToastContext';
 import { mayHaveGradedAnyway, latestSubmissionId, findNewSubmission } from '../utils/gradingRecovery';
 import { isTask1Type, formatEssayType } from '../constants/examTypes';
 import VisualDataRenderer from '../components/writing/VisualDataRenderer';
+import errorMessage from '../utils/errorMessage';
 
 const SESSION_KEY_PREFIX = 'writing_single_attemptId_';
 // Mirrors the draft mechanism ReadingContext already uses for quiz answers.
@@ -217,7 +218,7 @@ export default function WritingEditorPage() {
           navigate(`/writing/result/${res.data.data.submissionId}`, { replace: true });
         })
         .catch((err) => {
-          setError(err.response?.data?.message || 'Auto-submit failed. Please try submitting manually.');
+          setError(errorMessage(err, 'Auto-submit failed. Please try submitting manually.'));
           setGrading(false);
           submittingRef.current = false;
         });
@@ -303,7 +304,7 @@ export default function WritingEditorPage() {
         }
         setError('Grading did not complete. Check your history before submitting again, or your essay may be graded twice.');
       } else {
-        setError(err.response?.data?.message || err.message || 'Grading failed. Please try again.');
+        setError(errorMessage(err, 'Grading failed. Please try again.'));
       }
       submittingRef.current = false;
     }

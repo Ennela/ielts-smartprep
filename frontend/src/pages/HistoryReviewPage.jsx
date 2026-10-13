@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import statsApi from '../api/statsApi';
+import errorMessage from '../utils/errorMessage';
 
 export default function HistoryReviewPage() {
   const { historyId } = useParams();
@@ -16,7 +17,7 @@ export default function HistoryReviewPage() {
         const res = await statsApi.getHistoryDetail(historyId);
         setDetail(res.data.data);
       } catch (err) {
-        setError(err.message || 'Unable to load review details');
+        setError(errorMessage(err, 'Unable to load review details'));
       } finally {
         setLoading(false);
       }

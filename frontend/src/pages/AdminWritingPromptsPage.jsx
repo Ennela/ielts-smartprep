@@ -12,6 +12,7 @@ import {
   TASK1_TYPES, TASK2_TYPES, ALL_ESSAY_TYPES as ALL_TYPES,
   ESSAY_TYPE_LABELS as TYPE_LABELS, isTask1Type,
 } from '../constants/examTypes';
+import errorMessage from '../utils/errorMessage';
 
 export default function AdminWritingPromptsPage() {
   const navigate = useNavigate();
@@ -96,7 +97,7 @@ export default function AdminWritingPromptsPage() {
       invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
-      setError(err.message);
+      setError(errorMessage(err, 'Failed to save the prompt'));
     } finally {
       setSaving(false);
     }
@@ -111,7 +112,7 @@ export default function AdminWritingPromptsPage() {
       invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to restore');
+      setError(errorMessage(err, 'Failed to restore'));
     }
   };
 
@@ -125,7 +126,7 @@ export default function AdminWritingPromptsPage() {
       invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
-      setError(err.message);
+      setError(errorMessage(err, 'Failed to archive the prompt'));
     } finally {
       setDeleting(false);
     }

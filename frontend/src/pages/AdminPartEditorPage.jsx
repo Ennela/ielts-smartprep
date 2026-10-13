@@ -3,6 +3,7 @@ import ImageUploadField from '../components/admin/ImageUploadField';
 import { useNavigate, useParams } from 'react-router-dom';
 import adminApi from '../api/adminApi';
 import { nextRowKey, withRowKeys } from '../utils/rowKey';
+import errorMessage from '../utils/errorMessage';
 
 const TOPICS = [
   { value: 'ACCOMMODATION', label: 'Accommodation / Booking' },
@@ -91,7 +92,7 @@ export default function AdminPartEditorPage() {
             });
           }
         })
-        .catch(err => setError(err.message))
+        .catch(err => setError(errorMessage(err, 'Could not load this listening part.')))
         .finally(() => setLoading(false));
     }
   }, [partId, isEdit]);
@@ -197,7 +198,7 @@ export default function AdminPartEditorPage() {
       }
       navigate('/admin/listening');
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to save listening part');
+      setError(errorMessage(err, 'Failed to save listening part'));
     } finally {
       setSaving(false);
     }

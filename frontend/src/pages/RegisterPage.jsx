@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import errorMessage from '../utils/errorMessage';
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
@@ -32,7 +33,7 @@ export default function RegisterPage() {
       success('Account created successfully! A verification email has been sent.');
       navigate('/dashboard');
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Registration failed';
+      const msg = errorMessage(err, 'Registration failed');
       error(msg);
     } finally {
       setLoading(false);

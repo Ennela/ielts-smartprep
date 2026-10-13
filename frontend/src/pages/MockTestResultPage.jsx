@@ -4,6 +4,7 @@ import mockTestApi from '../api/mockTestApi';
 import AiVocabularyButton from '../components/vocab/AiVocabularyButton';
 import MockTestAnalyticsDashboard from '../components/mocktest/MockTestAnalyticsDashboard';
 import styles from '../styles/MockTestResult.module.css';
+import errorMessage from '../utils/errorMessage';
 
 const CRITERIA_EXPLANATIONS = [
   {
@@ -60,7 +61,7 @@ export default function MockTestResultPage() {
       await mockTestApi.regradeWriting(submissionId);
       await loadResult();
     } catch (err) {
-      setRegradeError(err.response?.data?.message || 'Could not restart grading. Please try again.');
+      setRegradeError(errorMessage(err, 'Could not restart grading. Please try again.'));
     } finally {
       setRegrading(false);
     }
@@ -75,7 +76,7 @@ export default function MockTestResultPage() {
       setAnalyticsError('');
     } catch (err) {
       setAnalytics(null);
-      setAnalyticsError(err.response?.data?.message || 'Result analytics could not be loaded.');
+      setAnalyticsError(errorMessage(err, 'Result analytics could not be loaded.'));
     }
   };
 
@@ -98,7 +99,7 @@ export default function MockTestResultPage() {
         }
       }
     } catch (err) {
-      setError(err.message || 'Failed to load test report.');
+      setError(errorMessage(err, 'Failed to load test report.'));
       setLoading(false);
     }
   };

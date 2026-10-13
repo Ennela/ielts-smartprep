@@ -106,7 +106,8 @@ describe('ListeningExamPage', () => {
 
     renderExam();
 
-    expect(await screen.findByText('Request failed with status code 500')).toBeInTheDocument();
+    expect(await screen.findByText('Failed to load the listening test.')).toBeInTheDocument();
+    expect(screen.queryByText('Request failed with status code 500')).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('Go Back'));
     expect(await screen.findByText('Practice page')).toBeInTheDocument();
   });
@@ -116,7 +117,8 @@ describe('ListeningExamPage', () => {
 
     renderExam();
 
-    expect(await screen.findByText('Service Unavailable')).toBeInTheDocument();
+    expect(await screen.findByText('Could not start the exam attempt. Please go back and try again.')).toBeInTheDocument();
+    expect(screen.queryByText('Service Unavailable')).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
 

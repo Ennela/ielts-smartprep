@@ -5,6 +5,7 @@ import speakingApi from '../api/speakingApi';
 import useAudioRecorder, { recordingSupported } from '../hooks/useAudioRecorder';
 import { useConfirm } from '../context/ConfirmContext';
 import QuestionsPractice from '../components/speaking/QuestionsPractice';
+import gradeErrorMessage from '../components/speaking/gradeErrorMessage';
 import styles from '../styles/Speaking.module.css';
 
 const MIN_SECONDS = 5;
@@ -100,7 +101,7 @@ export default function SpeakingPracticePage() {
       const res = await speakingApi.grade(prompt.promptId, [{ blob: recorder.blob, duration: recorder.duration }]);
       navigate(`/speaking/result/${res.data.data.submissionId}`, { replace: true });
     } catch (err) {
-      setGradeError(err.response?.data?.message || err.message || 'Grading failed. Your recording is still here; try again.');
+      setGradeError(gradeErrorMessage(err, 'your recording is still here'));
       setPhase('record');
     }
   };

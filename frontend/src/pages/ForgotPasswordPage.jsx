@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import authService from '../api/authService';
 import { useToast } from '../context/ToastContext';
+import errorMessage from '../utils/errorMessage';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -23,7 +24,7 @@ export default function ForgotPasswordPage() {
       success('If an account exists, a password reset link has been sent.');
       setSent(true);
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Failed to send reset link';
+      const msg = errorMessage(err, 'Failed to send reset link');
       error(msg);
     } finally {
       setLoading(false);

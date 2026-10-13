@@ -7,6 +7,7 @@ import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
 import ArchivedToggle from '../components/admin/ArchivedToggle';
 import Modal from '../components/common/Modal';
+import errorMessage from '../utils/errorMessage';
 
 export default function AdminMockTestsPage() {
   const navigate = useNavigate();
@@ -166,7 +167,7 @@ export default function AdminMockTestsPage() {
       invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
-      setError(err.message);
+      setError(errorMessage(err, 'Failed to save the mock test'));
     } finally {
       setSaving(false);
     }
@@ -181,7 +182,7 @@ export default function AdminMockTestsPage() {
       invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to restore');
+      setError(errorMessage(err, 'Failed to restore'));
     }
   };
 
@@ -195,7 +196,7 @@ export default function AdminMockTestsPage() {
       invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
-      setError(err.message);
+      setError(errorMessage(err, 'Failed to archive the mock test'));
     } finally {
       setDeleting(false);
     }

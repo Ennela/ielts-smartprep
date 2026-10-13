@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import speakingApi from '../../api/speakingApi';
 import useAudioRecorder, { recordingSupported } from '../../hooks/useAudioRecorder';
+import gradeErrorMessage from './gradeErrorMessage';
 import styles from '../../styles/Speaking.module.css';
 
 const MIN_SECONDS = 3;
@@ -70,7 +71,7 @@ export default function QuestionsPractice({ prompt }) {
       const res = await speakingApi.grade(prompt.promptId, answers);
       navigate(`/speaking/result/${res.data.data.submissionId}`, { replace: true });
     } catch (err) {
-      setGradeError(err.response?.data?.message || err.message || 'Grading failed. Your answers are still here; try again.');
+      setGradeError(gradeErrorMessage(err, 'your answers are still here'));
       setStage('review');
     }
   };

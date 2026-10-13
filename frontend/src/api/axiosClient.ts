@@ -9,6 +9,37 @@ interface FailedRequest {
 interface EnrichedError extends Error {
   status?: number;
   response?: AxiosResponse;
+  /** What the page may show the user; undefined when the page's own wording fits better. */
+  userMessage?: string;
+}
+
+// Error codes whose message the backend writes for the person using the app (see
+// GlobalExceptionHandler). Every other message -- a framework reason naming a parameter or a
+// content type, "Internal server error", "X not found: 12" -- is for developers.
+const USER_FACING_CODES = new Set([
+  'BAD_REQUEST', 'VALIDATION_ERROR', 'WORD_COUNT_TOO_LOW', 'ACCOUNT_LOCKED',
+  'ACCOUNT_SUSPENDED', 'INVALID_TOKEN', 'RATE_LIMIT_EXCEEDED',
+]);
+
+function userMessageFor(error: AxiosError<any>): string | undefined {
+  if (!error.response) {
+    if (error.code === 'ERR_CANCELED') return undefined;
+    return error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT'
+      ? 'The server took too long to respond. Please try again.'
+      : 'Could not reach the server. Check your internet connection and try again.';
+  }
+  const { status, data } = error.response;
+  if (typeof data?.message === 'string' && data.message && USER_FACING_CODES.has(data.errorCode)) {
+    return data.message;
+  }
+  if (status === 401) return 'Your session has expired. Please log in again.';
+  if (status === 403) return 'You do not have permission to do that.';
+  if (status === 413) return 'The file is too large to upload.';
+  if (status === 429) return 'Too many requests. Please wait a moment and try again.';
+  if (status === 502 || status === 503 || status === 504) {
+    return 'The service is busy right now. Please try again in a few minutes.';
+  }
+  return undefined;
 }
 
 const axiosClient = axios.create({
@@ -120,6 +151,7 @@ axiosClient.interceptors.response.use(
     const enrichedError: EnrichedError = new Error(message);
     enrichedError.status = error.response?.status;
     enrichedError.response = error.response;
+    enrichedError.userMessage = userMessageFor(error);
     return Promise.reject(enrichedError);
   }
 );

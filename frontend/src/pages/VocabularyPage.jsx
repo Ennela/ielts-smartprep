@@ -6,6 +6,7 @@ import vocabApi from '../api/vocabApi';
 import VocabInsightPanel from '../components/vocab/VocabInsightPanel';
 import insightStyles from '../styles/VocabInsight.module.css';
 import { useConfirm } from '../context/ConfirmContext';
+import errorMessage from '../utils/errorMessage';
 
 const WORDS_PAGE_SIZE = 12;
 
@@ -94,7 +95,7 @@ export default function VocabularyPage() {
       setReviewIndex(0);
       setIsFlipped(false);
     } catch (err) {
-      setError(err.message || 'Failed to fetch vocabulary data.');
+      setError(errorMessage(err, 'Failed to fetch vocabulary data.'));
     } finally {
       setLoading(false);
     }
@@ -125,7 +126,7 @@ export default function VocabularyPage() {
       await loadVocabulary();
       reloadWords();
     } catch (err) {
-      setAddError(err.message || 'Failed to add word.');
+      setAddError(errorMessage(err, 'Failed to add word.'));
     } finally {
       setAddLoading(false);
     }
@@ -149,7 +150,7 @@ export default function VocabularyPage() {
         }
       }, 300);
     } catch (err) {
-      setError('Failed to submit review: ' + err.message);
+      setError(errorMessage(err, 'Failed to submit the review.'));
     }
   };
 
@@ -173,7 +174,7 @@ export default function VocabularyPage() {
       loadVocabulary();
       reloadWords();
     } catch (err) {
-      setError('Failed to delete word: ' + err.message);
+      setError(errorMessage(err, 'Failed to delete the word.'));
     }
   };
 
@@ -723,7 +724,7 @@ export default function VocabularyPage() {
                 </div>
               ) : wordsQuery.isError ? (
                 <div className="error-msg" role="alert">
-                  <span>{wordsQuery.error?.message || 'Could not load your word bank.'}</span>
+                  <span>{errorMessage(wordsQuery.error, 'Could not load your word bank.')}</span>
                   <button className="btn btn-outline" onClick={reloadWords}>Retry</button>
                 </div>
               ) : filteredAllList.length === 0 ? (

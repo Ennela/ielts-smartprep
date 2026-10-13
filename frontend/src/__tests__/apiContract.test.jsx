@@ -128,7 +128,7 @@ describe('WritingFullResultPage by id', () => {
 
     renderAt('/writing/full-result/99');
 
-    expect(await screen.findByText('Not found')).toBeInTheDocument();
+    expect(await screen.findByText('Could not load this result.')).toBeInTheDocument();
   });
 
   it('keeps the old message when there is neither state nor an id', async () => {

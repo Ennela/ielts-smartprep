@@ -3,6 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import authService from '../api/authService';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import errorMessage from '../utils/errorMessage';
 
 export default function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
@@ -29,7 +30,7 @@ export default function VerifyEmailPage() {
           }
         } catch (err) {
           setVerifyStatus('error');
-          const msg = err.response?.data?.message || err.message || 'Verification failed';
+          const msg = errorMessage(err, 'Verification failed');
           error(msg);
         } finally {
           setVerifying(false);
@@ -55,7 +56,7 @@ export default function VerifyEmailPage() {
       success('Verification email resent! Please check your inbox.');
       setCooldown(60); // 60 seconds cooldown
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Failed to resend verification email';
+      const msg = errorMessage(err, 'Failed to resend verification email');
       error(msg);
     } finally {
       setResending(false);

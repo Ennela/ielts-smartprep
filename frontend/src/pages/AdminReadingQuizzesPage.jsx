@@ -8,6 +8,7 @@ import { usePaginatedQuery } from '../hooks/usePaginatedQuery';
 import Pagination from '../components/Pagination';
 import ArchivedToggle from '../components/admin/ArchivedToggle';
 import Modal from '../components/common/Modal';
+import errorMessage from '../utils/errorMessage';
 
 const TOPICS = [
   { value: 'ENVIRONMENT', label: 'Environment' },
@@ -257,7 +258,7 @@ export default function AdminReadingQuizzesPage() {
       invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to save quiz');
+      setError(errorMessage(err, 'Failed to save quiz'));
     } finally {
       setSaving(false);
     }
@@ -272,7 +273,7 @@ export default function AdminReadingQuizzesPage() {
       invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to restore');
+      setError(errorMessage(err, 'Failed to restore'));
     }
   };
 
@@ -286,7 +287,7 @@ export default function AdminReadingQuizzesPage() {
       invalidateList();
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to archive quiz');
+      setError(errorMessage(err, 'Failed to archive quiz'));
     } finally {
       setDeleting(false);
     }

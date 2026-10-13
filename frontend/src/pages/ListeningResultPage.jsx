@@ -2,6 +2,7 @@ import { Fragment, useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import listeningApi from '../api/listeningApi';
 import AiVocabularyButton from '../components/vocab/AiVocabularyButton';
+import errorMessage from '../utils/errorMessage';
 
 // Transcripts mark each answer as [ANS_3]forty[/ANS_3] so grading feedback can point at
 // it. This page printed those tags verbatim. After submission the answers are the point of
@@ -49,7 +50,7 @@ export default function ListeningResultPage() {
     listeningApi.getTestResult(testId)
       .then(res => { if (!cancelled) setResult(res.data.data); })
       .catch(err => {
-        if (!cancelled) setError(err.response?.data?.message || 'Could not load this result.');
+        if (!cancelled) setError(errorMessage(err, 'Could not load this result.'));
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };

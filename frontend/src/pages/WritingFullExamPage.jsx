@@ -11,6 +11,7 @@ import { useToast } from '../context/ToastContext';
 import { mayHaveGradedAnyway, latestSubmissionId, findNewSubmission } from '../utils/gradingRecovery';
 import { formatEssayType } from '../constants/examTypes';
 import { useConfirm } from '../context/ConfirmContext';
+import errorMessage from '../utils/errorMessage';
 
 const SESSION_KEY = 'writing_full_attemptId';
 
@@ -83,7 +84,7 @@ export default function WritingFullExamPage() {
       navigate(`/writing/full-result/${res.data.data.id}`, { state: { result: res.data.data }, replace: true });
     }).catch(err => {
       console.error(err);
-      showErrorToast(err.response?.data?.message || 'Auto-submit failed. Please try submitting manually.');
+      showErrorToast(errorMessage(err, 'Auto-submit failed. Please try submitting manually.'));
       setSubmitting(false);
       submittingRef.current = false;
     });
@@ -224,7 +225,7 @@ export default function WritingFullExamPage() {
         }
         showErrorToast('Grading did not complete. Check your history before submitting again, or the test may be graded twice.');
       } else {
-        showErrorToast(err.response?.data?.message || err.message || 'Submission failed');
+        showErrorToast(errorMessage(err, 'Submission failed'));
       }
       submittingRef.current = false;
     }

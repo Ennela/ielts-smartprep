@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import authService from '../api/authService';
 import analyticsApi from '../api/analyticsApi';
 import styles from '../styles/Profile.module.css';
+import errorMessage from '../utils/errorMessage';
 
 /** Bundled with the app, so it always resolves. */
 
@@ -78,7 +79,7 @@ export default function ProfilePage() {
       .then(res => setOverview(res.data.data))
       .catch(err => {
         console.error('Error fetching analytics overview:', err);
-        setOverviewError(err.response?.data?.message || err.message || 'Could not load your current estimated bands');
+        setOverviewError(errorMessage(err, 'Could not load your current estimated bands'));
       })
       .finally(() => setLoadingOverview(false));
   };
@@ -191,7 +192,7 @@ export default function ProfilePage() {
       });
       success('Profile picture updated successfully.');
     } catch (err) {
-      error(err.message || 'Failed to upload profile picture.');
+      error(errorMessage(err, 'Failed to upload profile picture.'));
       setAvatarPreview(null); // revert preview on failure
     } finally {
       setUploadingAvatar(false);
@@ -213,7 +214,7 @@ export default function ProfilePage() {
       });
       success('Personal information updated successfully.');
     } catch (err) {
-      error(err.message || 'Failed to update personal information.');
+      error(errorMessage(err, 'Failed to update personal information.'));
     } finally {
       setSavingPersonal(false);
     }
@@ -237,7 +238,7 @@ export default function ProfilePage() {
       success('Password changed. Please sign in again with your new password.');
       setTimeout(() => logout(), 1200);
     } catch (err) {
-      error(err.message || 'Failed to change password.');
+      error(errorMessage(err, 'Failed to change password.'));
     } finally {
       setSavingPassword(false);
     }
@@ -257,7 +258,7 @@ export default function ProfilePage() {
       });
       success('Study goals updated successfully.');
     } catch (err) {
-      error(err.message || 'Failed to update study goals.');
+      error(errorMessage(err, 'Failed to update study goals.'));
     } finally {
       setSavingGoals(false);
     }
@@ -283,7 +284,7 @@ export default function ProfilePage() {
       success('Preferences saved successfully.');
     } catch (err) {
       setNotifications(prevNotifs);
-      error(err.message || 'Failed to save preferences.');
+      error(errorMessage(err, 'Failed to save preferences.'));
     } finally {
       setSavingPrefs(false);
     }

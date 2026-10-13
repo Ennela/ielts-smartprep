@@ -83,7 +83,7 @@ describe('Preferences tab', () => {
     fireEvent.click(screen.getByRole('checkbox', { name: /email notifications/i }));
     fireEvent.click(screen.getByRole('button', { name: 'Save Preferences' }));
 
-    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Service Unavailable'));
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith('Failed to save preferences.'));
     expect(toastSuccess).not.toHaveBeenCalled();
   });
 

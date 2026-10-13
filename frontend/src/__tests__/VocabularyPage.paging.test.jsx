@@ -98,7 +98,8 @@ describe('VocabularyPage word bank', () => {
     renderPage();
     await openWordBank();
 
-    expect(await screen.findByText('Service Unavailable')).toBeInTheDocument();
+    expect(await screen.findByText('Could not load your word bank.')).toBeInTheDocument();
+    expect(screen.queryByText('Service Unavailable')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 });

@@ -59,7 +59,8 @@ describe('AuthProvider session bootstrap', () => {
     renderGuarded();
 
     expect(await screen.findByText('Could not verify your session.')).toBeInTheDocument();
-    expect(screen.getByText('Network Error')).toBeInTheDocument();
+    expect(screen.getByText('Check your internet connection and try again.')).toBeInTheDocument();
+    expect(screen.queryByText('Network Error')).not.toBeInTheDocument();
     expect(screen.queryByText('Login page')).not.toBeInTheDocument();
     expect(clearAllAuthData).not.toHaveBeenCalled();
     expect(localStorage.getItem('token')).toBe('access-token');

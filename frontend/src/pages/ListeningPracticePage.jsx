@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import listeningApi from '../api/listeningApi';
+import errorMessage from '../utils/errorMessage';
 
 const TOPICS = [
   { value: 'ACCOMMODATION', label: 'Accommodation / Booking' },
@@ -41,7 +42,7 @@ export default function ListeningPracticePage() {
   const parts = curatedQuery.data || [];
   const curatedLoading = curatedQuery.isLoading && activeTab === 'curated';
   const curatedError = curatedQuery.isError
-    ? (curatedQuery.error?.response?.data?.message || curatedQuery.error?.message || 'Failed to load curated tests')
+    ? errorMessage(curatedQuery.error, 'Failed to load curated tests')
     : '';
   const loadCurated = curatedQuery.refetch;
 
@@ -58,7 +59,7 @@ export default function ListeningPracticePage() {
         setError('No listening parts available to assemble a mock test.');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to assemble mock test');
+      setError(errorMessage(err, 'Failed to assemble mock test'));
       console.error(err);
     } finally {
       setMockLoading(false);
@@ -78,7 +79,7 @@ export default function ListeningPracticePage() {
         setError('Failed to generate AI Mock Test.');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to generate AI Mock Test');
+      setError(errorMessage(err, 'Failed to generate AI Mock Test'));
       console.error(err);
     } finally {
       setMockLoading(false);
@@ -97,7 +98,7 @@ export default function ListeningPracticePage() {
         throw new Error('No partId returned from AI generator');
       }
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Failed to generate listening test. Please try again.');
+      setError(errorMessage(err, 'Failed to generate listening test. Please try again.'));
     } finally {
       setGenerateLoading(false);
     }

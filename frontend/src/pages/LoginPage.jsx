@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import errorMessage from '../utils/errorMessage';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -43,7 +44,7 @@ export default function LoginPage() {
         }
       }
     } catch (err) {
-      const msg = err.response?.data?.message || err.message || 'Login failed';
+      const msg = errorMessage(err, 'Login failed');
       error(msg);
     } finally {
       setLoading(false);

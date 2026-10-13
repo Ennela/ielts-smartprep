@@ -14,6 +14,7 @@ import useExamWarnings from '../hooks/useExamWarnings';
 import { useToast } from '../context/ToastContext';
 import { submitAnswersPrompt } from '../utils/confirmSubmit';
 import { useConfirm } from '../context/ConfirmContext';
+import errorMessage from '../utils/errorMessage';
 
 const SESSION_KEY = 'listening_attemptId';
 // Answers are drafted per attempt so a reload or a dropped connection does not lose
@@ -83,7 +84,7 @@ export default function ListeningExamPage() {
       navigate(`/listening/result/${res.data?.data?.testId}`, { state: res.data?.data });
     }).catch(err => {
       console.error(err);
-      showErrorToast(err.response?.data?.message || 'Auto-submit failed. Please try submitting manually.');
+      showErrorToast(errorMessage(err, 'Auto-submit failed. Please try submitting manually.'));
       setSubmitting(false);
       submittingRef.current = false;
     });
@@ -207,7 +208,7 @@ export default function ListeningExamPage() {
       } catch (err) {
         console.error(err);
         if (active) {
-          setError(err.message || 'Failed to load the listening test.');
+          setError(errorMessage(err, 'Failed to load the listening test.'));
           setLoading(false);
         }
       }
@@ -252,7 +253,7 @@ export default function ListeningExamPage() {
         }
       } catch (err) {
         console.error("Failed to start attempt:", err);
-        if (active) setError(err.message || 'Could not start the exam attempt. Please go back and try again.');
+        if (active) setError(errorMessage(err, 'Could not start the exam attempt. Please go back and try again.'));
       }
     };
 

@@ -17,7 +17,11 @@ const speakingApi = {
             const extension = blob.type.includes('ogg') ? 'ogg' : blob.type.includes('mp4') ? 'm4a' : 'webm';
             form.append('audio', blob, `answer-${i + 1}.${extension}`);
         });
-        return axiosClient.post('/speaking/grade', form);
+        // Without this the client's default JSON Content-Type makes axios turn the form into
+        // JSON, and the server refuses it (415). The browser fills in the multipart boundary.
+        return axiosClient.post('/speaking/grade', form, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
     },
 
     getHistory: (page = 0, size = 10) =>

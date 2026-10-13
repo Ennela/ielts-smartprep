@@ -4,6 +4,7 @@ import { useReading } from '../context/ReadingContext';
 import readingApi from '../api/readingApi';
 import analyticsApi from '../api/analyticsApi';
 import AiVocabularyButton from '../components/vocab/AiVocabularyButton';
+import errorMessage from '../utils/errorMessage';
 
 export default function ReadingResultPage() {
   const { quizId } = useParams();
@@ -25,7 +26,7 @@ export default function ReadingResultPage() {
             navigate(`/reading/exam/${quizId}`, { replace: true });
             return;
           }
-          setError(err.response?.data?.message || err.message || 'Unable to load result');
+          setError(errorMessage(err, 'Unable to load result'));
         } finally {
           setLoading(false);
         }
