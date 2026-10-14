@@ -40,9 +40,11 @@ public interface ListeningPartRepository extends JpaRepository<ListeningPart, Lo
            "ORDER BY p.partNumber ASC, p.partId ASC")
     List<ListeningPart> findAllByOrderByPartNumberAscPartIdAsc();
 
+    // Topics are free text ("Accommodation booking") while the admin filter sends a key
+    // ("ACCOMMODATION"), so the filter matches a topic that contains it, ignoring case.
     @Query("SELECT p FROM ListeningPart p WHERE " +
            "(:audioStatus IS NULL OR p.audioStatus = :audioStatus) AND " +
-           "(:topic IS NULL OR p.topic = :topic) AND p.deletedAt IS NULL")
+           "(:topic IS NULL OR LOWER(p.topic) LIKE LOWER(CONCAT('%', :topic, '%'))) AND p.deletedAt IS NULL")
     Page<ListeningPart> findByFilters(
             @Param("audioStatus") AudioStatus audioStatus,
             @Param("topic") String topic,
@@ -51,7 +53,7 @@ public interface ListeningPartRepository extends JpaRepository<ListeningPart, Lo
     // Admin "Archived" view: only soft-deleted rows, newest archive first.
     @Query("SELECT p FROM ListeningPart p WHERE p.deletedAt IS NOT NULL AND " +
            "(:audioStatus IS NULL OR p.audioStatus = :audioStatus) AND " +
-           "(:topic IS NULL OR p.topic = :topic) ORDER BY p.deletedAt DESC")
+           "(:topic IS NULL OR LOWER(p.topic) LIKE LOWER(CONCAT('%', :topic, '%'))) ORDER BY p.deletedAt DESC")
     Page<ListeningPart> findArchivedByFilters(
             @Param("audioStatus") AudioStatus audioStatus,
             @Param("topic") String topic,

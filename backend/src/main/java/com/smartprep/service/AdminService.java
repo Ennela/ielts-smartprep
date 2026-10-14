@@ -31,7 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -153,23 +152,6 @@ public class AdminService {
                 .createdAt(user.getCreatedAt())
                 .skillStats(skillStats)
                 .recentScores(recentScores)
-                .build();
-    }
-
-    // ===== Dashboard Stats =====
-
-    public AdminDashboardResponse getDashboardStats() {
-        // "Total Students" on the dashboard: admin accounts are not learners.
-        long totalUsers = userRepository.countByRole(Role.STUDENT);
-        LocalDateTime todayStart = LocalDate.now().atStartOfDay();
-        long testsToday = scoreHistoryRepository.countByRecordedAtAfter(todayStart);
-        // pendingWritings: count submissions not yet graded (overallBand is null) — simplified as 0 for now
-        long pendingWritings = 0;
-        return AdminDashboardResponse.builder()
-                .totalUsers(totalUsers)
-                .testsToday(testsToday)
-                .pendingWritings(pendingWritings)
-                .apiHealthy(true)
                 .build();
     }
 

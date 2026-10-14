@@ -51,6 +51,31 @@ class AudioGenerationServiceTest {
     }
 
     @Test
+    @DisplayName("generateAudioAsync: the part's duration becomes the real length of the audio made")
+    void generateAudioAsync_success_storesRealDuration() {
+        ListeningPart part = ListeningPart.builder()
+                .partId(1L).partNumber(4)
+                .transcriptText("A lecture.")
+                .durationSeconds(420)   // the guess a generated part starts with
+                .audioStatus(AudioStatus.PENDING)
+                .build();
+        // 12000 bytes of MPEG-2 Layer III at 48 kbit/s, as edge-tts sends: two seconds
+        byte[] audio = new byte[12_000];
+        audio[0] = (byte) 0xFF; audio[1] = (byte) 0xF3; audio[2] = (byte) 0x64;
+
+        when(partRepository.findById(1L)).thenReturn(Optional.of(part));
+        when(ttsService.isAvailable()).thenReturn(true);
+        when(ttsService.synthesizeSingle(anyString(), anyString())).thenReturn(audio);
+        when(storageService.uploadAudio(anyString(), any(byte[].class))).thenReturn("/api/v1/listening/audio/part_1.mp3");
+        when(partRepository.save(any(ListeningPart.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        audioGenerationService.generateAudioAsync(1L);
+
+        verify(partRepository).save(argThat(p ->
+                p.getAudioStatus() == AudioStatus.READY && p.getDurationSeconds() == 2));
+    }
+
+    @Test
     @DisplayName("generateAudioAsync: TTS failure sets status to FAILED")
     void generateAudioAsync_ttsFailure_statusSetToFailed() {
         ListeningPart part = ListeningPart.builder()
