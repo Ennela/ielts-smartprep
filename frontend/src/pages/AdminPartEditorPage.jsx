@@ -13,6 +13,11 @@ const TOPICS = [
   { value: 'ENVIRONMENT', label: 'Environment / Nature' },
 ];
 
+// A stored topic is free text ("Science", "Accommodation booking"). One that is a key apart
+// from case selects that key; anything else is kept as it is and offered as its own option,
+// so the select never shows a topic the part does not have.
+const topicKey = (topic) => TOPICS.find(t => t.value === (topic || '').toUpperCase())?.value || topic || '';
+
 const QUESTION_TYPES = [
   { value: 'MCQ', label: 'Multiple Choice (MCQ)' },
   { value: 'FILL_BLANK', label: 'Fill in the Blank' },
@@ -39,7 +44,7 @@ export default function AdminPartEditorPage() {
   const [form, setForm] = useState({
     partNumber: 1,
     title: '',
-    topic: 'ACCOMMODATION',
+    topic: '',
     transcriptText: '',
     durationSeconds: 180,
     questions: [],
@@ -54,7 +59,7 @@ export default function AdminPartEditorPage() {
             setForm({
               partNumber: part.partNumber || 1,
               title: part.title || '',
-              topic: part.topic || 'ACCOMMODATION',
+              topic: topicKey(part.topic),
               transcriptText: part.transcriptText || '',
               durationSeconds: part.durationSeconds || 180,
               questions: part.questions ? withRowKeys(part.questions).map(q => {
@@ -151,6 +156,7 @@ export default function AdminPartEditorPage() {
 
     // Validations
     if (!form.title.trim()) { setError('Title is required'); return; }
+    if (!form.topic) { setError('Topic is required'); return; }
     if (!form.transcriptText.trim()) { setError('Transcript text is required'); return; }
     if (form.questions.length === 0) { setError('A listening part must contain at least 1 question'); return; }
 
@@ -253,6 +259,10 @@ export default function AdminPartEditorPage() {
               onChange={e => setForm(f => ({ ...f, topic: e.target.value }))}
               style={{ width: '100%', maxWidth: '100%' }}
             >
+              {!form.topic && <option value="" disabled>Select a topic</option>}
+              {form.topic && !TOPICS.some(t => t.value === form.topic) && (
+                <option value={form.topic}>{form.topic} (current)</option>
+              )}
               {TOPICS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>

@@ -24,6 +24,15 @@ export default function MainLayout() {
 
   const initials = (user?.displayName || user?.username || 'U').charAt(0).toUpperCase();
   const displayName = user?.displayName || user?.username || '';
+  // The picture uploaded on the profile page, as the learner layout shows it; the initial
+  // stays when there is none or it fails to load.
+  const avatarSrc = user?.avatarUrl
+    ? (user.avatarUrl.startsWith('http') ? user.avatarUrl : (import.meta.env.VITE_API_URL || '/api/v1').replace('/api/v1', '') + user.avatarUrl)
+    : null;
+  const [failedAvatarSrc, setFailedAvatarSrc] = useState(null);
+  const avatar = avatarSrc && failedAvatarSrc !== avatarSrc
+    ? <img src={avatarSrc} alt="" className={styles['avatar-img']} onError={() => setFailedAvatarSrc(avatarSrc)} />
+    : initials;
 
   return (
     <div className={styles['app-layout']}>
@@ -46,7 +55,7 @@ export default function MainLayout() {
           className={styles['sidebar-user-card']}
           onClick={() => { navigate('/admin/profile'); setSidebarOpen(false); }}
         >
-          <div className={styles['sidebar-avatar']}>{initials}</div>
+          <div className={styles['sidebar-avatar']}>{avatar}</div>
           <div className={styles['sidebar-user-info']}>
             <span className={styles['sidebar-user-name']}>{displayName}</span>
             <span className={styles['sidebar-user-role']}>
@@ -128,7 +137,7 @@ export default function MainLayout() {
               id="topbar-profile-btn"
               aria-label="Profile and settings"
             >
-              {initials}
+              {avatar}
             </button>
           </div>
         </header>

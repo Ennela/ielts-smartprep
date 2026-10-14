@@ -85,4 +85,26 @@ describe('AdminUsersPage account management', () => {
     expect(await within(details).findByText(/This is your own account/)).toBeInTheDocument();
     expect(within(details).queryByRole('button', { name: 'Suspend' })).not.toBeInTheDocument();
   });
+
+  it("shows a learner's target bands but not an admin's, and names the list after the tab", async () => {
+    const admin = { ...learner, userId: 9, username: 'other_admin', role: 'ADMIN' };
+    adminApi.getUserDetail.mockImplementation((id) => ok(id === 9 ? admin : { ...learner, userId: id }));
+    renderPage();
+    expect(await screen.findByRole('heading', { name: 'Student Management' })).toBeInTheDocument();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Details' }));
+    let details = await screen.findByRole('dialog', { name: 'Student details' });
+    expect(await within(details).findByText('Target Band Scores')).toBeInTheDocument();
+    fireEvent.keyDown(details, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    adminApi.listUsers.mockImplementation(() => ok({ content: [admin], totalPages: 1, totalElements: 1 }));
+    fireEvent.click(screen.getByRole('button', { name: 'Admins' }));
+    expect(await screen.findByRole('heading', { name: 'Account Management' })).toBeInTheDocument();
+    expect(await screen.findByText('other_admin')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Details' }));
+    details = await screen.findByRole('dialog', { name: 'Student details' });
+    expect(await within(details).findByText('@other_admin · l@test.com')).toBeInTheDocument();
+    expect(within(details).queryByText('Target Band Scores')).not.toBeInTheDocument();
+  });
 });
