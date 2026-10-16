@@ -24,6 +24,9 @@ public interface MockTestSubmissionRepository extends JpaRepository<MockTestSubm
     Page<MockTestSubmission> findByUserUserId(Long userId, Pageable pageable);
     Optional<MockTestSubmission> findBySubmissionIdAndUserUserId(Long submissionId, Long userId);
 
+    /** Sittings in this state, e.g. GRADING: Writing still waiting to be graded. */
+    long countByStatus(SubmissionStatus status);
+
     /**
      * Take ownership of a submission that needs grading again, atomically.
      *

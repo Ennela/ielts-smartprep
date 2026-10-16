@@ -114,6 +114,27 @@ class ListeningPartRepositoryTest extends AbstractMySQLContainerTest {
     }
 
     @Test
+    @DisplayName("findByFilters — the admin's topic key finds free-text topics that contain it, in any case")
+    void findByFilters_topicKeyMatchesFreeText() {
+        entityManager.persistAndFlush(buildPart(1, "Hotel", "Accommodation booking", AudioStatus.READY));
+        entityManager.persistAndFlush(buildPart(1, "Hostel", "ACCOMMODATION", AudioStatus.READY));
+        entityManager.persistAndFlush(buildPart(4, "Lecture", "Science", AudioStatus.READY));
+        ListeningPart archived = buildPart(1, "Old hotel", "accommodation", AudioStatus.READY);
+        archived.setDeletedAt(java.time.LocalDateTime.now());
+        entityManager.persistAndFlush(archived);
+
+        Page<ListeningPart> active = listeningPartRepository.findByFilters(
+                null, "ACCOMMODATION", PageRequest.of(0, 10));
+        Page<ListeningPart> inArchive = listeningPartRepository.findArchivedByFilters(
+                null, "ACCOMMODATION", PageRequest.of(0, 10));
+
+        assertThat(active.getContent()).extracting(ListeningPart::getTitle)
+                .containsExactlyInAnyOrder("Hotel", "Hostel");
+        assertThat(inArchive.getContent()).extracting(ListeningPart::getTitle)
+                .containsExactly("Old hotel");
+    }
+
+    @Test
     @DisplayName("findByFilters — null filters return all parts")
     void findByFilters_noFilter() {
         entityManager.persistAndFlush(buildPart(1, "A", "t1", AudioStatus.READY));

@@ -3,6 +3,7 @@ package com.smartprep.service;
 import com.smartprep.model.entity.ListeningPart;
 import com.smartprep.model.enums.AudioStatus;
 import com.smartprep.repository.ListeningPartRepository;
+import com.smartprep.service.util.Mp3Duration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -67,7 +68,7 @@ public class AudioGenerationService {
             }
         } catch (Exception e) {
             log.error("Failed to generate TTS audio for part {}: {}", partId, e.getMessage(), e);
-            updateStatus(partId, AudioStatus.FAILED, null);
+            updateStatus(partId, AudioStatus.FAILED, null, null);
             return;
         }
 
@@ -76,21 +77,26 @@ public class AudioGenerationService {
             String key = "part_" + partId + "_" + System.currentTimeMillis() + ".mp3";
             String audioUrl = storageService.uploadAudio(key, mp3Bytes);
 
-            updateStatus(partId, AudioStatus.READY, audioUrl);
+            // The stored length was a guess (or whatever the admin typed); the exam timer adds
+            // these up, so it becomes the real playing time of the audio just made.
+            updateStatus(partId, AudioStatus.READY, audioUrl, Mp3Duration.seconds(mp3Bytes));
             log.info("TTS audio successfully generated and saved for part {}: {}", partId, audioUrl);
         } catch (Exception e) {
             log.error("Failed to upload audio or update status for part {}: {}", partId, e.getMessage(), e);
-            updateStatus(partId, AudioStatus.FAILED, null);
+            updateStatus(partId, AudioStatus.FAILED, null, null);
         }
     }
 
-    private void updateStatus(Long partId, AudioStatus status, String audioUrl) {
+    private void updateStatus(Long partId, AudioStatus status, String audioUrl, Integer durationSeconds) {
         try {
             ListeningPart part = partRepository.findById(partId).orElse(null);
             if (part != null) {
                 part.setAudioStatus(status);
                 if (audioUrl != null) {
                     part.setAudioUrl(audioUrl);
+                }
+                if (durationSeconds != null && durationSeconds > 0) {
+                    part.setDurationSeconds(durationSeconds);
                 }
                 partRepository.save(part);
             }

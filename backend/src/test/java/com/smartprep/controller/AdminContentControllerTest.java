@@ -9,6 +9,7 @@ import com.smartprep.model.entity.User;
 import com.smartprep.repository.UserRepository;
 import com.smartprep.security.JwtAuthenticationFilter;
 import com.smartprep.security.JwtTokenProvider;
+import com.smartprep.service.AdminDashboardService;
 import com.smartprep.service.AdminListeningService;
 import com.smartprep.service.AdminService;
 import com.smartprep.service.ContentModerationService;
@@ -132,6 +133,11 @@ class AdminContentControllerTest {
         @Bean
         public AdminService adminService() {
             return mock(AdminService.class);
+        }
+
+        @Bean
+        public AdminDashboardService adminDashboardService() {
+            return mock(AdminDashboardService.class);
         }
 
         @Bean

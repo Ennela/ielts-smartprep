@@ -115,13 +115,4 @@ class AdminUserManagementTest {
         assertEquals(1, result.getTotalElements());
         verify(userRepository, never()).findAll(any(Pageable.class));
     }
-
-    @Test
-    @DisplayName("counts only students as 'Total Students' on the dashboard")
-    void dashboardCountsStudents() {
-        when(userRepository.countByRole(Role.STUDENT)).thenReturn(9L);
-
-        assertEquals(9L, adminService.getDashboardStats().getTotalUsers());
-        verify(userRepository, never()).count();
-    }
 }

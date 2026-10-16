@@ -9,6 +9,7 @@ import com.smartprep.dto.request.AdminUserUpdateRequest;
 import com.smartprep.model.entity.User;
 import com.smartprep.dto.response.*;
 import com.smartprep.model.entity.WritingPrompt;
+import com.smartprep.service.AdminDashboardService;
 import com.smartprep.service.AdminService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -33,12 +34,13 @@ public class AdminController {
     private static final int MAX_PAGE_SIZE = 100;
 
     private final AdminService adminService;
+    private final AdminDashboardService adminDashboardService;
 
     // ===== Dashboard =====
 
     @GetMapping("/dashboard")
     public ResponseEntity<ApiResponse<AdminDashboardResponse>> getDashboard() {
-        return ResponseEntity.ok(ApiResponse.ok(adminService.getDashboardStats()));
+        return ResponseEntity.ok(ApiResponse.ok(adminDashboardService.getDashboardStats()));
     }
 
     // ===== Users =====
