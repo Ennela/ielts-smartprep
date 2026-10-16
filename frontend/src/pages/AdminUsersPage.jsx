@@ -96,7 +96,7 @@ export default function AdminUsersPage() {
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             Overview
           </button>
-          <h1>Student Management</h1>
+          <h1>{roleFilter === 'STUDENT' ? 'Student Management' : 'Account Management'}</h1>
           <p className="subtitle">{totalElements} {listNoun}</p>
         </div>
       </div>
@@ -146,7 +146,7 @@ export default function AdminUsersPage() {
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>Student</th>
+                    <th>{roleFilter === 'STUDENT' ? 'Student' : 'Account'}</th>
                     <th>Email</th>
                     <th>Tests Taken</th>
                     <th>Avg Score</th>
@@ -285,15 +285,17 @@ export default function AdminUsersPage() {
                 )}
               </div>
 
-              {/* Targets */}
-              <div className="admin-detail-targets">
-                <h3>Target Band Scores</h3>
-                <div className="admin-target-row">
-                  <span>Reading: <strong>{detail.targetReadingScore ?? '—'}</strong></span>
-                  <span>Writing: <strong>{detail.targetWritingScore ?? '—'}</strong></span>
-                  <span>Listening: <strong>{detail.targetListeningScore ?? '—'}</strong></span>
+              {/* Targets: a learner's study goals; an admin has none, only the defaults. */}
+              {detail.role !== 'ADMIN' && (
+                <div className="admin-detail-targets">
+                  <h3>Target Band Scores</h3>
+                  <div className="admin-target-row">
+                    <span>Reading: <strong>{detail.targetReadingScore ?? '—'}</strong></span>
+                    <span>Writing: <strong>{detail.targetWritingScore ?? '—'}</strong></span>
+                    <span>Listening: <strong>{detail.targetListeningScore ?? '—'}</strong></span>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Skill Stats */}
               {detail.skillStats?.length > 0 && (

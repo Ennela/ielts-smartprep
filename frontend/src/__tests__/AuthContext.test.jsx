@@ -2,7 +2,8 @@ import '@testing-library/jest-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from '../context/AuthContext';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider, useAuth } from '../context/AuthContext';
 import ProtectedRoute from '../components/common/ProtectedRoute';
 
 /*
@@ -13,7 +14,7 @@ import ProtectedRoute from '../components/common/ProtectedRoute';
  */
 
 vi.mock('../api/authService', () => ({
-  default: { getProfile: vi.fn() },
+  default: { getProfile: vi.fn(), login: vi.fn(), logout: vi.fn() },
   clearAllAuthData: vi.fn(() => localStorage.removeItem('token')),
 }));
 
@@ -23,14 +24,16 @@ const profile = { id: 2, username: 'noah2005', role: 'STUDENT', emailVerified: t
 
 function renderGuarded() {
   return render(
-    <MemoryRouter initialEntries={['/dashboard']}>
-      <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<div>Login page</div>} />
-          <Route path="/dashboard" element={<ProtectedRoute><div>Dashboard</div></ProtectedRoute>} />
-        </Routes>
-      </AuthProvider>
-    </MemoryRouter>
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<div>Login page</div>} />
+            <Route path="/dashboard" element={<ProtectedRoute><div>Dashboard</div></ProtectedRoute>} />
+          </Routes>
+        </AuthProvider>
+      </MemoryRouter>
+    </QueryClientProvider>
   );
 }
 
@@ -79,5 +82,58 @@ describe('AuthProvider session bootstrap', () => {
     expect(await screen.findByText('Could not verify your session.')).toBeInTheDocument();
     expect(clearAllAuthData).not.toHaveBeenCalled();
     expect(localStorage.getItem('token')).toBe('access-token');
+  });
+});
+
+describe('AuthProvider and cached queries', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    localStorage.setItem('token', 'access-token');
+    authService.getProfile.mockResolvedValue({ data: { success: true, data: profile } });
+  });
+
+  function AccountSwitcher() {
+    const { user, login, logout } = useAuth();
+    return (
+      <div>
+        <span>Signed in: {user?.username || 'nobody'}</span>
+        <button type="button" onClick={() => logout()}>Log out</button>
+        <button type="button" onClick={() => login('other', 'pw')}>Log in as other</button>
+      </div>
+    );
+  }
+
+  function renderWithCache(queryClient) {
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider><AccountSwitcher /></AuthProvider>
+      </QueryClientProvider>
+    );
+  }
+
+  it("drops the last account's cached history on logout, so the next account never sees it", async () => {
+    const queryClient = new QueryClient();
+    renderWithCache(queryClient);
+    expect(await screen.findByText('Signed in: noah2005')).toBeInTheDocument();
+    queryClient.setQueryData(['reading', 'history'], ['noah2005 result']);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Log out' }));
+
+    expect(await screen.findByText('Signed in: nobody')).toBeInTheDocument();
+    expect(queryClient.getQueryData(['reading', 'history'])).toBeUndefined();
+  });
+
+  it('drops cached queries when another account signs in, even without a logout first', async () => {
+    authService.login.mockResolvedValue({ data: { data: { username: 'other', role: 'STUDENT', token: 't2' } } });
+    const queryClient = new QueryClient();
+    renderWithCache(queryClient);
+    expect(await screen.findByText('Signed in: noah2005')).toBeInTheDocument();
+    queryClient.setQueryData(['vocab', 'words'], ['noah2005 word']);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Log in as other' }));
+
+    expect(await screen.findByText('Signed in: other')).toBeInTheDocument();
+    expect(queryClient.getQueryData(['vocab', 'words'])).toBeUndefined();
   });
 });

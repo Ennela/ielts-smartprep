@@ -18,7 +18,7 @@ const toastError = vi.fn();
 let currentUser;
 
 vi.mock('../context/AuthContext', () => ({
-  useAuth: () => ({ user: currentUser, updateUser, logout }),
+  useAuth: () => ({ user: currentUser, updateUser, logout, isAdmin: currentUser?.role === 'ADMIN' }),
 }));
 
 vi.mock('../context/ToastContext', () => ({
@@ -162,5 +162,18 @@ describe('Personal info tab', () => {
     expect(updateUser).toHaveBeenCalledWith(
       expect.objectContaining({ displayName: 'Noah', avatarUrl: '/new.png' })
     );
+  });
+});
+
+describe('Profile of an admin', () => {
+  it('drops the learner wording and the progress-email toggle', () => {
+    currentUser = { ...currentUser, username: 'admin2026', displayName: 'admin2026', role: 'ADMIN' };
+    renderAt('prefs');
+
+    expect(screen.getByText('Manage your account details and preferences.')).toBeInTheDocument();
+    expect(screen.queryByText(/preparation preferences/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Email Notifications')).not.toBeInTheDocument();
+    expect(screen.getByText('Switch to a darker theme.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Study Goals' })).not.toBeInTheDocument();
   });
 });

@@ -328,7 +328,9 @@ export default function ProfilePage() {
       {/* Header */}
       <div className={styles.header}>
         <h1 className={styles.title}>Profile &amp; Settings</h1>
-        <p className={styles.subtitle}>Manage your account details and preparation preferences.</p>
+        <p className={styles.subtitle}>
+          {isAdmin ? 'Manage your account details and preferences.' : 'Manage your account details and preparation preferences.'}
+        </p>
       </div>
 
       {/* Tab Navigation */}
@@ -665,7 +667,8 @@ export default function ProfilePage() {
                 </select>
               </div>
 
-              {/* Notifications Toggle */}
+              {/* Notifications Toggle: progress emails are about a learner's own study. */}
+              {!isAdmin && (
               <div className={styles['pref-row']}>
                 <div>
                   <h3 className={styles['pref-info-title']}>Email Notifications</h3>
@@ -689,12 +692,15 @@ export default function ProfilePage() {
                   />
                 </div>
               </div>
+              )}
 
               {/* Dark Mode Toggle */}
               <div className={styles['pref-row']}>
                 <div>
                   <h3 className={styles['pref-info-title']}>Dark Mode</h3>
-                  <p className={styles['pref-info-desc']}>Switch to a darker theme for nighttime studying.</p>
+                  <p className={styles['pref-info-desc']}>
+                    {isAdmin ? 'Switch to a darker theme.' : 'Switch to a darker theme for nighttime studying.'}
+                  </p>
                 </div>
                 <div className={styles['toggle-switch-wrapper']}>
                   <input
