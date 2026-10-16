@@ -8,8 +8,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -142,5 +147,77 @@ class TtsServiceTest {
         doThrow(new RuntimeException("Connection error")).when(restTemplate).getForObject(any(java.net.URI.class), any());
 
         assertThrows(RuntimeException.class, () -> ttsService.synthesizeSingle("Hello", "en-US-GuyNeural"));
+    }
+
+    // ── 429 from the sidecar's rate limiter ─────────────────────────────────
+
+    private static HttpClientErrorException tooManyRequests(String retryAfter) {
+        HttpHeaders headers = new HttpHeaders();
+        if (retryAfter != null) {
+            headers.set("Retry-After", retryAfter);
+        }
+        return HttpClientErrorException.create(HttpStatus.TOO_MANY_REQUESTS, "Too Many Requests",
+                headers, new byte[0], StandardCharsets.UTF_8);
+    }
+
+    private List<Long> recordPauses() {
+        List<Long> waits = new ArrayList<>();
+        ReflectionTestUtils.setField(ttsService, "pause", (TtsService.Pause) waits::add);
+        return waits;
+    }
+
+    @Test
+    @DisplayName("a 429 is retried after the sidecar's Retry-After, and the audio still comes back")
+    void rateLimited_retriesAfterRetryAfter() {
+        List<Long> waits = recordPauses();
+        byte[] audio = {7, 7};
+        doThrow(tooManyRequests("3")).doThrow(tooManyRequests("12")).doReturn(audio)
+                .when(restTemplate).getForObject(any(java.net.URI.class), any());
+
+        byte[] result = ttsService.synthesizeSingle("Hello", "en-US-GuyNeural");
+
+        assertArrayEquals(audio, result);
+        assertEquals(List.of(3000L, 12000L), waits);
+        verify(restTemplate, times(3)).getForObject(any(java.net.URI.class), any());
+    }
+
+    @Test
+    @DisplayName("a 429 without a usable Retry-After waits a few seconds, and a huge one is capped")
+    void rateLimited_defaultAndCappedWait() {
+        List<Long> waits = recordPauses();
+        doThrow(tooManyRequests(null)).doThrow(tooManyRequests("soon")).doThrow(tooManyRequests("3600"))
+                .doReturn(new byte[]{1}).when(restTemplate).getForObject(any(java.net.URI.class), any());
+
+        ttsService.synthesizeSingle("Hello", "en-US-GuyNeural");
+
+        assertEquals(List.of(5000L, 5000L, 65000L), waits);
+    }
+
+    @Test
+    @DisplayName("a segment still rate limited after five retries fails the synthesis")
+    void rateLimited_givesUpAfterFiveRetries() {
+        List<Long> waits = recordPauses();
+        doThrow(tooManyRequests("1")).when(restTemplate).getForObject(any(java.net.URI.class), any());
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> ttsService.synthesizeSingle("Hello", "en-US-GuyNeural"));
+
+        assertEquals("Edge TTS synthesis failed", ex.getMessage());
+        assertEquals(5, waits.size());
+        verify(restTemplate, times(6)).getForObject(any(java.net.URI.class), any());
+    }
+
+    @Test
+    @DisplayName("other HTTP errors are not retried")
+    void otherErrors_notRetried() {
+        List<Long> waits = recordPauses();
+        doThrow(HttpClientErrorException.create(HttpStatus.BAD_REQUEST, "Bad Request", new HttpHeaders(),
+                new byte[0], StandardCharsets.UTF_8))
+                .when(restTemplate).getForObject(any(java.net.URI.class), any());
+
+        assertThrows(RuntimeException.class, () -> ttsService.synthesizeSingle("Hello", "en-US-GuyNeural"));
+
+        assertTrue(waits.isEmpty());
+        verify(restTemplate, times(1)).getForObject(any(java.net.URI.class), any());
     }
 }

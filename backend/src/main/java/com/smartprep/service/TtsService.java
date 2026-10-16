@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import jakarta.annotation.PostConstruct;
@@ -36,6 +37,18 @@ public class TtsService {
     private int readTimeoutSeconds;
 
     private RestTemplate restTemplate;
+
+    // A 429 from the sidecar is retried after its Retry-After, a few times at most.
+    private static final int MAX_RATE_LIMIT_RETRIES = 5;
+    private static final long DEFAULT_RETRY_AFTER_SECONDS = 5;
+    private static final long MAX_RETRY_AFTER_SECONDS = 65;
+
+    /** How the wait between rate-limit retries happens; a field so tests do not sleep. */
+    interface Pause {
+        void millis(long millis) throws InterruptedException;
+    }
+
+    Pause pause = Thread::sleep;
 
     // Edge TTS Neural Voices (alternating male/female)
     private static final List<String> VOICE_POOL = List.of(
@@ -212,18 +225,52 @@ public class TtsService {
                 .build(true)  // treat values as already encoded
                 .toUri();
 
-        try {
-            log.debug("Calling Edge TTS: voice={}, textLength={}, rate={}, url={}",
-                    voice, text.length(), speakingRate, uri);
-            byte[] response = restTemplate.getForObject(uri, byte[].class);
-            if (response == null || response.length == 0) {
-                throw new RuntimeException("Empty response received from Edge TTS service");
+        for (int attempt = 0; ; attempt++) {
+            try {
+                log.debug("Calling Edge TTS: voice={}, textLength={}, rate={}, url={}",
+                        voice, text.length(), speakingRate, uri);
+                byte[] response = restTemplate.getForObject(uri, byte[].class);
+                if (response == null || response.length == 0) {
+                    throw new RuntimeException("Empty response received from Edge TTS service");
+                }
+                return response;
+            } catch (HttpClientErrorException.TooManyRequests e) {
+                // The sidecar allows a fixed number of requests a minute, and a dialogue sends
+                // one per speaker turn, so a long script, or several parts at once, runs into it.
+                // Waiting as long as it asks and trying again finishes the part instead of
+                // failing it.
+                if (attempt >= MAX_RATE_LIMIT_RETRIES) {
+                    log.error("Edge TTS still rate limited after {} retries", MAX_RATE_LIMIT_RETRIES);
+                    throw new RuntimeException("Edge TTS synthesis failed", e);
+                }
+                long waitMillis = retryAfterMillis(e);
+                log.warn("Edge TTS rate limited; retrying in {} s (retry {}/{})",
+                        waitMillis / 1000, attempt + 1, MAX_RATE_LIMIT_RETRIES);
+                try {
+                    pause.millis(waitMillis);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Edge TTS synthesis interrupted", ie);
+                }
+            } catch (Exception e) {
+                log.error("Failed to connect to Edge TTS microservice: {}", e.getMessage());
+                throw new RuntimeException("Edge TTS synthesis failed", e);
             }
-            return response;
-        } catch (Exception e) {
-            log.error("Failed to connect to Edge TTS microservice: {}", e.getMessage());
-            throw new RuntimeException("Edge TTS synthesis failed", e);
         }
+    }
+
+    /** The sidecar's Retry-After in seconds, kept within a minute and a bit; a few seconds if absent. */
+    private static long retryAfterMillis(HttpClientErrorException e) {
+        String header = e.getResponseHeaders() != null ? e.getResponseHeaders().getFirst("Retry-After") : null;
+        long seconds = DEFAULT_RETRY_AFTER_SECONDS;
+        if (header != null) {
+            try {
+                seconds = Long.parseLong(header.trim());
+            } catch (NumberFormatException ignored) {
+                // an HTTP date, which the sidecar does not send; keep the default
+            }
+        }
+        return Math.min(Math.max(seconds, 1), MAX_RETRY_AFTER_SECONDS) * 1000;
     }
 
     // ========== MP3 Concatenation ==========
