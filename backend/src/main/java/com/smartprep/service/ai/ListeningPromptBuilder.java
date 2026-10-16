@@ -281,4 +281,36 @@ public class ListeningPromptBuilder {
 
         return sb.toString();
     }
+
+    // NotebookLM's chat box is too short for the generate prompt, so it goes into the notebook
+    // once per part as a source, and each part is asked for with a short message that names
+    // it. The output comes back through the admin import.
+
+    /** The title the admin gives the format source in NotebookLM; the chat message names it. */
+    public String notebookLmSourceTitle(int partNumber) {
+        return "IELTS Listening format - Part " + partNumber;
+    }
+
+    /**
+     * The generate prompt as a NotebookLM source, with the topic left to the chat message. The
+     * other sources are style references only, so the part stays original.
+     */
+    public String buildNotebookLmInstructions(int partNumber) {
+        return "# " + notebookLmSourceTitle(partNumber) + "\n\n"
+                + buildGeneratePrompt(partNumber, "the topic given in the chat message", null)
+                + "\nNOTEBOOK SOURCES:\n"
+                + "- Use the other sources in this notebook only as a reference for IELTS style, question wording and difficulty.\n"
+                + "- Do NOT copy scripts or questions from the sources. Write a new, original script with new names and situations.\n"
+                + "- Do NOT add citation markers such as [1] anywhere in the output.\n";
+    }
+
+    /** The short chat message asking for one part under the instructions above. */
+    public String buildNotebookLmMessage(int partNumber, String topic) {
+        return String.format(
+                "Follow every rule in the source \"%s\". "
+                + "Generate a new, original IELTS Listening Part %d on the topic: \"%s\". "
+                + "Return ONLY the JSON object, with no citation markers and no text before or after it.",
+                notebookLmSourceTitle(partNumber), partNumber, topic
+        );
+    }
 }

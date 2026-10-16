@@ -4,6 +4,7 @@ import com.smartprep.service.util.ImageUrls;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.smartprep.dto.request.AdminListeningImportRequest;
 import com.smartprep.dto.request.AdminListeningPartRequest;
 import com.smartprep.dto.response.AdminListeningPartResponse;
 import com.smartprep.dto.response.AdminListeningStatsResponse;
@@ -12,8 +13,11 @@ import com.smartprep.model.entity.ListeningPart;
 import com.smartprep.model.entity.ListeningQuestion;
 import com.smartprep.model.entity.QuestionOption;
 import com.smartprep.model.enums.AudioStatus;
+import com.smartprep.model.enums.ContentStatus;
 import com.smartprep.model.enums.QuestionType;
 import com.smartprep.repository.ListeningPartRepository;
+import com.smartprep.service.ai.ListeningGenerationService;
+import com.smartprep.service.ai.ListeningPromptBuilder;
 import com.smartprep.service.util.QuestionOptionMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +44,8 @@ public class AdminListeningService {
 
     private final ListeningPartRepository partRepository;
     private final AudioGenerationService audioGenerationService;
+    private final ListeningGenerationService listeningGenerationService;
+    private final ListeningPromptBuilder promptBuilder;
 
     /**
      * List all listening parts with pagination and filtering by audioStatus & topic.
@@ -132,6 +138,50 @@ public class AdminListeningService {
         audioGenerationService.generateAudioAsync(saved.getPartId());
 
         return toAdminPartResponse(saved);
+    }
+
+    /**
+     * What an admin pastes into NotebookLM to write a part for the import below: the format
+     * instructions, added once per part number as a source under sourceTitle, and the chat
+     * message for this topic.
+     */
+    public Map<String, String> importPrompt(int partNumber, String topic) {
+        return Map.of(
+                "sourceTitle", promptBuilder.notebookLmSourceTitle(partNumber),
+                "instructions", promptBuilder.buildNotebookLmInstructions(partNumber),
+                "message", promptBuilder.buildNotebookLmMessage(partNumber, topicLabel(topic)));
+    }
+
+    /**
+     * A bank part from one written in NotebookLM. It lands as AI_IMPORTED, so the bank does not
+     * serve it to learners until an admin has reviewed and published it.
+     *
+     * <p>Deliberately not {@code @Transactional}: the save commits on its own, and only then is
+     * the audio job queued, so the async task always finds the row. (createPart above queues it
+     * inside its transaction, which can race the commit.)
+     */
+    public AdminListeningPartResponse importPart(AdminListeningImportRequest request, String username) {
+        // Stored as the learner-facing topic key, so the bank's topic match finds it.
+        String topic = topicLabel(request.getTopic());
+        ListeningPart part = listeningGenerationService.parseImportedPart(
+                request.getContent(), request.getPartNumber(), topic);
+        part.setTopic(topic);
+        part.setAudioStatus(AudioStatus.PENDING);
+        part.setContentStatus(ContentStatus.AI_IMPORTED);
+        part.setSource("NOTEBOOKLM");
+        part.setImportedAt(LocalDateTime.now());
+        part.setCreatedBy(username);
+        part.setUpdatedAt(LocalDateTime.now());
+
+        ListeningPart saved = partRepository.save(part);
+        audioGenerationService.generateAudioAsync(saved.getPartId());
+        return toAdminPartResponse(saved);
+    }
+
+    /** "ACCOMMODATION" as "Accommodation". */
+    private static String topicLabel(String topic) {
+        String t = topic.trim();
+        return t.isEmpty() ? t : t.substring(0, 1).toUpperCase() + t.substring(1).toLowerCase();
     }
 
     /**
@@ -317,6 +367,7 @@ public class AdminListeningService {
                 .createdAt(part.getCreatedAt())
                 .updatedAt(part.getUpdatedAt())
                 .createdBy(part.getCreatedBy())
+                .contentStatus(part.getContentStatus() != null ? part.getContentStatus().name() : null)
                 .questionCount(questionDtos.size())
                 .questions(questionDtos)
                 .build();

@@ -2,6 +2,7 @@ package com.smartprep.model.entity;
 
 import com.smartprep.model.enums.ContentStatus;
 import com.smartprep.model.enums.EssayType;
+import com.smartprep.model.enums.Topic;
 import com.smartprep.model.enums.WritingTaskType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -42,6 +43,12 @@ public class WritingPrompt {
 
     @Column(name = "seed_key", length = 100)
     private String seedKey;
+
+    /** Null on prompts written before V60; the bank offers those only for "any topic". */
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    @Column(length = 20)
+    private Topic topic;
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.VARCHAR)

@@ -8,15 +8,18 @@ import com.smartprep.repository.ListeningPartRepository;
 import com.smartprep.service.ListeningQueryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 
 /**
- * The published part Listening generation falls back to when Gemini fails.
+ * The published parts Listening generation serves from: one the learner has not had yet
+ * before Gemini is called, and any published part when Gemini fails.
  *
  * <p>A bean of its own so each read runs in a short read-only transaction: a part's
  * questions and options are lazy, and with open-in-view off nothing else keeps a session
@@ -44,6 +47,23 @@ public class ListeningFallbackSource {
         }
         log.info("Selected fallback ListeningPart ID: {}", selected.getPartId());
         return listeningQueryService.toPartResponse(selected);
+    }
+
+    /**
+     * A published part from the bank that this user has not had in a test yet, or empty if
+     * none is left. Parts are shared, so the part itself is served rather than a copy.
+     */
+    @Transactional(readOnly = true)
+    public Optional<ListeningPartResponse> unseenPublishedPart(Long userId, int partNumber, String topic) {
+        String cleanTopic = topic != null && !topic.isBlank() ? topic.trim() : null;
+        List<ListeningPart> parts = partRepository.findUnseenPublishedParts(
+                partNumber, cleanTopic, userId, PageRequest.of(0, 20));
+        if (parts.isEmpty()) {
+            return Optional.empty();
+        }
+        ListeningPart selected = parts.get(new Random().nextInt(parts.size()));
+        log.info("Serving bank ListeningPart ID: {} (part {}) to user: {}", selected.getPartId(), partNumber, userId);
+        return Optional.of(listeningQueryService.toPartResponse(selected));
     }
 
     /** An unsaved copy of a published part, with its questions and options, for a generated full test. */

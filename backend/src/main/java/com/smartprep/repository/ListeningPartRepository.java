@@ -85,4 +85,20 @@ public interface ListeningPartRepository extends JpaRepository<ListeningPart, Lo
     @Query("SELECT p FROM ListeningPart p WHERE p.partNumber = :partNumber AND p.deletedAt IS NULL " +
            "AND p.contentStatus = com.smartprep.model.enums.ContentStatus.PUBLISHED ORDER BY p.partId ASC")
     List<ListeningPart> findPublishedByPartNumber(@Param("partNumber") Integer partNumber);
+
+    /**
+     * Published parts of this number, with their audio ready, that are in none of the user's
+     * tests. Topics are free text ("Accommodation booking"), so a topic matches any part whose
+     * topic contains it; a null topic matches every part.
+     */
+    @Query("SELECT p FROM ListeningPart p WHERE p.partNumber = :partNumber AND p.deletedAt IS NULL " +
+           "AND p.contentStatus = com.smartprep.model.enums.ContentStatus.PUBLISHED " +
+           "AND p.audioStatus = com.smartprep.model.enums.AudioStatus.READY " +
+           "AND (:topic IS NULL OR LOWER(p.topic) LIKE LOWER(CONCAT('%', :topic, '%'))) " +
+           "AND NOT EXISTS (SELECT tp FROM ListeningTestPart tp WHERE tp.part = p AND tp.test.user.userId = :userId)")
+    List<ListeningPart> findUnseenPublishedParts(
+            @Param("partNumber") Integer partNumber,
+            @Param("topic") String topic,
+            @Param("userId") Long userId,
+            Pageable pageable);
 }

@@ -4,6 +4,7 @@ import com.smartprep.service.util.ImageUrls;
 import com.smartprep.dto.request.AdminMockTestRequest;
 import com.smartprep.dto.request.AdminReadingImportRequest;
 import com.smartprep.dto.request.AdminReadingQuizRequest;
+import com.smartprep.dto.request.AdminWritingImportRequest;
 import com.smartprep.dto.request.AdminWritingPromptRequest;
 import com.smartprep.dto.request.AdminUserUpdateRequest;
 import com.smartprep.dto.response.*;
@@ -20,6 +21,7 @@ import com.smartprep.model.enums.WritingTaskType;
 import com.smartprep.repository.*;
 import com.smartprep.service.ai.ReadingGenerationService;
 import com.smartprep.service.ai.ReadingPromptBuilder;
+import com.smartprep.service.ai.WritingGenerationService;
 import com.smartprep.service.util.QuestionOptionMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -51,6 +53,7 @@ public class AdminService {
     private final ListeningPartRepository listeningPartRepository;
     private final ReadingGenerationService readingGenerationService;
     private final ReadingPromptBuilder readingPromptBuilder;
+    private final WritingGenerationService writingGenerationService;
 
     /**
      * List users with pagination, optional search, and configurable sort.
@@ -222,6 +225,38 @@ public class AdminService {
                 .orElseThrow(() -> new ResourceNotFoundException("Writing prompt not found: " + promptId));
         prompt.setDeletedAt(null);
         writingPromptRepository.save(prompt);
+    }
+
+    /**
+     * What an admin pastes into NotebookLM to write prompts for the import below: the format
+     * instructions, added once as a source under sourceTitle, and the chat message for this
+     * topic. An essay type asks for only the task it belongs to; none asks for the pair.
+     */
+    public java.util.Map<String, String> writingImportPrompt(String topicStr, String essayTypeStr) {
+        Topic topic = Topic.valueOf(topicStr.toUpperCase());
+        EssayType essayType = essayTypeStr != null && !essayTypeStr.isBlank()
+                ? EssayType.valueOf(essayTypeStr.toUpperCase()) : null;
+        return java.util.Map.of(
+                "sourceTitle", writingGenerationService.notebookLmSourceTitle(),
+                "instructions", writingGenerationService.buildNotebookLmInstructions(),
+                "message", writingGenerationService.buildNotebookLmMessage(topic, essayType));
+    }
+
+    /**
+     * Bank prompts from ones written in NotebookLM, Task 1, Task 2 or both. They land as
+     * AI_IMPORTED, so the bank does not serve them to learners until an admin has reviewed
+     * and published them.
+     */
+    @Transactional
+    public List<WritingPrompt> importWritingPrompts(AdminWritingImportRequest request) {
+        Topic topic = Topic.valueOf(request.getTopic().toUpperCase());
+        List<WritingPrompt> prompts = writingGenerationService.parseImportedPrompts(request.getContent(), topic);
+        for (WritingPrompt prompt : prompts) {
+            prompt.setContentStatus(ContentStatus.AI_IMPORTED);
+            prompt.setSource("NOTEBOOKLM");
+            prompt.setImportedAt(LocalDateTime.now());
+        }
+        return writingPromptRepository.saveAll(prompts);
     }
 
     @Transactional(readOnly = true)

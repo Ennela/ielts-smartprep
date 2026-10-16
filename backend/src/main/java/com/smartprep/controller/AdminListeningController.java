@@ -1,5 +1,6 @@
 package com.smartprep.controller;
 
+import com.smartprep.dto.request.AdminListeningImportRequest;
 import com.smartprep.dto.request.AdminListeningPartRequest;
 import com.smartprep.dto.response.AdminListeningPartResponse;
 import com.smartprep.dto.response.AdminListeningStatsResponse;
@@ -74,6 +75,27 @@ public class AdminListeningController {
         String username = (user != null) ? user.getUsername() : "ADMIN";
         AdminListeningPartResponse created = adminListeningService.createPart(request, username);
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(created, "Listening part created successfully"));
+    }
+
+    @Operation(summary = "The NotebookLM source and chat message for a Listening part to import")
+    @GetMapping("/parts/import-prompt")
+    public ResponseEntity<ApiResponse<Map<String, String>>> importPrompt(
+            @RequestParam int partNumber,
+            @RequestParam String topic) {
+        if (partNumber < 1 || partNumber > 4) {
+            throw new IllegalArgumentException("Part number must be 1 to 4");
+        }
+        return ResponseEntity.ok(ApiResponse.ok(adminListeningService.importPrompt(partNumber, topic)));
+    }
+
+    @Operation(summary = "Add a Listening part written in NotebookLM to the bank, awaiting review")
+    @PostMapping("/parts/import")
+    public ResponseEntity<ApiResponse<AdminListeningPartResponse>> importPart(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody AdminListeningImportRequest request) {
+        String username = (user != null) ? user.getUsername() : "ADMIN";
+        AdminListeningPartResponse created = adminListeningService.importPart(request, username);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok(created, "Listening part imported"));
     }
 
     /**

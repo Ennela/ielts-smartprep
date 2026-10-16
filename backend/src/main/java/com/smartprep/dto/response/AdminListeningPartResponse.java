@@ -24,6 +24,7 @@ public class AdminListeningPartResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private String createdBy;
+    private String contentStatus;
     private Integer questionCount;
     private List<QuestionDto> questions;
 

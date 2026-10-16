@@ -3,6 +3,8 @@ package com.smartprep.repository;
 import com.smartprep.model.entity.WritingPrompt;
 import com.smartprep.model.enums.ContentStatus;
 import com.smartprep.model.enums.EssayType;
+import com.smartprep.model.enums.Topic;
+import com.smartprep.model.enums.WritingTaskType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,6 +12,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -77,4 +80,19 @@ public interface WritingPromptRepository extends JpaRepository<WritingPrompt, Lo
     @Query("SELECT p FROM WritingPrompt p WHERE p.essayType = :essayType AND p.deletedAt IS NULL " +
            "AND p.contentStatus = com.smartprep.model.enums.ContentStatus.PUBLISHED ORDER BY p.createdAt DESC")
     List<WritingPrompt> findPublishedByEssayType(@Param("essayType") EssayType essayType);
+
+    /**
+     * Published prompts of these essay types the user has never submitted an essay for. A null
+     * topic matches every prompt, including those written before prompts had one (V60).
+     */
+    @Query("SELECT p FROM WritingPrompt p WHERE p.taskType = :taskType AND p.essayType IN :essayTypes " +
+           "AND (:topic IS NULL OR p.topic = :topic) " +
+           "AND p.deletedAt IS NULL AND p.contentStatus = com.smartprep.model.enums.ContentStatus.PUBLISHED " +
+           "AND NOT EXISTS (SELECT s FROM WritingSubmission s WHERE s.prompt = p AND s.user.userId = :userId)")
+    List<WritingPrompt> findUnseenPublished(
+            @Param("taskType") WritingTaskType taskType,
+            @Param("essayTypes") Collection<EssayType> essayTypes,
+            @Param("topic") Topic topic,
+            @Param("userId") Long userId,
+            Pageable pageable);
 }
