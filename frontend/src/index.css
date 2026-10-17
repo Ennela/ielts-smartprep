@@ -528,7 +528,7 @@ a.card-clickable, a.card-clickable:hover { display: block; color: inherit; }
 .badge-status-error { background: rgba(186,26,26,0.08); color: var(--color-error); }
 .badge-status-info { background: rgba(0,95,175,0.08); color: var(--color-blue); }
 .badge-diagram { background: rgba(0, 108, 74, 0.08); color: var(--color-emerald); }
-.prompt-text { font-size: 0.95rem; line-height: 1.7; color: var(--color-text); margin-bottom: 12px; }
+.prompt-text { font-size: 0.95rem; line-height: 1.7; color: var(--color-text); margin-bottom: 12px; white-space: pre-line; }
 .empty-msg { text-align: center; color: var(--color-text-muted); padding: 40px 0; }
 
 /* Task Tabs */

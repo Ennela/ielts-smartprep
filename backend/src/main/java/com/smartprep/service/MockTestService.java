@@ -961,6 +961,9 @@ public class MockTestService {
                 .essayType(prompt.getEssayType().name())
                 .taskType(prompt.getTaskType() != null ? prompt.getTaskType().name() : null)
                 .imageUrl(prompt.getImageUrl())
+                // The chart, map or process a Task 1 is drawn from; without it a mock test
+                // showed the prompt with nothing to describe.
+                .visualData(prompt.getVisualData())
                 .build();
     }
 
