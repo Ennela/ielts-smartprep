@@ -435,7 +435,7 @@ export default function WritingEditorPage() {
             border: '1px solid var(--outline-variant)',
             marginBottom: 16,
           }}>
-            <p style={{ fontSize: '0.95rem', lineHeight: 1.75, color: 'var(--on-surface)' }}>
+            <p style={{ fontSize: '0.95rem', lineHeight: 1.75, color: 'var(--on-surface)', whiteSpace: 'pre-line' }}>
               {prompt?.promptText}
             </p>
           </div>

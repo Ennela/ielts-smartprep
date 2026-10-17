@@ -9,6 +9,7 @@ import QuestionNavigator from '../components/mocktest/QuestionNavigator';
 import { usesGroupedLayout, questionOffset } from '../components/listening/groupedLayout';
 import PassageViewer from '../components/reading/PassageViewer';
 import MockTestQuestionPanel from '../components/mocktest/MockTestQuestionPanel';
+import VisualDataRenderer from '../components/writing/VisualDataRenderer';
 import { useToast } from '../context/ToastContext';
 import { isTask1Type } from '../constants/examTypes';
 import { useConfirm } from '../context/ConfirmContext';
@@ -549,10 +550,15 @@ export default function MockTestSessionPage() {
                 border: '1px solid var(--outline-variant)',
                 marginBottom: 16
               }}>
-                <p style={{ fontSize: '0.95rem', lineHeight: 1.75, color: 'var(--on-surface)' }}>
+                <p style={{ fontSize: '0.95rem', lineHeight: 1.75, color: 'var(--on-surface)', whiteSpace: 'pre-line' }}>
                   {currentWritingPrompt.promptText}
                 </p>
               </div>
+
+              {/* A chart, map or process drawn from the prompt's data, as in the Writing editor. */}
+              {currentWritingPrompt.visualData && (
+                <VisualDataRenderer visualDataJson={currentWritingPrompt.visualData} essayType={currentWritingPrompt.essayType} />
+              )}
 
               {currentWritingPrompt.imageUrl && (
                 <div style={{ width: '100%', display: 'flex', justifyContent: 'center', margin: '20px 0' }}>

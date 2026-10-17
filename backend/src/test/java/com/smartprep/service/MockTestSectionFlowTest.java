@@ -122,6 +122,24 @@ class MockTestSectionFlowTest {
         assertEquals(0, mockTestService.getSessionById(USER_ID, SESSION_ID).getTimeRemainingSeconds());
     }
 
+    @Test
+    @DisplayName("the Writing section sends a Task 1 prompt's chart data, so the chart can be drawn")
+    void getSession_writingIncludesVisualData() {
+        mockTest.getWritingPrompts().add(com.smartprep.model.entity.WritingPrompt.builder()
+                .promptId(7L).promptText("The chart below shows...")
+                .essayType(com.smartprep.model.enums.EssayType.BAR_CHART)
+                .taskType(com.smartprep.model.enums.WritingTaskType.TASK_1)
+                .visualData("{\"title\":\"Sales\",\"keys\":[\"2020\"],\"data\":[{\"name\":\"A\",\"2020\":3}]}")
+                .build());
+        MockTestSession session = sessionStartedSecondsAgo(60, SkillType.WRITING);
+        when(sessionRepository.findById(SESSION_ID)).thenReturn(Optional.of(session));
+
+        MockTestSessionResponse response = mockTestService.getSessionById(USER_ID, SESSION_ID);
+
+        assertEquals(1, response.getWritingPrompts().size());
+        assertTrue(response.getWritingPrompts().get(0).getVisualData().contains("\"Sales\""));
+    }
+
     // ── Section ordering ─────────────────────────────────────────────────────
 
     @Test

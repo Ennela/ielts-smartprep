@@ -205,7 +205,7 @@ export default function WritingFullResultPage() {
                   <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--primary)', fontSize: 20 }}>description</span>
                   Prompt Description
                 </h3>
-                <p style={{ fontSize: '0.92rem', lineHeight: 1.6, color: 'var(--on-surface)', margin: 0 }}>
+                <p style={{ fontSize: '0.92rem', lineHeight: 1.6, color: 'var(--on-surface)', margin: 0, whiteSpace: 'pre-line' }}>
                   {activeTaskResult.promptText}
                 </p>
 
